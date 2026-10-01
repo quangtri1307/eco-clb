@@ -1,0 +1,8 @@
+{
+  "name": "eco-clb",
+  "private": true,
+  "description": "Hệ thống quản lý CLB: ECOBoard và ECODesk chạy trên Google Apps Script",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
