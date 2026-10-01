@@ -191,6 +191,7 @@ function layCaiDatDesk(phien) {
     quyChe: String(layCaiDat('QuyChe') || ''),
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan(),
+    mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length },
     zalo: (function () {
       var n = dongBoNguoiNhanZalo();
       return { coBot: !!layTokenZalo(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
@@ -233,8 +234,9 @@ function luuSapDenHan(phien, soNgay) {
   return true;
 }
 
-/** Cho một thành viên vào ECODesk với vai trò ban nhân sự. */
-function themBanNhanSu(phien, hoVaTen, matKhau) {
+/** Cho một thành viên vào ECODesk với vai trò ban nhân sự (HR) hoặc ứng cử viên (UCV). */
+function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
+  vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
   canDangNhap(phien, 'caidat');
   var tv = docBang('ThanhVien').filter(function (t) { return String(t.HoVaTen) === String(hoVaTen); })[0];
   if (!tv) throw new Error('Không có "' + hoVaTen + '" trong danh sách thành viên.');
@@ -244,7 +246,7 @@ function themBanNhanSu(phien, hoVaTen, matKhau) {
   var loi = kiemTraMatKhauMoi(matKhau);
   if (loi) throw new Error(loi);
   var muoi = Utilities.getUuid();
-  themDong('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: 'HR', MatKhau: bamMatKhau(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date() }]);
+  themDong('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: bamMatKhau(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date() }]);
   return true;
 }
 

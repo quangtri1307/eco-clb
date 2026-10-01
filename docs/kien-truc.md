@@ -26,6 +26,10 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
 | Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
 | KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai trong BOD và ban nhân sự đã kết nối bot Zalo. |
+| ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet | Mỗi thao tác mail của ứng cử viên (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. |
+| ThuMau | ThoiGianTao, ThuMuc, TieuDe, NoiDung, NguoiSua, ThoiGianSua | Thư mẫu của BOD, chia theo thư mục. |
+| DanhBa | Nhom, Ten, Email, GhiChu | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
+| LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. |
 
 Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần dùng đầu tiên.
 
@@ -75,6 +79,16 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
 - Khi BOD được giao task mới, bot báo ngay cho người đó (nếu đã kết nối).
 
+### Mail (`src/Mail.gs`)
+
+- Mọi thư gửi bằng Gmail của tài khoản chủ file dữ liệu (tài khoản CLB). Tên người gửi hiển thị đặt trong Cài đặt.
+- Ứng cử viên đọc hộp thư tự do (theo thư mục, nhãn, tìm kiếm). BOD chọn cho UCV xem toàn bộ hộp thư hay chỉ các luồng thư do chính UCV đó gửi (CaiDat `UcvXemHopThu`).
+- Mọi thao tác thay đổi hộp thư của UCV (soạn, trả lời, trả lời tất cả, chuyển tiếp, lưu trữ, về hộp thư đến, xoá, báo thư rác, gắn và bỏ nhãn) thành một dòng ViecMail. BOD chọn Đã duyệt (thực hiện ngay trên Gmail), Cần sửa lại, hoặc Từ chối, kèm ghi chú.
+- Tệp UCV đính kèm được lưu ở thư mục Drive "ECO - Đính kèm mail" (tự tạo; mã thư mục ở CaiDat `ThuMucDinhKemId`).
+- Nội dung thư đến hiển thị trong khung riêng không chạy được mã (sandbox), nên thư lạ không ảnh hưởng ECODesk.
+- Gửi hàng loạt: chọn thư (từ thư mẫu hoặc viết mới), người nhận (thành viên, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{TenCot}` được thay bằng thông tin người nhận, so khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi.
+- Thư hẹn giờ: lịch chạy `guiThuDaLenLich` mỗi 10 phút (tự cài lần đầu hẹn giờ) gửi các thư đã đến giờ.
+
 ### Cài đặt
 
 | Mục | Lưu ở |
@@ -84,4 +98,6 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Bảng ghim | tab BangGhim |
 | Số ngày coi là sắp đến hạn | CaiDat, khoá `SapDenHanNgay` (mặc định 2) |
 | Bot Zalo | CaiDat, khoá `ZaloToken`, `ZaloTenBot`, `ZaloGioNhac`, `ZaloNhacSapDenHan`, `ZaloNhacTre`, `ZaloLanNhacCuoi`; người nhận ở tab KetNoiZalo |
-| Ban nhân sự, mật khẩu | tab TaiKhoan |
+| Ban nhân sự, ứng cử viên, mật khẩu | tab TaiKhoan |
+| Tên người gửi, quyền xem hộp thư của UCV | CaiDat, khoá `TenNguoiGui`, `UcvXemHopThu` |
+| Danh bạ gửi hàng loạt | tab DanhBa |
