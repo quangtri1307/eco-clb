@@ -6,7 +6,7 @@
 - Một **dự án Apps Script gắn với file đó** chứa toàn bộ mã trong thư mục `src/`.
 - Dự án được triển khai thành **ứng dụng web**, chạy dưới quyền tài khoản CLB, ai có link cũng mở được.
   - `…/exec` mở ECOBoard.
-  - `…/exec?app=desk` mở ECODesk (đang xây dựng).
+  - `…/exec?app=desk` mở ECODesk.
 - Trong file Google Sheet có menu **ECO hậu kỳ → Tải danh sách lên hệ thống**. Đây là thao tác duy nhất không làm trên giao diện app.
 
 ## Các tab dữ liệu
@@ -39,3 +39,29 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 ## ECOBoard
 
 Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số điện thoại, email, Facebook, nơi sống không bao giờ được gửi ra trang công khai. Người không còn trong danh sách không hiện trên ECOBoard. Dữ liệu bảng điểm được nhớ tạm 60 giây để trang tải nhanh.
+
+## ECODesk
+
+### Đăng nhập và phân quyền
+
+- Đăng nhập bằng email và mật khẩu. Mật khẩu lưu dạng băm SHA-256 lặp 300 lần kèm chuỗi muối riêng cho từng tài khoản.
+- Sai mật khẩu 8 lần liên tiếp thì khoá email đó 15 phút.
+- Đăng nhập thành công tạo một mã phiên ngẫu nhiên, lưu trong Script Properties của dự án Apps Script, hết hạn sau 30 ngày. Trình duyệt giữ mã phiên để lần sau không phải đăng nhập lại.
+- Mỗi lần gọi máy chủ đều kiểm tra lại tài khoản trong tab TaiKhoan, nên gỡ tài khoản là mất quyền ngay.
+- Quyền theo vai trò (xem `QUYEN` trong `Logic.gs`): BOD dùng mọi chức năng; ban nhân sự (HR) chỉ dùng Task; ứng cử viên (UCV) chỉ dùng Mail.
+- Tài khoản BOD đi theo danh sách thành viên (cột Ban = BOD). Tài khoản ban nhân sự do BOD thêm trong Cài đặt.
+
+### Cộng điểm
+
+- BOD chọn một loại hoạt động và nhiều người. Mỗi người thành một dòng LichSuDiem với điểm của loại tại lúc cộng, người cộng lấy từ tài khoản đăng nhập, thời gian lấy lúc bấm.
+- Xoá một lần cộng nhầm: nhận diện dòng bằng thời gian cộng và họ tên (không có cột mã).
+
+### Cài đặt
+
+| Mục | Lưu ở |
+|---|---|
+| Loại hoạt động và điểm | tab LoaiHoatDong |
+| Quy chế cộng điểm | CaiDat, khoá `QuyChe` |
+| Bảng ghim | tab BangGhim |
+| Số ngày coi là sắp đến hạn | CaiDat, khoá `SapDenHanNgay` (mặc định 2) |
+| Ban nhân sự, mật khẩu | tab TaiKhoan |

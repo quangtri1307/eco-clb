@@ -17,6 +17,8 @@ Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw fi
 | `src/Logic.gs` | Bấm **+ → Tập lệnh**, đặt tên `Logic` |
 | `src/Board.html` | Bấm **+ → HTML**, đặt tên `Board` |
 | `src/HauKy.html` | Bấm **+ → HTML**, đặt tên `HauKy` |
+| `src/Desk.gs` | Bấm **+ → Tập lệnh**, đặt tên `Desk` |
+| `src/Desk.html` | Bấm **+ → HTML**, đặt tên `Desk` |
 | `src/appsscript.json` | Bấm **Cài đặt dự án** (bánh răng) → bật **Hiển thị tệp kê khai "appsscript.json"**, quay lại trình soạn, mở `appsscript.json` và dán đè |
 
 Bấm biểu tượng **Lưu** (đĩa mềm).
@@ -34,6 +36,7 @@ Bấm biểu tượng **Lưu** (đĩa mềm).
 2. Bấm bánh răng cạnh "Chọn loại", chọn **Ứng dụng web**.
 3. **Thực thi với tư cách**: Tôi (tài khoản CLB). **Người có quyền truy cập**: Bất kỳ ai.
 4. Bấm **Triển khai**, sao chép **URL ứng dụng web**. Đó là link ECOBoard để gửi cho thành viên.
+5. Link ECODesk là link đó thêm `?app=desk` ở cuối, ví dụ `https://script.google.com/macros/s/…/exec?app=desk`. Ban điều hành đăng nhập bằng email trong danh sách thành viên và mật khẩu mặc định đã nhập ở bước 3.
 
 ## Khi có mã mới
 

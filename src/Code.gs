@@ -9,12 +9,9 @@ var GIOI_HAN_GOP_Y_MOI_PHUT = 20;
 
 function doGet(e) {
   var app = (e && e.parameter && e.parameter.app) || 'board';
-  if (app === 'desk') {
-    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:24px">ECODesk đang được xây dựng.</p>')
-      .setTitle('ECODesk');
-  }
-  return HtmlService.createTemplateFromFile('Board').evaluate()
-    .setTitle('ECOBoard')
+  var laDesk = app === 'desk';
+  return HtmlService.createTemplateFromFile(laDesk ? 'Desk' : 'Board').evaluate()
+    .setTitle(laDesk ? 'ECODesk' : 'ECOBoard')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

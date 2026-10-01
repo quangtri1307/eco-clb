@@ -98,7 +98,7 @@ function tenHienThiCot(khoa) {
 function docDanhSachThanhVien(values) {
   var nd = nhanDienCot(values);
   if (nd.thieu.length) {
-    return { thanhVien: [], loi: ['Không tìm thấy cột: ' + nd.thieu.join(', ') + '. Kiểm tra lại tên cột trên sheet nguồn.'] };
+    return { thanhVien: [], loi: ['Không tìm thấy cột: ' + nd.thieu.join(', ') + '. Kiểm tra lai tên cột trên sheet nguồn.'] };
   }
   var ds = [];
   var loi = [];
@@ -230,12 +230,96 @@ function taiKhoanBodCanCo(thanhVien) {
   }).map(function (tv) { return { Email: tv.Email, HoVaTen: tv.HoVaTen }; });
 }
 
+/* ===================== ECODesk ===================== */
+
+/** Chức năng mỗi vai trò được dùng. */
+var QUYEN = {
+  BOD: ['congdiem', 'task', 'mail', 'baocao', 'gopy', 'log', 'caidat'],
+  HR: ['task'],
+  UCV: ['mail']
+};
+
+function coQuyen(vaiTro, chucNang) {
+  return (QUYEN[vaiTro] || []).indexOf(chucNang) >= 0;
+}
+
+/** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
+function kiemTraMatKhauMoi(mk) {
+  var s = String(mk == null ? '' : mk);
+  if (s.length < 6) return 'Mật khẩu cần ít nhất 6 ký tự.';
+  if (s.length > 100) return 'Mật khẩu dài quá.';
+  return '';
+}
+
+/**
+ * Tạo các dòng LichSuDiem cho một lần cộng điểm.
+ * Điểm lấy theo loại hoạt động tại lúc cộng; người được cộng phải có trong danh sách thành viên.
+ * @return {{dong:Array<Object>, loi:string}}
+ */
+function taoDongCongDiem(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio) {
+  if (!ky) return { dong: [], loi: 'Chưa có học kỳ nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.' };
+  var loai = null;
+  loaiHoatDong.forEach(function (l) { if (String(l.TenLoai) === String(yeuCau.loai)) loai = l; });
+  if (!loai) return { dong: [], loi: 'Không có loại hoạt động "' + yeuCau.loai + '".' };
+  var ds = (yeuCau.nguoi || []).map(function (n) { return String(n); });
+  if (!ds.length) return { dong: [], loi: 'Bạn chưa chọn ai.' };
+  var tenDung = {};
+  thanhVien.forEach(function (tv) { tenDung[String(tv.HoVaTen).toLowerCase()] = String(tv.HoVaTen); });
+  var khongCo = ds.filter(function (n) { return !tenDung[n.toLowerCase()]; });
+  if (khongCo.length) return { dong: [], loi: 'Không có trong danh sách thành viên: ' + khongCo.join(', ') + '.' };
+  var daCo = {};
+  var dong = [];
+  ds.forEach(function (n) {
+    var k = n.toLowerCase();
+    if (daCo[k]) return;
+    daCo[k] = true;
+    dong.push({
+      ThoiGian: bayGio, HoVaTen: tenDung[k], LoaiHoatDong: String(loai.TenLoai),
+      TenHoatDong: String(yeuCau.tenHoatDong || '').trim().slice(0, 200), Diem: Number(loai.Diem) || 0,
+      NguoiCong: nguoiCong, NhiemKy: String(ky.NhiemKy), HocKy: Number(ky.HocKy)
+    });
+  });
+  return { dong: dong, loi: '' };
+}
+
+/** Kiểm tra danh sách loại hoạt động do BOD sửa. */
+function chuanHoaLoaiHoatDong(ds) {
+  var kq = [];
+  var daCo = {};
+  for (var i = 0; i < (ds || []).length; i++) {
+    var ten = String(ds[i].ten == null ? '' : ds[i].ten).trim();
+    var diem = Number(ds[i].diem);
+    if (!ten) continue;
+    if (daCo[ten.toLowerCase()]) return { ds: [], loi: 'Loại "' + ten + '" bị trùng.' };
+    if (!isFinite(diem) || diem < 0) return { ds: [], loi: 'Điểm của "' + ten + '" phải là số không âm.' };
+    daCo[ten.toLowerCase()] = true;
+    kq.push({ TenLoai: ten, Diem: diem });
+  }
+  if (!kq.length) return { ds: [], loi: 'Cần ít nhất một loại hoạt động.' };
+  return { ds: kq, loi: '' };
+}
+
+/** Kiểm tra danh sách link ghim do BOD sửa. */
+function chuanHoaGhim(ds) {
+  var kq = [];
+  for (var i = 0; i < (ds || []).length; i++) {
+    var tieuDe = String(ds[i].tieuDe == null ? '' : ds[i].tieuDe).trim();
+    var link = String(ds[i].link == null ? '' : ds[i].link).trim();
+    if (!tieuDe && !link) continue;
+    if (!linkHopLe(link)) return { ds: [], loi: 'Link "' + (tieuDe || link) + '" phải bắt đầu bằng http:// hoặc https://' };
+    kq.push({ TieuDe: tieuDe || link, DuongDan: link });
+  }
+  return { ds: kq, loi: '' };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
     boDau: boDau, chuanHoaTenCot: chuanHoaTenCot, nhomBan: nhomBan, nhanDienCot: nhanDienCot,
     docDanhSachThanhVien: docDanhSachThanhVien, tenNhiemKy: tenNhiemKy, tinhKyMoi: tinhKyMoi,
     dongThanhDoiTuong: dongThanhDoiTuong, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
-    linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo
+    linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo,
+    coQuyen: coQuyen, kiemTraMatKhauMoi: kiemTraMatKhauMoi, taoDongCongDiem: taoDongCongDiem,
+    chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim
   };
 }
