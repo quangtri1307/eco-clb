@@ -7,7 +7,25 @@ Làm một lần duy nhất, khoảng 15 phút. Đăng nhập **tài khoản Goo
 1. Vào Google Drive, tạo một Google Sheet mới, đặt tên **ECO - Dữ liệu**.
 2. Trong file đó, bấm **Tiện ích mở rộng → Apps Script**. Một tab mới mở ra.
 
-## 2. Chép mã vào Apps Script
+## 2. Đưa mã vào Apps Script
+
+### Cách tự động (khuyên dùng)
+
+Cài một lần, sau đó mỗi khi gộp thay đổi vào nhánh `main` trên GitHub, GitHub tự đẩy mã lên Apps Script và cập nhật app (link giữ nguyên).
+
+1. Đăng nhập tài khoản CLB, mở https://script.google.com/home/usersettings và bật **Google Apps Script API**.
+2. Trên một máy tính có cài Node.js, mở cửa sổ lệnh (Terminal trong VS Code) và chạy `npx @google/clasp login`. Trình duyệt mở ra: chọn **tài khoản CLB**, bấm **Cho phép**.
+3. Mở file `.clasprc.json` vừa được tạo trong thư mục người dùng (Windows: `C:\Users\<tên máy>\.clasprc.json`, Mac: `~/.clasprc.json`) và sao chép toàn bộ nội dung.
+4. Trên GitHub, vào kho mã → **Settings → Secrets and variables → Actions → New repository secret**, tạo:
+   - `CLASPRC_JSON`: dán nội dung vừa sao chép.
+   - `SCRIPT_ID`: trong Apps Script bấm **Cài đặt dự án** (bánh răng), sao chép **ID tập lệnh**.
+5. Xoá file `.clasprc.json` trên máy cho an toàn.
+6. Vào tab **Actions** của kho mã → **Đẩy code lên Google Apps Script** → **Run workflow**. Đợi dấu tích xanh, rồi tải lại Apps Script sẽ thấy đủ các file.
+7. Sau bước 4 bên dưới (triển khai lần đầu), vào **Triển khai → Quản lý các lần triển khai**, sao chép **Mã triển khai** và tạo thêm secret `DEPLOYMENT_ID`. Từ đó mỗi lần gộp thay đổi, app tự cập nhật.
+
+Lưu ý: Apps Script giữ tối đa 200 phiên bản. Nếu GitHub báo lỗi đã đủ phiên bản, vào Apps Script → **Phiên bản** (biểu tượng đồng hồ) xoá bớt các phiên bản cũ. Nếu đăng nhập hết hạn (lâu không dùng), làm lại bước 2 đến 4 cho `CLASPRC_JSON`. App đang chạy không bị ảnh hưởng.
+
+### Cách thủ công
 
 Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw file** (biểu tượng hai tờ giấy ở góc phải) rồi dán vào Apps Script:
 
@@ -43,7 +61,7 @@ Bấm biểu tượng **Lưu** (đĩa mềm).
 
 ## Khi có mã mới
 
-Chép lại các file đã thay đổi như bước 2, lưu, rồi vào **Triển khai → Quản lý các lần triển khai → biểu tượng bút chì → Phiên bản: Phiên bản mới → Triển khai**. Link ECOBoard giữ nguyên.
+Nếu đã cài cách tự động ở bước 2, chỉ cần gộp thay đổi vào `main`. Nếu không, chép lại các file đã thay đổi như bước 2, lưu, rồi vào **Triển khai → Quản lý các lần triển khai → biểu tượng bút chì → Phiên bản: Phiên bản mới → Triển khai**. Link ECOBoard giữ nguyên.
 
 Nếu bản mới cần thêm quyền (ví dụ bản có bot Zalo cần quyền gửi yêu cầu ra ngoài và chạy theo lịch, bản có Mail cần quyền đọc và gửi Gmail, lưu tệp vào Drive), hãy cấp lại quyền một lần: trong Apps Script chọn hàm `khoiTaoCoSoDuLieu` ở thanh trên cùng, bấm **Chạy**, rồi **Cho phép** như bước 3.
 
