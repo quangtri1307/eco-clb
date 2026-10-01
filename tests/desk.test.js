@@ -47,3 +47,14 @@ test('chuanHoaGhim chỉ nhận link http(s)', () => {
   assert.deepStrictEqual(L.chuanHoaGhim([{ tieuDe: '', link: 'https://a.vn' }, { tieuDe: '', link: '' }]).ds, [{ TieuDe: 'https://a.vn', DuongDan: 'https://a.vn' }]);
   assert.match(L.chuanHoaGhim([{ tieuDe: 'X', link: 'javascript:alert(1)' }]).loi, /http/);
 });
+
+test('kiemTraTokenGoogle', () => {
+  const id = '123-abc.apps.googleusercontent.com';
+  const ok = { email: 'a@gmail.com', aud: id, iss: 'https://accounts.google.com', email_verified: 'true', exp: '2000' };
+  assert.strictEqual(L.kiemTraTokenGoogle(ok, id, 1000), '');
+  assert.match(L.kiemTraTokenGoogle({ ...ok, aud: 'khac' }, id, 1000), /không phải của ECODesk/);
+  assert.match(L.kiemTraTokenGoogle({ ...ok, iss: 'evil' }, id, 1000), /Google cấp/);
+  assert.match(L.kiemTraTokenGoogle({ ...ok, email_verified: 'false' }, id, 1000), /xác minh/);
+  assert.match(L.kiemTraTokenGoogle({ ...ok, exp: '999' }, id, 1000), /hết hạn/);
+  assert.match(L.kiemTraTokenGoogle(null, id, 1000), /Không xác nhận/);
+});
