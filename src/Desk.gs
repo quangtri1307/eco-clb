@@ -21,12 +21,33 @@ function dangNhap(email, matKhau) {
     throw new Error('Email hoặc mật khẩu không đúng.');
   }
   cache.remove(khoaDem);
+  return taoPhien(tk);
+}
+
+function taoPhien(tk) {
   donPhienHetHan();
   var phien = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
   PropertiesService.getScriptProperties().setProperty('phien_' + phien, JSON.stringify({
-    email: email, hetHan: Date.now() + THOI_HAN_PHIEN_NGAY * 864e5
+    email: String(tk.Email).toLowerCase(), hetHan: Date.now() + THOI_HAN_PHIEN_NGAY * 864e5
   }));
   return { phien: phien, nguoiDung: thongTinNguoiDung(tk) };
+}
+
+/**
+ * Đăng nhập bằng Google (chỉ có khi mở ECODesk qua trang vỏ cài trên điện thoại/máy tính).
+ * Trang vỏ lấy mã xác nhận (ID token) từ Google; ở đây hỏi lại Google để chắc mã thật, đúng ứng dụng của CLB.
+ */
+function dangNhapGoogle(idToken) {
+  var clientId = String(layCaiDat('GoogleClientId') || '');
+  if (!clientId) throw new Error('CLB chưa bật đăng nhập bằng Google.');
+  var res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(String(idToken || '')), { muteHttpExceptions: true });
+  var info = null;
+  try { info = JSON.parse(res.getContentText()); } catch (e) { info = null; }
+  var loi = kiemTraTokenGoogle(res.getResponseCode() === 200 ? info : null, clientId, Math.floor(Date.now() / 1000));
+  if (loi) throw new Error(loi);
+  var tk = timTaiKhoan(info.email);
+  if (!tk) throw new Error('Email ' + info.email + ' chưa có tài khoản ECODesk.');
+  return taoPhien(tk);
 }
 
 function dangXuat(phien) {
@@ -192,6 +213,7 @@ function layCaiDatDesk(phien) {
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan(),
     mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length },
+    googleClientId: String(layCaiDat('GoogleClientId') || ''),
     log: { linkMau: String(layCaiDat('LinkMauLog') || ''), linkThuMuc: String(layCaiDat('LinkThuMucLog') || '') },
     zalo: (function () {
       var n = dongBoNguoiNhanZalo();
@@ -379,5 +401,13 @@ function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
   var td = v[0];
   sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
   sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
+  return true;
+}
+
+function luuGoogleClientId(phien, clientId) {
+  canDangNhap(phien, 'caidat');
+  var id = String(clientId || '').trim();
+  if (id && !/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(id)) throw new Error('Mã Client ID chưa đúng dạng. Mã đúng kết thúc bằng .apps.googleusercontent.com');
+  datCaiDat('GoogleClientId', id);
   return true;
 }

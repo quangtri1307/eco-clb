@@ -754,6 +754,18 @@ function kiemTraFileLog(yc, thanhVien) {
   return { loi: '', tenFile: tenFile.slice(0, 150), nguoi: nguoi, buoi: buoi };
 }
 
+/* ===================== Đăng nhập Google ===================== */
+
+/** Kiểm tra thông tin Google trả về cho một ID token. Trả về '' nếu hợp lệ. */
+function kiemTraTokenGoogle(info, clientId, bayGioGiay) {
+  if (!info || !info.email) return 'Không xác nhận được tài khoản Google. Bạn thử lại nhé.';
+  if (String(info.aud) !== String(clientId)) return 'Mã đăng nhập không phải của ECODesk.';
+  if (['accounts.google.com', 'https://accounts.google.com'].indexOf(String(info.iss)) < 0) return 'Mã đăng nhập không phải do Google cấp.';
+  if (!(info.email_verified === true || info.email_verified === 'true')) return 'Email Google này chưa được xác minh.';
+  if (Number(info.exp) < bayGioGiay) return 'Mã đăng nhập đã hết hạn. Bạn thử lại nhé.';
+  return '';
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
@@ -770,6 +782,6 @@ if (typeof module !== 'undefined') {
     kiemTraViecMail: kiemTraViecMail, timChoTrong: timChoTrong, thayTheMau: thayTheMau, chuSangHtml: chuSangHtml,
     docBangNgoai: docBangNgoai, chuanBiGuiHangLoat: chuanBiGuiHangLoat,
     chiSoBaoCao: chiSoBaoCao, taskBiTre: taskBiTre, tongHopBaoCao: tongHopBaoCao, chiaMoc: chiaMoc, bieuDoBaoCao: bieuDoBaoCao,
-    timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog
+    timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog, kiemTraTokenGoogle: kiemTraTokenGoogle
   };
 }

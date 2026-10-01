@@ -116,3 +116,11 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Tên người gửi, quyền xem hộp thư của UCV | CaiDat, khoá `TenNguoiGui`, `UcvXemHopThu` |
 | Danh bạ gửi hàng loạt | tab DanhBa |
 | Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |
+
+## Trang vỏ (`pwa/`) và đăng nhập Google
+
+- `pwa/board/` và `pwa/desk/` là hai trang có manifest riêng nên cài được thành hai app. Mỗi trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`.
+- `pwa/sw.js` giữ sẵn file của trang vỏ (cần cho việc cài app); dữ liệu luôn lấy trực tiếp từ Apps Script.
+- Trang vỏ được đưa lên GitHub Pages từ nhánh `gh-pages` (bản sao của thư mục `pwa/`).
+- Đăng nhập Google: ECODesk (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Bấm nút thì trang vỏ hiện nút đăng nhập chính thức của Google, nhận mã xác nhận (ID token) rồi gửi vào ECODesk. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email và tạo phiên như đăng nhập mật khẩu.
+- Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.
