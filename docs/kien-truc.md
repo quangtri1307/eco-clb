@@ -29,6 +29,7 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet | Mỗi thao tác mail của ứng cử viên (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. |
 | ThuMau | ThoiGianTao, ThuMuc, TieuDe, NoiDung, NguoiSua, ThoiGianSua | Thư mẫu của BOD, chia theo thư mục. |
 | DanhBa | Nhom, Ten, Email, GhiChu | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
+| FileLog | ThoiGian, TenFile, DuongDan, SoNguoi, SoBuoi, NguoiTao | Các file đăng ký log đã tạo. |
 | LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. |
 
 Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần dùng đầu tiên.
@@ -89,6 +90,19 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Gửi hàng loạt: chọn thư (từ thư mẫu hoặc viết mới), người nhận (thành viên, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{TenCot}` được thay bằng thông tin người nhận, so khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi.
 - Thư hẹn giờ: lịch chạy `guiThuDaLenLich` mỗi 10 phút (tự cài lần đầu hẹn giờ) gửi các thư đã đến giờ.
 
+### Báo cáo (`src/BaoCao.gs`)
+
+- Chọn khoảng thời gian: tháng, học kỳ, nhiệm kỳ (lấy từ tab KyHoatDong: một học kỳ kéo dài đến ngày trước học kỳ sau), hoặc tự chọn.
+- Xem theo thành viên, theo ban (PR CAP, PR DES… gộp thành PR), hoặc cả CLB. Chỉ tính người đang có trong danh sách thành viên; người đã rời CLB không còn trong báo cáo nhưng lịch sử vẫn nằm trong sheet.
+- Chỉ số: điểm; số lần mỗi loại hoạt động (Seeding tách theo tên hoạt động, ví dụ comment, react); task đã xong (theo ngày xong); task trễ hạn (hạn chót nằm trong khoảng, xong sau hạn hoặc chưa xong mà đã quá hạn).
+- Biểu đồ chia mốc theo ngày (khoảng ≤ 31 ngày), theo tuần (≤ 120 ngày), hoặc theo tháng.
+- Xuất Excel: tạo Google Sheet tạm, tải về dạng .xlsx rồi chuyển sheet tạm vào thùng rác.
+
+### File đăng ký log
+
+- Cài đặt có link Google Sheet mẫu (`LinkMauLog`) và thư mục Drive để lưu (`LinkThuMucLog`).
+- Tạo file: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Không có mẫu thì tạo bảng đơn giản.
+
 ### Cài đặt
 
 | Mục | Lưu ở |
@@ -101,3 +115,4 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Ban nhân sự, ứng cử viên, mật khẩu | tab TaiKhoan |
 | Tên người gửi, quyền xem hộp thư của UCV | CaiDat, khoá `TenNguoiGui`, `UcvXemHopThu` |
 | Danh bạ gửi hàng loạt | tab DanhBa |
+| Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |

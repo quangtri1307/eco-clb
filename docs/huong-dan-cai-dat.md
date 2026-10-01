@@ -21,6 +21,7 @@ Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw fi
 | `src/Desk.html` | Bấm **+ → HTML**, đặt tên `Desk` |
 | `src/Zalo.gs` | Bấm **+ → Tập lệnh**, đặt tên `Zalo` |
 | `src/Mail.gs` | Bấm **+ → Tập lệnh**, đặt tên `Mail` |
+| `src/BaoCao.gs` | Bấm **+ → Tập lệnh**, đặt tên `BaoCao` |
 | `src/appsscript.json` | Bấm **Cài đặt dự án** (bánh răng) → bật **Hiển thị tệp kê khai "appsscript.json"**, quay lại trình soạn, mở `appsscript.json` và dán đè |
 
 Bấm biểu tượng **Lưu** (đĩa mềm).

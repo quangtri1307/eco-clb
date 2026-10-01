@@ -192,6 +192,7 @@ function layCaiDatDesk(phien) {
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan(),
     mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length },
+    log: { linkMau: String(layCaiDat('LinkMauLog') || ''), linkThuMuc: String(layCaiDat('LinkThuMucLog') || '') },
     zalo: (function () {
       var n = dongBoNguoiNhanZalo();
       return { coBot: !!layTokenZalo(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
