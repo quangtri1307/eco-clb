@@ -49,7 +49,8 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .app.gon{grid-template-columns:72px minmax(0,1fr)}
 .side{position:sticky;top:0;height:100vh;height:100dvh;background:var(--side-bg);color:#fff;display:flex;flex-direction:column;padding:16px 12px 14px;gap:14px;min-width:0;z-index:5}
 .sb-top{display:flex;align-items:center;gap:10px;padding:0 4px;min-height:40px}
-.logo{width:38px;height:38px;border-radius:11px;background:rgb(255 255 255 / .14);border:1px solid rgb(255 255 255 / .28);display:grid;place-items:center;font-size:11px;font-weight:800;letter-spacing:.04em;color:#fff;flex:none}
+.logo{width:38px;height:38px;border-radius:11px;background:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--brand);flex:none;overflow:hidden;padding:3px}
+.logo img{width:100%;height:100%;object-fit:contain;display:block}
 .sb-name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;flex:1}
 .sb-thu{background:none;border:0;color:rgb(255 255 255 / .7);cursor:pointer;padding:6px;border-radius:8px;display:grid;place-items:center}
 .sb-thu:hover{background:rgb(255 255 255 / .1);color:#fff}
@@ -70,6 +71,7 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .sb-me b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-me span{display:block;font-size:12px;opacity:.7;white-space:nowrap}
 .av{width:34px;height:34px;border-radius:50%;background:#d7ecc4;color:#1d3a0e;display:grid;place-items:center;font-weight:800;flex:none}
+.sb-me span.av{display:grid;font-size:14px;opacity:1}
 .app.gon .sb-name,.app.gon .grp,.app.gon .nav span.t,.app.gon .sb-me .who,.app.gon .sb-me .more{display:none}
 .app.gon .nav,.app.gon .sb-me{justify-content:center;padding:10px 0}
 .app.gon .sb-top{flex-direction:column;gap:8px}
@@ -78,8 +80,8 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 
 .wrap{min-width:0;display:flex;flex-direction:column}
 .topbar{display:none}
-.main{padding:24px 28px 56px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;width:100%;max-width:1180px}
-.main.rong{max-width:none}
+.main{padding:24px 28px 56px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;width:100%;max-width:1240px;margin-inline:auto}
+.main.rong{max-width:1240px}
 .head{display:flex;gap:12px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap}
 .head h2{margin:0;font-size:23px;line-height:1.25;text-wrap:balance}
 .lead{color:var(--muted);margin:3px 0 0;max-width:72ch}
@@ -180,7 +182,7 @@ td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular
 .login-wrap{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:calc(24px + var(--sat)) 16px calc(24px + var(--sab));background:var(--side-bg)}
 .login{width:100%;max-width:400px;background:var(--surface);border-radius:18px;padding:28px 24px;box-shadow:var(--shadow-pop);display:grid;gap:16px}
 .login .brand{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
-.login .brand .logo{width:54px;height:54px;border-radius:15px;background:var(--brand);border:0;font-size:13px}
+.login .brand .logo{width:54px;height:54px;border-radius:15px;background:#fff;border:1px solid var(--line);padding:5px}
 .login h2{margin:0;font-size:21px}
 .gbtn{display:flex;gap:10px;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line-2);border-radius:10px;padding:11px;font-weight:600;cursor:pointer;width:100%}
 .gbtn:hover{background:var(--soft)}
@@ -299,7 +301,7 @@ td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular
 svg text{fill:var(--muted);font-family:var(--f-body);font-size:11px}
 
 /* ---------- Cài đặt ---------- */
-.setsearch{position:relative;max-width:760px}
+.setsearch{position:relative;max-width:none}
 .setsearch svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted)}
 .setsearch input{padding-left:36px}
 .sgroup{display:grid;gap:6px}
