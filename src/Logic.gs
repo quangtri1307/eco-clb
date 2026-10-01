@@ -31,7 +31,9 @@ var BANG = {
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc'],
   TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao'],
-  CaiDat: ['Khoa', 'GiaTri']
+  CaiDat: ['Khoa', 'GiaTri'],
+  Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
+  KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi']
 };
 
 /** Ba kiểu tải danh sách thành viên ở phần hậu kỳ. */
@@ -312,6 +314,145 @@ function chuanHoaGhim(ds) {
   return { ds: kq, loi: '' };
 }
 
+/* ===================== Task ===================== */
+
+/** Trạng thái lưu trong sheet chỉ có Đã giao, Đã xong, Đã huỷ. Sắp đến hạn và Trễ hạn được tính từ hạn chót. */
+var TRANG_THAI_TASK = { GIAO: 'Đã giao', SAP: 'Sắp đến hạn', TRE: 'Trễ hạn', XONG: 'Đã xong', HUY: 'Đã huỷ' };
+
+/** Ngày dạng yyyy-mm-dd có thật hay không. */
+function ngayHopLe(s) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+  if (!m) return false;
+  var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+}
+
+/** Số ngày từ ngày "tu" đến ngày "den" (cả hai dạng yyyy-mm-dd). */
+function soNgayGiua(tu, den) {
+  var a = String(tu).split('-'), b = String(den).split('-');
+  return Math.round((Date.UTC(+b[0], +b[1] - 1, +b[2]) - Date.UTC(+a[0], +a[1] - 1, +a[2])) / 864e5);
+}
+
+/** yyyy-mm-dd → dd/mm/yyyy */
+function hienNgay(s) {
+  var p = String(s).split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(s);
+}
+
+function trangThaiTask(trangThaiLuu, hanChot, homNay, soNgaySapDenHan) {
+  if (trangThaiLuu === TRANG_THAI_TASK.XONG || trangThaiLuu === TRANG_THAI_TASK.HUY) return trangThaiLuu;
+  if (!ngayHopLe(hanChot)) return TRANG_THAI_TASK.GIAO;
+  var conLai = soNgayGiua(homNay, hanChot);
+  if (conLai < 0) return TRANG_THAI_TASK.TRE;
+  if (conLai <= soNgaySapDenHan) return TRANG_THAI_TASK.SAP;
+  return TRANG_THAI_TASK.GIAO;
+}
+
+/** Kiểm tra nội dung task. Trả về { loi, ten, moTa, hanChot, nguoi[] } với tên người đã chuẩn theo danh sách. */
+function kiemTraTask(yeuCau, thanhVien) {
+  yeuCau = yeuCau || {};
+  var ten = String(yeuCau.ten || '').replace(/\s+/g, ' ').trim();
+  var moTa = String(yeuCau.moTa || '').trim();
+  var hanChot = String(yeuCau.hanChot || '').trim();
+  if (!ten) return { loi: 'Bạn chưa nhập tên task.' };
+  if (ten.length > 200) return { loi: 'Tên task dài quá 200 ký tự.' };
+  if (moTa.length > 2000) return { loi: 'Mô tả dài quá 2000 ký tự.' };
+  if (!ngayHopLe(hanChot)) return { loi: 'Hạn chót chưa đúng.' };
+  var theoTen = {};
+  thanhVien.forEach(function (tv) { theoTen[String(tv.HoVaTen).toLowerCase()] = String(tv.HoVaTen); });
+  var nguoi = [], daCo = {};
+  var vao = yeuCau.nguoi || [];
+  for (var i = 0; i < vao.length; i++) {
+    var chuan = theoTen[String(vao[i]).trim().toLowerCase()];
+    if (!chuan) return { loi: 'Không có "' + vao[i] + '" trong danh sách thành viên.' };
+    if (!daCo[chuan]) { daCo[chuan] = true; nguoi.push(chuan); }
+  }
+  if (!nguoi.length) return { loi: 'Bạn chưa chọn người phụ trách.' };
+  return { loi: '', ten: ten, moTa: moTa, hanChot: hanChot, nguoi: nguoi };
+}
+
+/** Tạo các dòng task, mỗi người phụ trách một dòng. BOD tạo là "Giao task", ban nhân sự tạo là "Nhập task". */
+function taoDongTask(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio) {
+  var k = kiemTraTask(yeuCau, thanhVien);
+  if (k.loi) return { dong: [], loi: k.loi };
+  return {
+    loi: '',
+    dong: k.nguoi.map(function (n) {
+      return {
+        ThoiGianTao: bayGio, TenTask: k.ten, MoTa: k.moTa, HanChot: k.hanChot, NguoiPhuTrach: n,
+        NguoiTao: nguoiTao, KieuTao: vaiTro === 'BOD' ? 'Giao task' : 'Nhập task', TrangThai: TRANG_THAI_TASK.GIAO, ThoiGianXong: ''
+      };
+    })
+  };
+}
+
+/* ===================== Nhắc việc qua Zalo ===================== */
+
+var NHAC_TRE = { MOI_NGAY: 'Mỗi ngày', MOT_LAN: 'Chỉ một lần', KHONG: 'Không nhắc' };
+
+/**
+ * Chọn task cần nhắc hôm nay. ds: [{ ten, nguoi, hanChot, trangThai }] (trangThai đã tính).
+ * caiDat: { nhacSapDenHan: true/false, nhacTre: một giá trị của NHAC_TRE }.
+ */
+function chonTaskCanNhac(ds, homNay, caiDat) {
+  return ds.filter(function (t) {
+    if (t.trangThai === TRANG_THAI_TASK.SAP) return !!caiDat.nhacSapDenHan;
+    if (t.trangThai !== TRANG_THAI_TASK.TRE) return false;
+    if (caiDat.nhacTre === NHAC_TRE.MOI_NGAY) return true;
+    if (caiDat.nhacTre === NHAC_TRE.MOT_LAN) return soNgayGiua(t.hanChot, homNay) === 1;
+    return false;
+  });
+}
+
+/** Mô tả hạn của một task, ví dụ "trễ 2 ngày", "hạn hôm nay", "còn 1 ngày". */
+function moTaHan(hanChot, homNay) {
+  var d = soNgayGiua(homNay, hanChot);
+  if (d < 0) return 'trễ ' + (-d) + ' ngày';
+  if (d === 0) return 'hạn hôm nay';
+  return 'còn ' + d + ' ngày';
+}
+
+/**
+ * Soạn tin nhắc. laNhanSu = true: tin cho ban nhân sự, có tên người phụ trách để nhắc lại qua Messenger.
+ * Trả về '' nếu không có gì cần nhắc.
+ */
+function soanTinNhac(tenNguoiNhan, ds, homNay, laNhanSu) {
+  if (!ds.length) return '';
+  var sx = ds.slice().sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : 0; });
+  var dau = laNhanSu
+    ? 'ECODesk nhắc việc. Chào ' + tenNguoiNhan + ', nhờ bạn nhắc các bạn sau qua Messenger:'
+    : 'ECODesk nhắc việc. Chào ' + tenNguoiNhan + ', bạn có ' + ds.length + ' task cần chú ý:';
+  return dau + '\n' + sx.map(function (t) {
+    return '• ' + (laNhanSu ? t.nguoi + ': ' : '') + t.ten + ' (hạn ' + hienNgay(t.hanChot) + ', ' + moTaHan(t.hanChot, homNay) + ')';
+  }).join('\n');
+}
+
+/** Chia tin dài thành nhiều tin, mỗi tin không quá "toiDa" ký tự, ưu tiên cắt ở chỗ xuống dòng. */
+function chiaTin(tin, toiDa) {
+  var kq = [], cur = '';
+  String(tin).split('\n').forEach(function (dong) {
+    while (dong.length > toiDa) {
+      if (cur) { kq.push(cur); cur = ''; }
+      kq.push(dong.slice(0, toiDa));
+      dong = dong.slice(toiDa);
+    }
+    if (cur && (cur.length + 1 + dong.length) > toiDa) { kq.push(cur); cur = dong; }
+    else cur = cur ? cur + '\n' + dong : dong;
+  });
+  if (cur) kq.push(cur);
+  return kq;
+}
+
+/** Tìm mã kết nối trong tin nhắn người dùng gửi bot. Trả về mã khớp hoặc ''. */
+function timMaTrongTin(tin, dsMa) {
+  var chu = String(tin || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ');
+  var tu = chu.split(/\s+/);
+  for (var i = 0; i < dsMa.length; i++) {
+    if (dsMa[i] && tu.indexOf(String(dsMa[i]).toUpperCase()) >= 0) return dsMa[i];
+  }
+  return '';
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
@@ -320,6 +461,9 @@ if (typeof module !== 'undefined') {
     dongThanhDoiTuong: dongThanhDoiTuong, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
     linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo,
     coQuyen: coQuyen, kiemTraMatKhauMoi: kiemTraMatKhauMoi, taoDongCongDiem: taoDongCongDiem,
-    chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim
+    chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim,
+    TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe, soNgayGiua: soNgayGiua, hienNgay: hienNgay,
+    trangThaiTask: trangThaiTask, kiemTraTask: kiemTraTask, taoDongTask: taoDongTask, chonTaskCanNhac: chonTaskCanNhac,
+    moTaHan: moTaHan, soanTinNhac: soanTinNhac, chiaTin: chiaTin, timMaTrongTin: timMaTrongTin
   };
 }

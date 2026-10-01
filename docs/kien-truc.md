@@ -24,6 +24,10 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | GopY | ThoiGian, NoiDung, DaDoc | Góp ý ẩn danh. |
 | TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
+| Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
+| KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai trong BOD và ban nhân sự đã kết nối bot Zalo. |
+
+Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần dùng đầu tiên.
 
 ## Tải danh sách thành viên (hậu kỳ)
 
@@ -56,6 +60,21 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - BOD chọn một loại hoạt động và nhiều người. Mỗi người thành một dòng LichSuDiem với điểm của loại tại lúc cộng, người cộng lấy từ tài khoản đăng nhập, thời gian lấy lúc bấm.
 - Xoá một lần cộng nhầm: nhận diện dòng bằng thời gian cộng và họ tên (không có cột mã).
 
+### Task
+
+- BOD và ban nhân sự đều tạo, sửa, đánh dấu xong, huỷ, mở lại được. Chọn nhiều người thì mỗi người một task.
+- `KieuTao` là "Giao task" nếu BOD tạo, "Nhập task" nếu ban nhân sự tạo.
+- Sheet chỉ lưu trạng thái Đã giao, Đã xong, Đã huỷ. "Sắp đến hạn" và "Trễ hạn" được tính mỗi lần xem, từ hạn chót và cài đặt số ngày.
+- Task đã xong hoặc đã huỷ chỉ hiện trên ECODesk trong 120 ngày, nhưng vẫn nằm trong sheet để làm báo cáo.
+
+### Nhắc việc qua Zalo (`src/Zalo.gs`)
+
+- Gọi Zalo Bot API `https://bot-api.zapps.me/bot<mã bot>/<phương thức>` (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
+- Kết nối: mỗi BOD và thành viên ban nhân sự có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
+- Lưu cài đặt bot sẽ cài một lịch chạy hằng ngày (`nhacViecHangNgay`) vào giờ đã chọn. BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger.
+- Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
+- Khi BOD được giao task mới, bot báo ngay cho người đó (nếu đã kết nối).
+
 ### Cài đặt
 
 | Mục | Lưu ở |
@@ -64,4 +83,5 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Quy chế cộng điểm | CaiDat, khoá `QuyChe` |
 | Bảng ghim | tab BangGhim |
 | Số ngày coi là sắp đến hạn | CaiDat, khoá `SapDenHanNgay` (mặc định 2) |
+| Bot Zalo | CaiDat, khoá `ZaloToken`, `ZaloTenBot`, `ZaloGioNhac`, `ZaloNhacSapDenHan`, `ZaloNhacTre`, `ZaloLanNhacCuoi`; người nhận ở tab KetNoiZalo |
 | Ban nhân sự, mật khẩu | tab TaiKhoan |

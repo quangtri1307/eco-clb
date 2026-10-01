@@ -19,6 +19,7 @@ Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw fi
 | `src/HauKy.html` | Bấm **+ → HTML**, đặt tên `HauKy` |
 | `src/Desk.gs` | Bấm **+ → Tập lệnh**, đặt tên `Desk` |
 | `src/Desk.html` | Bấm **+ → HTML**, đặt tên `Desk` |
+| `src/Zalo.gs` | Bấm **+ → Tập lệnh**, đặt tên `Zalo` |
 | `src/appsscript.json` | Bấm **Cài đặt dự án** (bánh răng) → bật **Hiển thị tệp kê khai "appsscript.json"**, quay lại trình soạn, mở `appsscript.json` và dán đè |
 
 Bấm biểu tượng **Lưu** (đĩa mềm).
@@ -41,3 +42,9 @@ Bấm biểu tượng **Lưu** (đĩa mềm).
 ## Khi có mã mới
 
 Chép lại các file đã thay đổi như bước 2, lưu, rồi vào **Triển khai → Quản lý các lần triển khai → biểu tượng bút chì → Phiên bản: Phiên bản mới → Triển khai**. Link ECOBoard giữ nguyên.
+
+Nếu bản mới cần thêm quyền (ví dụ bản có bot Zalo cần quyền gửi yêu cầu ra ngoài và chạy theo lịch), hãy cấp lại quyền một lần: trong Apps Script chọn hàm `khoiTaoCoSoDuLieu` ở thanh trên cùng, bấm **Chạy**, rồi **Cho phép** như bước 3.
+
+## Bật nhắc việc qua Zalo
+
+Head HR làm mỗi năm một lần, chi tiết có ngay trong ECODesk: **Cài đặt → Bot Zalo nhắc việc → Hướng dẫn tạo bot Zalo**. Tóm tắt: tạo bot ở bot.zaloplatforms.com, dán mã bot vào ECODesk, chọn giờ nhắc, bấm Lưu; rồi mỗi BOD và thành viên ban nhân sự nhắn mã kết nối của mình cho bot.

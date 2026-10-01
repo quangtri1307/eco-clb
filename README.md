@@ -21,7 +21,8 @@ src/            Mã chạy trên Google Apps Script (chép nguyên vào trình s
   Logic.gs      Các hàm tính toán thuần (có kiểm thử)
   Board.html    Giao diện ECOBoard
   HauKy.html    Hộp thoại tải danh sách trong Google Sheet
-  Desk.gs       Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, góp ý, cài đặt
+  Desk.gs       Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
+  Zalo.gs       Nhắc việc qua bot Zalo
   Desk.html     Giao diện ECODesk
   appsscript.json  Cấu hình dự án Apps Script
 tests/          Kiểm thử tự động cho Logic.gs (chạy: npm test)

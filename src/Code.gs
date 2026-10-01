@@ -191,7 +191,9 @@ function khoiTaoCoSoDuLieu() {
 }
 
 function bangDuLieu(ten) {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ten);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(ten);
+  if (!sh && BANG[ten]) { khoiTaoCoSoDuLieu(); sh = ss.getSheetByName(ten); } // tab mới thêm ở bản cập nhật
   if (!sh) throw new Error('Thiếu tab ' + ten + '. Mở menu ECO hậu kỳ để khởi tạo.');
   return sh;
 }
@@ -237,10 +239,13 @@ function layCaiDat(khoa) {
 function datCaiDat(khoa, giaTri) {
   var sh = bangDuLieu('CaiDat');
   var v = sh.getDataRange().getValues();
-  for (var r = 1; r < v.length; r++) {
-    if (v[r][0] === khoa) { sh.getRange(r + 1, 2).setValue(giaTri); return; }
-  }
-  sh.appendRow([khoa, giaTri]);
+  var dong = v.length + 1;
+  for (var r = 1; r < v.length; r++) if (v[r][0] === khoa) { dong = r + 1; break; }
+  if (dong > v.length) sh.getRange(dong, 1).setValue(khoa);
+  var o = sh.getRange(dong, 2);
+  // Chữ thì giữ nguyên là chữ, để sheet không tự đổi thành ngày giờ hay số.
+  o.setNumberFormat(typeof giaTri === 'string' ? '@' : 'General');
+  o.setValue(giaTri);
 }
 
 function xoaBoNhoTam() {
