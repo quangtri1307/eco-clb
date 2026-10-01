@@ -192,6 +192,31 @@ function khoiTaoCoSoDuLieu() {
   if (macDinh && macDinh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(macDinh);
 }
 
+/** Tên các folder con trong folder tổng của CLB (quy tắc đặt tên đã thống nhất). */
+var THU_MUC = { DU_LIEU: '01. Dữ liệu hệ thống', THANH_VIEN: '02. Danh sách thành viên', DINH_KEM: '03. Đính kèm mail', LOG: '04. File log' };
+
+/**
+ * Folder tổng ("Hệ thống quản lý"): nếu file dữ liệu nằm trong "01. Dữ liệu hệ thống"
+ * thì lấy folder bên trên nó; nếu không thì lấy chính folder chứa file dữ liệu.
+ */
+function thuMucTong() {
+  var cha = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).getParents();
+  if (!cha.hasNext()) return DriveApp.getRootFolder();
+  var f = cha.next();
+  if (/^0?1\.\s/.test(f.getName())) {
+    var ong = f.getParents();
+    if (ong.hasNext()) return ong.next();
+  }
+  return f;
+}
+
+/** Lấy folder con theo tên trong folder tổng, chưa có thì tạo. */
+function thuMucCon(ten) {
+  var tong = thuMucTong();
+  var co = tong.getFoldersByName(ten);
+  return co.hasNext() ? co.next() : tong.createFolder(ten);
+}
+
 function bangDuLieu(ten) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(ten);

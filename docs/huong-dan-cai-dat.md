@@ -2,9 +2,24 @@
 
 Làm một lần duy nhất, khoảng 15 phút. Đăng nhập **tài khoản Google của CLB** trước khi bắt đầu.
 
+## Quy tắc đặt tên trên Drive
+
+Mọi thứ nằm trong folder tổng **Hệ thống quản lý**:
+
+| Folder | Chứa gì |
+|---|---|
+| `01. Dữ liệu hệ thống` | File **ECO - Dữ liệu** (dữ liệu và mã của 2 app). Không sửa tay, trừ menu hậu kỳ. |
+| `02. Danh sách thành viên` | Các file danh sách, ví dụ *Danh sách thành viên - 2026.10* |
+| `03. Đính kèm mail` | Tệp UCV tải lên khi soạn mail. App tự tạo và tự bỏ vào. |
+| `04. File log` | File mẫu *Mẫu - File log* và các file log app tạo ra. App tự tạo nếu chưa có. |
+
+Tên file: `Loại - Nội dung - Năm.Tháng.Ngày`, ví dụ *File log - Workshop A - 2026.10.15*. Năm viết trước để Drive xếp đúng thứ tự thời gian. Không dùng chữ "mới", "final", "bản 2".
+
+App nhớ file và folder theo mã, không theo tên, nên đổi tên hay di chuyển sau này không làm hỏng app.
+
 ## 1. Tạo file dữ liệu
 
-1. Vào Google Drive, tạo một Google Sheet mới, đặt tên **ECO - Dữ liệu**.
+1. Vào Google Drive, mở folder **Hệ thống quản lý**, tạo folder con **01. Dữ liệu hệ thống**. Trong đó tạo một Google Sheet mới, đặt tên **ECO - Dữ liệu**.
 2. Trong file đó, bấm **Tiện ích mở rộng → Apps Script**. Một tab mới mở ra.
 
 ## 2. Chép mã vào Apps Script

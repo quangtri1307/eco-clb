@@ -75,7 +75,7 @@ function xuatExcelBaoCao(phien, tu, den, cheDo) {
   canDangNhap(phien, 'baocao');
   var kq = tinhBaoCao(tu, den, cheDo);
   var tenCheDo = { thanhvien: 'thành viên', ban: 'ban', clb: 'cả CLB' }[cheDo] || 'thành viên';
-  var ten = 'Báo cáo ' + tenCheDo + ' ' + hienNgay(tu) + ' - ' + hienNgay(den);
+  var ten = tenFileChuan('Báo cáo', tenCheDo, ngayTenFile(tu) + ' đến ' + ngayTenFile(den));
   var ss = SpreadsheetApp.create(ten);
   try {
     var sh = ss.getSheets()[0].setName('Tổng hợp');
@@ -139,14 +139,18 @@ function taoFileLog(phien, yc) {
   var maThuMuc = maTuLink(layCaiDat('LinkThuMucLog'));
   var thuMuc = null;
   if (maThuMuc) { try { thuMuc = DriveApp.getFolderById(maThuMuc); } catch (e) { throw new Error('Không mở được thư mục lưu file log. Kiểm tra lại link trong Cài đặt.'); } }
+  if (!thuMuc) {
+    thuMuc = thuMucCon(THU_MUC.LOG);
+    datCaiDat('LinkThuMucLog', thuMuc.getUrl());
+  }
   var file;
   if (maMau) {
-    try { file = DriveApp.getFileById(maMau).makeCopy(k.tenFile, thuMuc || DriveApp.getRootFolder()); }
+    try { file = DriveApp.getFileById(maMau).makeCopy(k.tenFile, thuMuc); }
     catch (e) { throw new Error('Không chép được sheet mẫu. Kiểm tra lại link mẫu trong Cài đặt.'); }
   } else {
     var moi = SpreadsheetApp.create(k.tenFile);
     file = DriveApp.getFileById(moi.getId());
-    if (thuMuc) file.moveTo(thuMuc);
+    file.moveTo(thuMuc);
   }
   var ss = SpreadsheetApp.openById(file.getId());
   var sh = ss.getSheets()[0];

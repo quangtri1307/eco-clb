@@ -344,6 +344,17 @@ function hienNgay(s) {
   return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(s);
 }
 
+/** Ngày trong tên file: 2026-10-15 → 2026.10.15 (năm trước để Drive xếp đúng thứ tự). */
+function ngayTenFile(s) {
+  var p = String(s).split('-');
+  return p.length === 3 ? p.join('.') : String(s);
+}
+
+/** Tên file theo quy tắc CLB: "Loại - Nội dung - Năm.Tháng.Ngày". */
+function tenFileChuan(loai, noiDung, ngay) {
+  return [loai, noiDung, ngay].map(function (x) { return String(x || '').trim(); }).filter(String).join(' - ');
+}
+
 function trangThaiTask(trangThaiLuu, hanChot, homNay, soNgaySapDenHan) {
   if (trangThaiLuu === TRANG_THAI_TASK.XONG || trangThaiLuu === TRANG_THAI_TASK.HUY) return trangThaiLuu;
   if (!ngayHopLe(hanChot)) return TRANG_THAI_TASK.GIAO;
@@ -775,7 +786,7 @@ if (typeof module !== 'undefined') {
     linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo,
     coQuyen: coQuyen, kiemTraMatKhauMoi: kiemTraMatKhauMoi, taoDongCongDiem: taoDongCongDiem,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim,
-    TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe, soNgayGiua: soNgayGiua, hienNgay: hienNgay,
+    TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe, soNgayGiua: soNgayGiua, hienNgay: hienNgay, ngayTenFile: ngayTenFile, tenFileChuan: tenFileChuan,
     trangThaiTask: trangThaiTask, kiemTraTask: kiemTraTask, taoDongTask: taoDongTask, chonTaskCanNhac: chonTaskCanNhac,
     moTaHan: moTaHan, soanTinNhac: soanTinNhac, chiaTin: chiaTin, timMaTrongTin: timMaTrongTin,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe, tachEmail: tachEmail,

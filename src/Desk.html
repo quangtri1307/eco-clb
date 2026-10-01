@@ -1060,7 +1060,7 @@ VIEWS.log = function () {
     var hom = new Date();
     $('#main').innerHTML = '<div><h2>File đăng ký log</h2><p class="lead">Tạo Google Sheet đăng ký làm log từ file mẫu: điền tên, ban, số điện thoại của những người được chọn và một cột cho mỗi buổi.</p></div>' +
       (d.coMau ? '' : '<div class="card"><p style="margin:0">Chưa có file mẫu nên ECODesk sẽ tạo một bảng đơn giản. Muốn dùng mẫu của CLB, vào <b>Cài đặt → File đăng ký log</b>.</p></div>') +
-      '<form class="card form" id="lf3"><label class="f">Tên file<input type="text" id="lg-t" maxlength="150" value="Đăng ký log tháng ' + ('0' + (hom.getMonth() + 1)).slice(-2) + '/' + hom.getFullYear() + '"></label>' +
+      '<form class="card form" id="lf3"><label class="f">Tên file<input type="text" id="lg-t" maxlength="150" value="File log - Tháng ' + ('0' + (hom.getMonth() + 1)).slice(-2) + ' - ' + hom.getFullYear() + '.' + ('0' + (hom.getMonth() + 1)).slice(-2) + '.' + ('0' + hom.getDate()).slice(-2) + '"></label>' +
       '<div class="grid2" style="align-items:start"><div>' + picker('lp', d.thanhVien) + '</div><div class="form"><b style="font-size:13px">Các buổi</b><div id="lb" style="display:grid;gap:8px"></div><div><button type="button" class="btn ghost sm" id="lb-add">' + ic('plus', 14) + 'Thêm buổi</button></div></div></div>' +
       '<div class="row"><button class="btn" id="lg-b">' + ic('file', 16) + 'Tạo file</button><span id="lg-m"></span></div></form>' +
       '<div class="card"><h3>File đã tạo gần đây</h3>' + (d.ganDay.length ? '<div class="tscroll"><table><tbody>' + d.ganDay.map(function (f) { return '<tr><td><a href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.ten) + '</a><div class="hint">' + f.soNguoi + ' người · ' + f.soBuoi + ' buổi</div></td><td class="muted">' + esc(f.nguoiTao) + '</td><td class="muted" style="white-space:nowrap">' + ngayDayDu(f.thoiGian) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted" style="margin:0">Chưa có file nào.</p>') + '</div>';
@@ -1280,7 +1280,7 @@ var SUB = {
   },
   logcfg: function () {
     $('#subbody').innerHTML = '<form class="card form" id="lc" style="max-width:640px"><label class="f">Link Google Sheet mẫu <small>File đăng ký log sẽ được chép từ mẫu này. Mẫu cần một dòng tiêu đề có cột Họ và tên (có thể thêm STT, Ban, Số điện thoại); các cột buổi được thêm ngay sau cột tiêu đề cuối cùng.</small><input type="text" id="lc-m" value="' + esc(CD.log.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
-      '<label class="f">Link thư mục Google Drive để lưu file <small>Bỏ trống thì lưu ở thư mục gốc Drive của tài khoản CLB</small><input type="text" id="lc-f" value="' + esc(CD.log.linkThuMuc) + '" placeholder="https://drive.google.com/drive/folders/…"></label>' +
+      '<label class="f">Link thư mục Google Drive để lưu file <small>Bỏ trống thì app tự tạo và dùng folder "04. File log" trong folder tổng</small><input type="text" id="lc-f" value="' + esc(CD.log.linkThuMuc) + '" placeholder="https://drive.google.com/drive/folders/…"></label>' +
       '<div class="row"><button class="btn sm" id="lc-b">Lưu</button><span id="m"></span></div></form>';
     $('#lc').onsubmit = function (e) { e.preventDefault(); luuVa($('#lc-b'), $('#m'), 'luuCaiDatLog', [{ linkMau: $('#lc-m').value, linkThuMuc: $('#lc-f').value }]); };
   },

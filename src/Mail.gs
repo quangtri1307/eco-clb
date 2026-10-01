@@ -36,7 +36,7 @@ function emailClb() {
 function thuMucDinhKem() {
   var id = layCaiDat('ThuMucDinhKemId');
   if (id) { try { return DriveApp.getFolderById(String(id)); } catch (e) { /* bị xoá thì tạo lại */ } }
-  var f = DriveApp.createFolder('ECO - Đính kèm mail');
+  var f = thuMucCon(THU_MUC.DINH_KEM);
   datCaiDat('ThuMucDinhKemId', f.getId());
   return f;
 }

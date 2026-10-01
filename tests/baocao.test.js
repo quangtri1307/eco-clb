@@ -74,3 +74,9 @@ test('timTieuDeMauLog và kiemTraFileLog', () => {
   assert.match(L.kiemTraFileLog({ tenFile: 'x', nguoi: ['an'], buoi: [' '] }, TVs).loi, /chưa đặt tên/);
   assert.match(L.kiemTraFileLog({ tenFile: 'x', nguoi: [], buoi: ['a'] }, TVs).loi, /thành viên/);
 });
+
+test('tên file theo quy tắc Loại - Nội dung - Năm.Tháng.Ngày', () => {
+  assert.equal(L.ngayTenFile('2026-10-05'), '2026.10.05');
+  assert.equal(L.tenFileChuan('Báo cáo', 'cả CLB', '2026.10.01 đến 2026.10.31'), 'Báo cáo - cả CLB - 2026.10.01 đến 2026.10.31');
+  assert.equal(L.tenFileChuan('File log', '  ', '2026.10.05'), 'File log - 2026.10.05');
+});
