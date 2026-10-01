@@ -190,7 +190,11 @@ function layCaiDatDesk(phien) {
     loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     quyChe: String(layCaiDat('QuyChe') || ''),
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
-    sapDenHanNgay: Number(layCaiDat('SapDenHanNgay') || 2),
+    sapDenHanNgay: soNgaySapDenHan(),
+    zalo: (function () {
+      var n = dongBoNguoiNhanZalo();
+      return { coBot: !!layTokenZalo(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
+    })(),
     taiKhoan: docBang('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro) }; }),
     thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), email: String(t.Email || '') }; })
   };
@@ -259,5 +263,118 @@ function datLaiMatKhau(phien, email, matKhauMoi) {
   var loi = kiemTraMatKhauMoi(matKhauMoi);
   if (loi) throw new Error(loi);
   ghiMatKhau(email, matKhauMoi);
+  return true;
+}
+
+/* ===================== Task ===================== */
+
+var GIU_TASK_DA_KET_THUC_NGAY = 120;
+
+/** Ngày hôm nay theo giờ Việt Nam, dạng yyyy-MM-dd. */
+function homNay() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+/** Ô ngày trong sheet có thể là kiểu ngày hoặc chữ; đưa về yyyy-MM-dd. */
+function ngayChuoi(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+  return String(v || '').slice(0, 10);
+}
+
+function soNgaySapDenHan() {
+  var n = layCaiDat('SapDenHanNgay');
+  return n === null || n === '' ? 2 : Number(n);
+}
+
+/** Đọc toàn bộ task kèm trạng thái đã tính. */
+function docTask() {
+  var hom = homNay(), sap = soNgaySapDenHan();
+  return docBang('Task').map(function (t) {
+    var han = ngayChuoi(t.HanChot);
+    var luu = String(t.TrangThai || TRANG_THAI_TASK.GIAO);
+    return {
+      thoiGianTao: new Date(t.ThoiGianTao).getTime(), ten: String(t.TenTask), moTa: String(t.MoTa || ''), hanChot: han,
+      nguoi: String(t.NguoiPhuTrach), nguoiTao: String(t.NguoiTao), kieuTao: String(t.KieuTao),
+      trangThaiLuu: luu, trangThai: trangThaiTask(luu, han, hom, sap),
+      thoiGianXong: t.ThoiGianXong ? new Date(t.ThoiGianXong).getTime() : null
+    };
+  });
+}
+
+function layDuLieuTask(phien) {
+  var tk = canDangNhap(phien, 'task');
+  var moc = Date.now() - GIU_TASK_DA_KET_THUC_NGAY * 864e5;
+  var ds = docTask().filter(function (t) {
+    if (t.trangThaiLuu !== TRANG_THAI_TASK.XONG && t.trangThaiLuu !== TRANG_THAI_TASK.HUY) return true;
+    return (t.thoiGianXong || t.thoiGianTao) >= moc;
+  }).sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : b.thoiGianTao - a.thoiGianTao; });
+  return {
+    homNay: homNay(),
+    sapDenHanNgay: soNgaySapDenHan(),
+    task: ds,
+    thanhVien: docBang('ThanhVien').map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan(tv.Ban) }; }),
+    zalo: trangThaiZaloCuaToi(String(tk.HoVaTen))
+  };
+}
+
+function taoTask(phien, yeuCau) {
+  var tk = canDangNhap(phien, 'task');
+  var khoa = LockService.getScriptLock();
+  khoa.waitLock(30000);
+  var kq;
+  try {
+    kq = taoDongTask(yeuCau, docBang('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date());
+    if (kq.loi) throw new Error(kq.loi);
+    themDong('Task', kq.dong);
+  } finally {
+    khoa.releaseLock();
+  }
+  baoTaskMoiChoBod(kq.dong, String(tk.HoVaTen));
+  return kq.dong.length;
+}
+
+/** Tìm dòng task theo thời gian tạo và người phụ trách. Trả về số dòng trong sheet (tính từ 1). */
+function timDongTask(v, thoiGianTao, nguoi) {
+  var cT = v[0].indexOf('ThoiGianTao'), cN = v[0].indexOf('NguoiPhuTrach');
+  for (var r = 1; r < v.length; r++) {
+    if (new Date(v[r][cT]).getTime() === Number(thoiGianTao) && String(v[r][cN]) === String(nguoi)) return r + 1;
+  }
+  throw new Error('Không tìm thấy task, có thể người khác vừa sửa. Bạn tải lại trang nhé.');
+}
+
+/** Sửa tên, mô tả, hạn chót hoặc người phụ trách của một task. */
+function suaTask(phien, thoiGianTao, nguoiCu, moi) {
+  canDangNhap(phien, 'task');
+  var k = kiemTraTask({ ten: moi && moi.ten, moTa: moi && moi.moTa, hanChot: moi && moi.hanChot, nguoi: [moi && moi.nguoi] }, docBang('ThanhVien'));
+  if (k.loi) throw new Error(k.loi);
+  var khoa = LockService.getScriptLock();
+  khoa.waitLock(30000);
+  try {
+    var sh = bangDuLieu('Task');
+    var v = sh.getDataRange().getValues();
+    var dong = timDongTask(v, thoiGianTao, nguoiCu);
+    var td = v[0];
+    var gia = v[dong - 1].slice();
+    gia[td.indexOf('TenTask')] = k.ten;
+    gia[td.indexOf('MoTa')] = k.moTa;
+    gia[td.indexOf('HanChot')] = k.hanChot;
+    gia[td.indexOf('NguoiPhuTrach')] = k.nguoi[0];
+    sh.getRange(dong, 1, 1, td.length).setValues([gia]);
+  } finally {
+    khoa.releaseLock();
+  }
+  return true;
+}
+
+/** Đánh dấu Đã xong, Đã huỷ, hoặc mở lại (Đã giao). */
+function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
+  canDangNhap(phien, 'task');
+  if ([TRANG_THAI_TASK.XONG, TRANG_THAI_TASK.HUY, TRANG_THAI_TASK.GIAO].indexOf(trangThai) < 0) throw new Error('Trạng thái không hợp lệ.');
+  var sh = bangDuLieu('Task');
+  var v = sh.getDataRange().getValues();
+  var dong = timDongTask(v, thoiGianTao, nguoi);
+  var td = v[0];
+  sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
+  sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
   return true;
 }
