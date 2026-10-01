@@ -10,7 +10,9 @@ var GIOI_HAN_GOP_Y_MOI_PHUT = 20;
 function doGet(e) {
   var app = (e && e.parameter && e.parameter.app) || 'board';
   var laDesk = app === 'desk';
-  return HtmlService.createTemplateFromFile(laDesk ? 'Desk' : 'Board').evaluate()
+  var trang = HtmlService.createTemplateFromFile(laDesk ? 'Desk' : 'Board');
+  trang.googleClientId = laDesk ? String(layCaiDat('GoogleClientId') || '') : '';
+  return trang.evaluate()
     .setTitle(laDesk ? 'ECODesk' : 'ECOBoard')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

@@ -214,6 +214,21 @@ function ngayGio(ms) { var d = new Date(ms); var p = function (x) { return ('0' 
 function ngayDayDu(ms) { var d = new Date(ms); var p = function (x) { return ('0' + x).slice(-2); }; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
 function boDau(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
 
+/* ---------- Trang vỏ (app cài trên điện thoại) và đăng nhập Google ---------- */
+var GOOGLE_CLIENT_ID = <?!= JSON.stringify(googleClientId) ?>;
+var coVo = false;
+window.addEventListener('message', function (e) {
+  var d = e.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.eco === 'vo') { if (!coVo) { coVo = true; if (!NGUOI && $('#lf')) shell(); } return; }
+  if (d.eco === 'google-token' && d.token && !NGUOI) {
+    if ($('#lg-m')) $('#lg-m').innerHTML = '<span class="hint">Đang đăng nhập…</span>';
+    goi('dangNhapGoogle', d.token).then(function (kq) { luuPhien(kq.phien); NGUOI = kq.nguoiDung; page = null; shell(); demGopYMoi(); })
+      .catch(function (err) { thongBao($('#lg-m'), 'loi', err.message); });
+  }
+});
+if (window.top !== window) { try { window.top.postMessage({ eco: 'xin-chao' }, '*'); } catch (e) {} }
+
 /* ---------- Lưu phiên đăng nhập trên máy ---------- */
 var PHIEN = null, NGUOI = null;
 function luuPhien(p) { PHIEN = p; try { if (p) localStorage.setItem('eco_phien', p); else localStorage.removeItem('eco_phien'); } catch (e) {} }
@@ -285,10 +300,13 @@ function loginView() {
     '<div class="login card"><div style="text-align:center"><h2 style="margin:0">Đăng nhập ECODesk</h2><p class="hint">Dành cho ban điều hành, ban nhân sự và ứng cử viên.</p></div>' +
     '<form class="form" id="lf"><label class="f">Email<input type="email" id="lg-e" autocomplete="username" required></label>' +
     '<label class="f">Mật khẩu<input type="password" id="lg-p" autocomplete="current-password" required></label>' +
-    '<button class="btn" id="lg-b" style="justify-content:center">Đăng nhập</button><span id="lg-m"></span>' +
+    '<button class="btn" id="lg-b" style="justify-content:center">Đăng nhập</button>' +
+    (coVo && GOOGLE_CLIENT_ID ? '<div class="hint" style="text-align:center">hoặc</div><button type="button" class="btn ghost" id="lg-g" style="justify-content:center"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 01-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0012 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 010-4.6V6.6H1.3a12 12 0 000 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 001.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>Đăng nhập bằng Google</button>' : '') +
+    '<span id="lg-m"></span>' +
     '<p class="hint">Quên mật khẩu? Nhờ một thành viên ban điều hành đặt lại cho bạn.</p></form></div>';
 }
 function bindLogin() {
+  if ($('#lg-g')) $('#lg-g').onclick = function () { window.top.postMessage({ eco: 'dang-nhap-google', clientId: GOOGLE_CLIENT_ID }, '*'); };
   $('#lf').onsubmit = function (e) {
     e.preventDefault();
     $('#lg-b').disabled = true; $('#lg-m').innerHTML = '<span class="hint">Đang đăng nhập…</span>';
@@ -1114,7 +1132,7 @@ var SET = [
   ['Task và nhắc việc', [['due', 'clock', 'Quy định sắp đến hạn', function () { return 'Còn ' + CD.sapDenHanNgay + ' ngày trở xuống'; }, 'sắp đến hạn task hạn chót'], ['zalo', 'bell', 'Bot Zalo nhắc việc', function () { return CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + ' / ' + CD.zalo.tong + ' người' : 'Chưa có bot'; }, 'zalo bot nhắc token mã kết nối giờ nhắc trễ hạn']]],
   ['Mail', [['mailcfg', 'mail', 'Gửi mail và quyền xem của ứng cử viên', function () { return CD.mail.cheDoUcv === 'rieng' ? 'UCV chỉ xem thư của mình' : 'UCV xem toàn bộ hộp thư'; }, 'mail tên người gửi ứng cử viên ucv xem hộp thư'], ['contacts', 'addr', 'Danh bạ gửi hàng loạt', function () { return CD.mail.soDanhBa + ' địa chỉ'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['File đăng ký log', [['logcfg', 'file', 'Sheet mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có sheet mẫu' : 'Chưa có sheet mẫu'; }, 'log mẫu template thư mục drive']]],
-  ['Người dùng', [['hr', 'users', 'Ban nhân sự được vào ECODesk', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' người'; }, 'ban nhân sự hr quyền'], ['ucv', 'users', 'Ứng cử viên', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' người'; }, 'ứng cử viên ucv tài khoản mail'], ['accounts', 'lock', 'Tài khoản và mật khẩu', function () { return 'Đặt lại mật khẩu cho mọi người'; }, 'mật khẩu tài khoản đặt lại']]]
+  ['Người dùng', [['hr', 'users', 'Ban nhân sự được vào ECODesk', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' người'; }, 'ban nhân sự hr quyền'], ['ucv', 'users', 'Ứng cử viên', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' người'; }, 'ứng cử viên ucv tài khoản mail'], ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'], ['accounts', 'lock', 'Tài khoản và mật khẩu', function () { return 'Đặt lại mật khẩu cho mọi người'; }, 'mật khẩu tài khoản đặt lại']]]
 ];
 function napCaiDat() { return goiPhien('layCaiDatDesk').then(function (d) { CD = d; return d; }); }
 VIEWS.caidat = function () {
@@ -1277,6 +1295,12 @@ var SUB = {
     $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
   },
   ucv: function () { SUB.hr('UCV'); },
+  google: function () {
+    $('#subbody').innerHTML = '<form class="card form" id="gg" style="max-width:640px"><p class="hint" style="margin:0">Khi bật, ai có tài khoản ECODesk có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này chỉ hiện khi mở ECODesk qua app đã cài (trang vỏ).</p>' +
+      '<label class="f">Google Client ID <small>Tạo một lần trên Google Cloud của tài khoản CLB, xem hướng dẫn trong tài liệu. Bỏ trống để tắt.</small><input type="text" id="gg-i" value="' + esc(CD.googleClientId) + '" placeholder="1234567890-abc….apps.googleusercontent.com"></label>' +
+      '<div class="row"><button class="btn sm" id="gg-b">Lưu</button><span id="m"></span></div></form>';
+    $('#gg').onsubmit = function (e) { e.preventDefault(); luuVa($('#gg-b'), $('#m'), 'luuGoogleClientId', [$('#gg-i').value]); };
+  },
   accounts: function () {
     $('#subbody').innerHTML = '<div class="card"><div class="tscroll"><table><thead><tr><th>Người</th><th>Vai trò</th><th></th></tr></thead><tbody>' + CD.taiKhoan.map(function (t, i) {
       return '<tr><td>' + esc(t.ten) + '<div class="hint">' + esc(t.email) + '</div></td><td>' + (VAI_TRO[t.vaiTro] || esc(t.vaiTro)) + '</td><td><div class="row" style="flex-wrap:nowrap;justify-content:flex-end"><input type="text" id="np' + i + '" placeholder="Mật khẩu mới" aria-label="Mật khẩu mới cho ' + esc(t.ten) + '" style="max-width:160px"><button class="btn ghost sm" data-rs="' + i + '">Đặt lại</button></div></td></tr>';
