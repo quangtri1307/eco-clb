@@ -1,0 +1,46 @@
+# Mỗi khi gộp thay đổi vào main, tự đẩy code trong src/ lên Google Apps Script
+# và cập nhật bản triển khai (link app giữ nguyên).
+# Cần 3 mục trong Settings → Secrets and variables → Actions:
+#   CLASPRC_JSON  : nội dung file .clasprc.json sau khi chạy "npx @google/clasp login" bằng tài khoản CLB
+#   SCRIPT_ID     : ID tập lệnh (Apps Script → Cài đặt dự án)
+#   DEPLOYMENT_ID : ID bản triển khai ứng dụng web (Triển khai → Quản lý các lần triển khai)
+name: Đẩy code lên Google Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', '.github/workflows/day-len-gas.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: day-len-gas
+  cancel-in-progress: false
+
+jobs:
+  day-len-gas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Chạy kiểm tra
+        run: npm test
+      - name: Đẩy code lên Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ] || [ -z "$SCRIPT_ID" ]; then
+            echo "::warning::Chưa cài CLASPRC_JSON hoặc SCRIPT_ID nên chưa đẩy code. Xem docs/huong-dan-cai-dat.md."
+            exit 0
+          fi
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+          printf '{"scriptId":"%s","rootDir":"src"}' "$SCRIPT_ID" > .clasp.json
+          npx -y @google/clasp@3.4.1 push -f
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            npx -y @google/clasp@3.4.1 redeploy "$DEPLOYMENT_ID" -d "GitHub ${GITHUB_SHA::7}"
+          else
+            echo "::notice::Đã đẩy code. Chưa có DEPLOYMENT_ID nên app đang chạy chưa được cập nhật."
+          fi
