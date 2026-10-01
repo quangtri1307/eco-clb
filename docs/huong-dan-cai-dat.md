@@ -68,3 +68,14 @@ Nếu bản mới cần thêm quyền (ví dụ bản có bot Zalo cần quyền
 ## Bật nhắc việc qua Zalo
 
 Head HR làm mỗi năm một lần, chi tiết có ngay trong ECODesk: **Cài đặt → Bot Zalo nhắc việc → Hướng dẫn tạo bot Zalo**. Tóm tắt: tạo bot ở bot.zaloplatforms.com, dán mã bot vào ECODesk, chọn giờ nhắc, bấm Lưu; rồi mỗi BOD và thành viên ban nhân sự nhắn mã kết nối của mình cho bot.
+
+## Bật đăng nhập bằng Google cho ECODesk
+
+Làm một lần, khoảng 5 phút, bằng **tài khoản Google của CLB**. Hướng dẫn từng bước có ngay trong ECODesk: **Cài đặt → Đăng nhập Google**. Tóm tắt:
+
+1. Mở https://console.cloud.google.com, tạo một dự án (ví dụ "ECODesk").
+2. Vào **APIs & Services → OAuth consent screen**, chọn **External**, điền tên app và email CLB, lưu rồi bấm **Publish app**.
+3. Vào **Credentials → Create credentials → OAuth client ID**, loại **Web application**. Ở **Authorized JavaScript origins** thêm `https://ecotdn.github.io`. Bấm **Create**.
+4. Sao chép **Client ID** (đuôi `.apps.googleusercontent.com`), dán vào ECODesk ở **Cài đặt → Đăng nhập Google**, bấm Lưu.
+
+Nút Google chỉ hiện khi mở ECODesk từ app cài trên máy (link ecotdn.github.io/desk/). Người đăng nhập phải dùng đúng email đã có tài khoản trong ECODesk.

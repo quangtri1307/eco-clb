@@ -1,7 +1,8 @@
 /**
  * Mail của ECODesk. Mọi thư gửi đi dưới tên tài khoản Gmail của CLB (tài khoản chủ của file dữ liệu).
  *  - Ứng cử viên (UCV): đọc hộp thư tự do; mọi thao tác làm thay đổi hộp thư tạo một "việc" chờ BOD duyệt.
- *  - BOD: duyệt việc của UCV, quản lý thư mẫu, gửi hàng loạt (gửi ngay hoặc hẹn giờ), xem thư đã lên lịch.
+ *  - BOD: duyệt thư của UCV; soạn thư nháp ngay trong Gmail của CLB rồi dùng ECODesk để gửi hàng loạt
+ *    (gửi ngay hoặc hẹn giờ), xem thư đã lên lịch.
  */
 
 var THU_MUC_GMAIL = {
@@ -28,8 +29,39 @@ function tuyChonGui(them) {
   return o;
 }
 
+var EMAIL_CLB_ = null;
 function emailClb() {
-  return String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  if (EMAIL_CLB_ === null) EMAIL_CLB_ = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  return EMAIL_CLB_;
+}
+
+/** Link mở Gmail của tài khoản CLB (BOD đã đăng nhập sẵn tài khoản này trên máy). */
+function linkGmail(phanSau) {
+  return 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent(emailClb()) + (phanSau || '');
+}
+
+/* Chữ ký CLB tự thêm vào cuối thư UCV gửi (BOD sửa hoặc tắt trong Cài đặt). */
+var CHU_KY_MAC_DINH = '<table border="0" cellspacing="0" cellpadding="0" style="font-size:13px;font-family:Arial,sans-serif;color:#333333;line-height:1.6;border-collapse:collapse"><tbody><tr>' +
+  '<td style="vertical-align:middle;padding-right:18px;width:96px"><img width="96" height="96" src="https://lh3.googleusercontent.com/d/1o2D6zBM2oLqxgyQbrZ1NDg72P3F4sBHj" alt="ECO" style="display:block"></td>' +
+  '<td style="vertical-align:top;border-left:2px solid #274e13;padding-left:18px"><div style="font-size:14px;font-weight:800;color:#274e13;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">CLB MÔI TRƯỜNG - ECO TRẦN ĐẠI NGHĨA</div>' +
+  '<div style="font-size:12px;color:#444444"><b>Fanpage:</b> <a href="https://www.facebook.com/ecotdn/" style="color:#274e13;font-weight:bold;text-decoration:none">Facebook</a> | <a href="https://www.instagram.com/eco_tdn/" style="color:#274e13;font-weight:bold;text-decoration:none">Instagram</a></div>' +
+  '<div style="font-size:12px;color:#444444"><b>Email:</b> clbmoitruongecotdn@gmail.com</div>' +
+  '<div style="font-size:12px;color:#444444"><b>Điện thoại:</b> 0984 916 216 (Hà Phương)</div>' +
+  '<div style="font-size:12px;color:#444444"><b>Địa chỉ:</b> Lô P2 Khu tái định cư 38, An Khánh</div></td></tr></tbody></table>';
+
+/** Chữ ký đang dùng: { bat, html }. */
+function layChuKy() {
+  var html = layCaiDat('ChuKyThu');
+  return { bat: String(layCaiDat('DungChuKy') || '') !== 'tat', html: html === null || html === '' ? CHU_KY_MAC_DINH : String(html) };
+}
+
+function luuChuKy(phien, ck) {
+  canDangNhap(phien, 'caidat');
+  ck = ck || {};
+  var html = lamSachHtml(String(ck.html || '')).slice(0, 20000);
+  datCaiDat('DungChuKy', ck.bat ? 'bat' : 'tat');
+  datCaiDat('ChuKyThu', htmlSangChu(html) || /<img/i.test(html) ? html : CHU_KY_MAC_DINH);
+  return true;
 }
 
 /** Thư mục Drive giữ tệp đính kèm UCV tải lên (tự tạo lần đầu). */
@@ -137,9 +169,11 @@ function taiDinhKem(phien, maThu, maMsg, thuTu) {
 }
 
 function viecRaDoiTuong(v) {
-  var dk = [];
+  var dk = [], tc = {};
   try { dk = JSON.parse(String(v.DinhKem || '[]')); } catch (e) { dk = []; }
+  try { tc = JSON.parse(String(v.TuyChon || '{}')) || {}; } catch (e) { tc = {}; }
   return {
+    laHtml: !!tc.html, trichDan: tc.trichDan !== false,
     thoiGian: new Date(v.ThoiGian).getTime(), nguoiTao: String(v.NguoiTao), thaoTac: String(v.ThaoTac),
     maThu: String(v.MaThu || ''), tieuDeThu: String(v.TieuDeThu || ''), den: String(v.Den || ''), cc: String(v.Cc || ''), bcc: String(v.Bcc || ''),
     tieuDe: String(v.TieuDe || ''), noiDung: String(v.NoiDung || ''), nhan: String(v.Nhan || ''), dinhKem: dk,
@@ -161,7 +195,12 @@ function layViecCuaToi(phien) {
 function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
   var tk = canDangNhap(phien, 'hopthu');
   viec = viec || {};
+  var laHtml = !!viec.laHtml;
+  var noiDung = laHtml ? lamSachHtml(viec.noiDung) : String(viec.noiDung || '');
+  if (laHtml && !htmlSangChu(noiDung) && !/<img/i.test(noiDung)) noiDung = '';
+  viec.noiDung = noiDung;
   var loi = kiemTraViecMail(viec);
+  if (noiDung.length > 45000) throw new Error('Nội dung dài quá. Nếu bạn dán từ nơi khác, thử dán lại không kèm định dạng (Ctrl+Shift+V).');
   if (loi && guiDuyet) throw new Error(loi);
   if (viec.thaoTac !== THAO_TAC_MAIL.SOAN && viec.maThu) canXemLuong(tk, viec.maThu);
 
@@ -203,9 +242,10 @@ function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
     var o = {
       ThoiGian: dongCu ? v[dongCu - 1][td.indexOf('ThoiGian')] : new Date(), NguoiTao: String(tk.HoVaTen), ThaoTac: String(viec.thaoTac || THAO_TAC_MAIL.SOAN),
       MaThu: String(viec.maThu || ''), TieuDeThu: tieuDeThu, Den: tachEmail(viec.den).ds.join(', '), Cc: tachEmail(viec.cc).ds.join(', '), Bcc: tachEmail(viec.bcc).ds.join(', '),
-      TieuDe: String(viec.tieuDe || '').trim().slice(0, 250), NoiDung: String(viec.noiDung || '').slice(0, 40000), Nhan: String(viec.nhan || '').trim().slice(0, 100),
+      TieuDe: String(viec.tieuDe || '').trim().slice(0, 250), NoiDung: noiDung, Nhan: String(viec.nhan || '').trim().slice(0, 100),
       DinhKem: JSON.stringify(dinhKem), TrangThai: guiDuyet ? TRANG_THAI_VIEC.CHO : TRANG_THAI_VIEC.NHAP,
-      GhiChu: dongCu ? v[dongCu - 1][td.indexOf('GhiChu')] : '', NguoiDuyet: '', ThoiGianDuyet: ''
+      GhiChu: dongCu ? v[dongCu - 1][td.indexOf('GhiChu')] : '', NguoiDuyet: '', ThoiGianDuyet: '',
+      TuyChon: JSON.stringify({ html: laHtml, trichDan: viec.trichDan !== false })
     };
     var dong = td.map(function (c) { return o[c] === undefined ? '' : o[c]; });
     if (dongCu) sh.getRange(dongCu, 1, 1, td.length).setValues([dong]);
@@ -213,7 +253,8 @@ function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
   } finally {
     khoa.releaseLock();
   }
-  return true;
+  // Trả về để khung soạn biết việc đã lưu (lần lưu sau sẽ sửa đúng việc này, không tải tệp lên lại).
+  return { thoiGian: new Date(o.ThoiGian).getTime(), dinhKem: dinhKem };
 }
 
 /** UCV xoá việc nháp hoặc việc bị trả về của mình. */
@@ -238,7 +279,7 @@ function xoaViecMail(phien, thoiGian) {
 function layViecDuyet(phien) {
   canDangNhap(phien, 'duyetmail');
   return docBang('ViecMail').filter(function (v) { return String(v.TrangThai) !== TRANG_THAI_VIEC.NHAP; })
-    .map(viecRaDoiTuong).sort(function (a, b) {
+    .map(function (v) { var o = viecRaDoiTuong(v); o.linkThu = o.maThu ? linkLuongGmail(o.maThu) : ''; return o; }).sort(function (a, b) {
       var ca = a.trangThai === TRANG_THAI_VIEC.CHO ? 0 : 1, cb = b.trangThai === TRANG_THAI_VIEC.CHO ? 0 : 1;
       return ca - cb || b.thoiGian - a.thoiGian;
     }).slice(0, 300);
@@ -297,21 +338,37 @@ function blobDinhKem(ds) {
   return (ds || []).map(function (f) { return DriveApp.getFileById(f.id).getBlob().setName(f.ten); });
 }
 
+/** Phần trích dẫn thư gốc kiểu Gmail, đặt dưới thư trả lời. */
+function trichDanThu(m) {
+  return '<div class="gmail_quote"><div class="gmail_attr">Vào ' + ngayGioChu(m.getDate()) + ', ' + escHtml(m.getFrom()) + ' đã viết:<br></div>' +
+    '<blockquote class="gmail_quote" style="margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">' + m.getBody() + '</blockquote></div>';
+}
+
+/** Nội dung HTML cuối cùng của thư UCV: thân thư, chữ ký CLB (nếu bật). */
+function thanThuHtml(v) {
+  var than = v.laHtml ? '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">' + v.noiDung + '</div>' : chuSangHtml(v.noiDung);
+  var ck = layChuKy();
+  return than + (ck.bat ? '<br><div>--</div>' + ck.html : '');
+}
+
 /** Thực hiện một việc đã được duyệt trên Gmail của CLB. Trả về mã luồng thư liên quan. */
 function thucHienViec(v) {
   var T = THAO_TAC_MAIL;
-  var opts = tuyChonGui({ htmlBody: chuSangHtml(v.noiDung) });
+  var html = thanThuHtml(v);
+  var chu = htmlSangChu(html);
+  var opts = tuyChonGui({ htmlBody: html });
   if (v.cc) opts.cc = v.cc;
   if (v.bcc) opts.bcc = v.bcc;
   if (v.dinhKem.length) opts.attachments = blobDinhKem(v.dinhKem);
   if (v.thaoTac === T.SOAN) {
-    return GmailApp.createDraft(v.den, v.tieuDe, v.noiDung, opts).send().getThread().getId();
+    return GmailApp.createDraft(v.den, v.tieuDe, chu, opts).send().getThread().getId();
   }
   var t = GmailApp.getThreadById(v.maThu);
   if (!t) throw new Error('Thư gốc không còn nữa.');
   if (v.thaoTac === T.TRA_LOI || v.thaoTac === T.TRA_LOI_TAT_CA) {
     var goc = thuDeTraLoi(t);
-    var nap = v.thaoTac === T.TRA_LOI ? goc.createDraftReply(v.noiDung, opts) : goc.createDraftReplyAll(v.noiDung, opts);
+    if (v.trichDan) opts.htmlBody = html + '<br>' + trichDanThu(goc);
+    var nap = v.thaoTac === T.TRA_LOI ? goc.createDraftReply(chu, opts) : goc.createDraftReplyAll(chu, opts);
     nap.send();
     return t.getId();
   }
@@ -319,7 +376,7 @@ function thucHienViec(v) {
     var cuoi = t.getMessages()[t.getMessages().length - 1];
     var dau = '<br><br>---------- Thư được chuyển tiếp ----------<br>Từ: ' + escHtml(cuoi.getFrom()) + '<br>Ngày: ' + ngayGioChu(cuoi.getDate()) +
       '<br>Tiêu đề: ' + escHtml(cuoi.getSubject()) + '<br>Tới: ' + escHtml(cuoi.getTo()) + '<br><br>';
-    var fo = tuyChonGui({ htmlBody: (v.noiDung ? chuSangHtml(v.noiDung) : '') + dau + cuoi.getBody(), attachments: cuoi.getAttachments().concat(opts.attachments || []) });
+    var fo = tuyChonGui({ htmlBody: (htmlSangChu(v.noiDung) || /<img/i.test(v.noiDung) ? html : '') + dau + cuoi.getBody(), attachments: cuoi.getAttachments().concat(opts.attachments || []) });
     if (v.cc) fo.cc = v.cc;
     if (v.bcc) fo.bcc = v.bcc;
     fo.subject = v.tieuDe || ('Fwd: ' + cuoi.getSubject());
@@ -335,54 +392,59 @@ function thucHienViec(v) {
   throw new Error('Thao tác không hợp lệ.');
 }
 
-/* ===================== Thư mẫu ===================== */
+/* ===================== Thư nháp Gmail (BOD soạn trong Gmail, ECODesk chỉ tổng hợp và gửi) ===================== */
 
-function thuMauRaDoiTuong(m) {
-  return { thoiGianTao: new Date(m.ThoiGianTao).getTime(), thuMuc: String(m.ThuMuc || 'Chung'), tieuDe: String(m.TieuDe || ''), noiDung: String(m.NoiDung || ''), nguoiSua: String(m.NguoiSua || ''), thoiGianSua: m.ThoiGianSua ? new Date(m.ThoiGianSua).getTime() : null };
+var SO_THU_NHAP_TOI_DA = 60;
+
+function tomTatThuNhap(d) {
+  var m = d.getMessage();
+  var html = String(m.getBody() || '');
+  return {
+    ma: d.getId(), tieuDe: String(m.getSubject() || ''), den: String(m.getTo() || ''), ngay: m.getDate().getTime(),
+    doan: htmlSangChu(html).replace(/\s+/g, ' ').slice(0, 160),
+    choTrong: timChoTrong(String(m.getSubject() || '') + ' ' + htmlSangChu(html)),
+    dinhKem: m.getAttachments({ includeInlineImages: false }).map(function (a) { return a.getName(); }),
+    link: linkGmail('#drafts?compose=' + m.getId())
+  };
 }
 
-function layThuMau(phien) {
+/** Danh sách thư nháp trong Gmail của CLB, mới sửa trước. */
+function layThuNhapGmail(phien) {
   canDangNhap(phien, 'duyetmail');
-  return docBang('ThuMau').map(thuMauRaDoiTuong);
+  var ds = GmailApp.getDrafts().slice(0, SO_THU_NHAP_TOI_DA).map(tomTatThuNhap);
+  ds.sort(function (a, b) { return b.ngay - a.ngay; });
+  return { ds: ds, linkNhap: linkGmail('#drafts'), linkMoi: linkGmail('#drafts?compose=new'), linkHopThu: linkGmail('#inbox') };
 }
 
-function luuThuMau(phien, m, thoiGianTao) {
-  var tk = canDangNhap(phien, 'duyetmail');
-  m = m || {};
-  var thuMuc = String(m.thuMuc || '').trim().slice(0, 80) || 'Chung';
-  var tieuDe = String(m.tieuDe || '').trim().slice(0, 250);
-  if (!tieuDe) throw new Error('Thư mẫu cần có tiêu đề.');
-  var o = { ThuMuc: thuMuc, TieuDe: tieuDe, NoiDung: String(m.noiDung || '').slice(0, 40000), NguoiSua: String(tk.HoVaTen), ThoiGianSua: new Date() };
-  if (!thoiGianTao) { o.ThoiGianTao = new Date(); themDong('ThuMau', [o]); return true; }
-  var sh = bangDuLieu('ThuMau');
-  var v = sh.getDataRange().getValues(), td = v[0];
-  for (var r = 1; r < v.length; r++) {
-    if (new Date(v[r][td.indexOf('ThoiGianTao')]).getTime() === Number(thoiGianTao)) {
-      Object.keys(o).forEach(function (c) { sh.getRange(r + 1, td.indexOf(c) + 1).setValue(o[c]); });
-      return true;
-    }
-  }
-  throw new Error('Không tìm thấy thư mẫu.');
-}
-
-function xoaThuMau(phien, thoiGianTao) {
+function xemThuNhapGmail(phien, maNhap) {
   canDangNhap(phien, 'duyetmail');
-  var sh = bangDuLieu('ThuMau');
-  var v = sh.getDataRange().getValues(), td = v[0];
-  for (var r = 1; r < v.length; r++) {
-    if (new Date(v[r][td.indexOf('ThoiGianTao')]).getTime() === Number(thoiGianTao)) { sh.deleteRow(r + 1); return true; }
-  }
-  throw new Error('Không tìm thấy thư mẫu.');
+  var d = layNhap(maNhap);
+  var t = tomTatThuNhap(d);
+  t.html = String(d.getMessage().getBody() || '').replace(/<script[\s\S]*?<\/script>/gi, '');
+  return t;
 }
 
-function doiTenThuMuc(phien, cu, moi) {
-  canDangNhap(phien, 'duyetmail');
-  moi = String(moi || '').trim().slice(0, 80);
-  if (!moi) throw new Error('Tên thư mục không được trống.');
-  var sh = bangDuLieu('ThuMau');
-  var v = sh.getDataRange().getValues(), c = v[0].indexOf('ThuMuc');
-  for (var r = 1; r < v.length; r++) if (String(v[r][c]) === String(cu)) sh.getRange(r + 1, c + 1).setValue(moi);
-  return true;
+function layNhap(maNhap) {
+  var d = null;
+  try { d = GmailApp.getDraft(String(maNhap)); } catch (e) { d = null; }
+  if (!d) throw new Error('Không tìm thấy thư nháp này trong Gmail của CLB, có thể đã bị xoá hoặc đã gửi.');
+  return d;
+}
+
+/**
+ * Lấy nội dung thư nháp để gửi: tiêu đề, HTML, tệp đính kèm và ảnh chèn trong thư.
+ * Ảnh chèn trong thư (cid:) được ghép theo tên ảnh, cách Google hướng dẫn cho mail merge.
+ */
+function mauTuNhap(maNhap) {
+  var m = layNhap(maNhap).getMessage();
+  var html = String(m.getBody() || '');
+  var anh = m.getAttachments({ includeInlineImages: true, includeAttachments: false });
+  var theoTen = {};
+  anh.forEach(function (a) { theoTen[a.getName()] = a; });
+  var inline = {};
+  var re = /<img[^>]*?src="cid:([^"]+)"[^>]*?alt="([^"]*)"[^>]*>/gi, x;
+  while ((x = re.exec(html))) if (theoTen[x[2]]) inline[x[1]] = theoTen[x[2]];
+  return { tieuDe: String(m.getSubject() || ''), html: html, dinhKem: m.getAttachments({ includeInlineImages: false }), anh: inline };
 }
 
 /* ===================== Gửi hàng loạt và hẹn giờ ===================== */
@@ -421,36 +483,44 @@ function docSheetGui(phien, link, tenTab) {
 }
 
 /**
- * Gửi hàng loạt. yc: { tieuDe, noiDung, nguoiNhan[{email, duLieu}], moTaNguon, henGio (ms, bỏ trống = gửi ngay) }.
+ * Gửi hàng loạt từ một thư nháp Gmail. yc: { maNhap, nguoiNhan[{email, duLieu}], moTaNguon, henGio (ms, bỏ trống = gửi ngay) }.
+ * Hẹn giờ thì đến giờ mới đọc thư nháp, nên sửa thư nháp trong Gmail trước giờ gửi vẫn được.
  */
 function guiHangLoat(phien, yc) {
   var tk = canDangNhap(phien, 'duyetmail');
   yc = yc || {};
+  var mau = mauTuNhap(yc.maNhap);
   if (yc.henGio) {
-    var kt = chuanBiGuiHangLoat(yc.tieuDe, yc.noiDung, yc.nguoiNhan, null);
+    var kt = chuanBiGuiTuNhap(mau, yc.nguoiNhan, null);
     if (kt.loi) throw new Error(kt.loi);
     var luc = new Date(Number(yc.henGio));
     if (!(luc.getTime() > Date.now() + 60000)) throw new Error('Giờ hẹn phải sau bây giờ ít nhất 1 phút.');
     var nn = JSON.stringify(yc.nguoiNhan.map(function (n) { return { email: n.email, duLieu: n.duLieu || {} }; }));
     if (nn.length > 45000) throw new Error('Danh sách người nhận quá lớn để hẹn giờ. Chia thành nhiều đợt nhỏ hơn.');
     themDong('LichGui', [{
-      ThoiGianTao: new Date(), ThoiGianGui: luc, TieuDe: String(yc.tieuDe), NoiDung: String(yc.noiDung), NguoiNhan: nn,
+      ThoiGianTao: new Date(), ThoiGianGui: luc, TieuDe: mau.tieuDe, NoiDung: '', NguoiNhan: nn, MaNhap: String(yc.maNhap),
       MoTaNguon: String(yc.moTaNguon || '').slice(0, 200), NguoiTao: String(tk.HoVaTen), TrangThai: 'Đã lên lịch', KetQua: ''
     }]);
     caiLichGuiThu();
     return { henGio: true, soNguoi: kt.ds.length };
   }
-  var kq = chuanBiGuiHangLoat(yc.tieuDe, yc.noiDung, yc.nguoiNhan, MailApp.getRemainingDailyQuota());
+  var kq = chuanBiGuiTuNhap(mau, yc.nguoiNhan, MailApp.getRemainingDailyQuota());
   if (kq.loi) throw new Error(kq.loi);
-  var gui = guiDanhSach(kq.ds);
+  var gui = guiDanhSach(kq.ds, mau);
   return { henGio: false, daGui: gui.daGui, loi: gui.loi };
 }
 
-function guiDanhSach(ds) {
+/** Gửi từng thư. mau (nếu có) mang theo tệp đính kèm và ảnh của thư nháp. */
+function guiDanhSach(ds, mau) {
   var daGui = 0, loi = [];
   ds.forEach(function (t) {
-    try { GmailApp.sendEmail(t.email, t.tieuDe, t.noiDung, tuyChonGui({ htmlBody: chuSangHtml(t.noiDung) })); daGui++; }
-    catch (e) { loi.push(t.email + ': ' + e.message); }
+    try {
+      var o = tuyChonGui({ htmlBody: t.html || chuSangHtml(t.noiDung) });
+      if (mau && mau.dinhKem.length) o.attachments = mau.dinhKem;
+      if (mau && Object.keys(mau.anh).length) o.inlineImages = mau.anh;
+      GmailApp.sendEmail(t.email, t.tieuDe, t.chu || t.noiDung, o);
+      daGui++;
+    } catch (e) { loi.push(t.email + ': ' + e.message); }
   });
   return { daGui: daGui, loi: loi };
 }
@@ -476,10 +546,13 @@ function guiThuDaLenLich() {
       var trangThai = 'Đã gửi', ketQua;
       try {
         var nn = JSON.parse(String(v[r][c('NguoiNhan')]));
-        var kq = chuanBiGuiHangLoat(v[r][c('TieuDe')], v[r][c('NoiDung')], nn, MailApp.getRemainingDailyQuota());
+        var maNhap = c('MaNhap') >= 0 ? String(v[r][c('MaNhap')] || '') : '';
+        var mau = maNhap ? mauTuNhap(maNhap) : null;
+        var kq = mau ? chuanBiGuiTuNhap(mau, nn, MailApp.getRemainingDailyQuota())
+          : chuanBiGuiHangLoat(v[r][c('TieuDe')], v[r][c('NoiDung')], nn, MailApp.getRemainingDailyQuota());
         if (kq.loi) { trangThai = 'Lỗi'; ketQua = kq.loi; }
         else {
-          var g = guiDanhSach(kq.ds);
+          var g = guiDanhSach(kq.ds, mau);
           ketQua = 'Đã gửi ' + g.daGui + '/' + kq.ds.length + (g.loi.length ? '. Lỗi: ' + g.loi.slice(0, 5).join('; ') : '');
           if (!g.daGui) trangThai = 'Lỗi';
         }
@@ -497,7 +570,9 @@ function layLichGui(phien) {
   return docBang('LichGui').map(function (l) {
     var soNguoi = 0;
     try { soNguoi = JSON.parse(String(l.NguoiNhan)).length; } catch (e) { soNguoi = 0; }
+    var maNhap = String(l.MaNhap || '');
     return {
+      maNhap: maNhap, linkNhap: maNhap ? linkGmail('#drafts') : '',
       thoiGianTao: new Date(l.ThoiGianTao).getTime(), thoiGianGui: new Date(l.ThoiGianGui).getTime(), tieuDe: String(l.TieuDe), noiDung: String(l.NoiDung),
       soNguoi: soNguoi, moTaNguon: String(l.MoTaNguon || ''), nguoiTao: String(l.NguoiTao), trangThai: String(l.TrangThai), ketQua: String(l.KetQua || '')
     };
@@ -522,14 +597,9 @@ function suaLichGui(phien, thoiGianTao, moi) {
   try {
     var sh = bangDuLieu('LichGui');
     var x = timDongLich(sh, thoiGianTao);
-    var nn = JSON.parse(String(x.gia[x.td.indexOf('NguoiNhan')]));
-    var kt = chuanBiGuiHangLoat(moi.tieuDe, moi.noiDung, nn, null);
-    if (kt.loi) throw new Error(kt.loi);
     var luc = new Date(Number(moi.thoiGianGui));
     if (!(luc.getTime() > Date.now() + 60000)) throw new Error('Giờ hẹn phải sau bây giờ ít nhất 1 phút.');
     sh.getRange(x.dong, x.td.indexOf('ThoiGianGui') + 1).setValue(luc);
-    sh.getRange(x.dong, x.td.indexOf('TieuDe') + 1).setValue(String(moi.tieuDe));
-    sh.getRange(x.dong, x.td.indexOf('NoiDung') + 1).setValue(String(moi.noiDung));
   } finally {
     khoa.releaseLock();
   }
@@ -556,7 +626,8 @@ function layCaiDatMail(phien) {
   canDangNhap(phien, 'caidat');
   return {
     danhBa: docBang('DanhBa').map(function (d) { return { nhom: String(d.Nhom || ''), ten: String(d.Ten || ''), email: String(d.Email || ''), ghiChu: String(d.GhiChu || '') }; }),
-    cheDoUcv: cheDoXemUcv(), tenNguoiGui: String(layCaiDat('TenNguoiGui') || ''), emailClb: emailClb()
+    cheDoUcv: cheDoXemUcv(), tenNguoiGui: String(layCaiDat('TenNguoiGui') || ''), emailClb: emailClb(),
+    chuKy: layChuKy()
   };
 }
 
@@ -578,4 +649,25 @@ function luuCaiDatMail(phien, cd) {
   datCaiDat('UcvXemHopThu', cd && cd.cheDoUcv === 'rieng' ? 'rieng' : 'tatca');
   datCaiDat('TenNguoiGui', String((cd && cd.tenNguoiGui) || '').trim().slice(0, 100));
   return true;
+}
+
+/* ===================== Dữ liệu cho khung soạn thư của UCV ===================== */
+
+/** Danh bạ để chọn người nhận (thành viên có email và danh bạ CLB), cùng chữ ký sẽ tự thêm. */
+function layCauHinhSoan(phien) {
+  canDangNhap(phien, 'hopthu');
+  var ds = [];
+  docBang('ThanhVien').forEach(function (t) {
+    if (emailHopLe(t.Email)) ds.push({ nhom: 'Thành viên · ' + (nhomBan(t.Ban) || 'Khác'), ten: String(t.HoVaTen), email: String(t.Email).trim() });
+  });
+  docBang('DanhBa').forEach(function (d) {
+    if (emailHopLe(d.Email)) ds.push({ nhom: String(d.Nhom || 'Danh bạ'), ten: String(d.Ten || d.Email), email: String(d.Email).trim() });
+  });
+  var ck = layChuKy();
+  return { danhBa: ds, chuKy: ck.bat ? ck.html : '', toiDaTepMb: TOI_DA_TEP_MB, toiDaTongMb: TOI_DA_TONG_TEP_MB };
+}
+
+/** Link mở luồng thư trong Gmail CLB (cho BOD). */
+function linkLuongGmail(maThu) {
+  return linkGmail('#all/' + String(maThu));
 }

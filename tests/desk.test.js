@@ -58,3 +58,9 @@ test('kiemTraTokenGoogle', () => {
   assert.match(L.kiemTraTokenGoogle({ ...ok, exp: '999' }, id, 1000), /hết hạn/);
   assert.match(L.kiemTraTokenGoogle(null, id, 1000), /Không xác nhận/);
 });
+
+test('khongPhaiBod', () => {
+  assert.strictEqual(L.khongPhaiBod({ HoVaTen: 'A', Ban: 'BOD' }), false);
+  assert.strictEqual(L.khongPhaiBod({ ten: 'A', ban: 'bod ' }), false);
+  assert.strictEqual(L.khongPhaiBod({ HoVaTen: 'A', Ban: 'PR CAP' }), true);
+});

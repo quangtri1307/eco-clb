@@ -20,9 +20,13 @@
   --gold:#e0b64a; --silver:#b4bcc8; --bronze:#d39161; --bad:#f2968d; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+html{background:var(--brand);overscroll-behavior:none}
+body{min-height:100vh;overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipulation}
+.btn-link{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:var(--brand-ink);text-decoration:none;font-weight:600;padding:10px 16px;border-radius:10px}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-bottom:var(--sab)}
 .wrap{max-width:720px;margin:0 auto;padding-inline:16px}
-header{background:var(--brand);color:var(--brand-ink);padding-block:calc(18px + env(safe-area-inset-top,0px)) 16px}
+header{background:var(--brand);color:var(--brand-ink);padding-block:calc(18px + var(--sat)) 16px}
 .head{display:flex;align-items:center;gap:14px}
 .logo{width:48px;height:48px;border-radius:50%;border:2px dashed currentColor;display:grid;place-items:center;font-size:10px;font-weight:700;opacity:.85;flex:none;text-align:center;line-height:1.1}
 h1{font-size:24px;font-weight:800;margin:0}
@@ -56,7 +60,7 @@ input[type=search],select,textarea{width:100%;font:15px var(--f-body);color:var(
 .empty{padding:24px;text-align:center;color:var(--muted)}
 .count{font-size:13px;color:var(--muted)}
 .sheet{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.panel{background:var(--surface);width:100%;max-width:720px;max-height:85%;overflow:auto;border-radius:18px 18px 0 0;padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.panel{background:var(--surface);width:100%;max-width:720px;max-height:85%;overflow:auto;border-radius:18px 18px 0 0;padding:20px 16px calc(24px + var(--sab))}
 .panel h2{margin:0;font-size:20px}
 .stat{display:flex;gap:10px;flex-wrap:wrap;margin-block:14px}
 .stat div{flex:1 1 120px;background:var(--brand-soft);border-radius:12px;padding:10px 12px}
@@ -123,7 +127,7 @@ td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
       <h3>Điểm theo loại hoạt động</h3>
       <table><thead><tr><th>Loại hoạt động</th><th style="text-align:right">Điểm mỗi lần</th></tr></thead><tbody id="types"></tbody></table>
     </div>
-    <div class="card"><h3>Quy chế cộng điểm</h3><p class="rules" id="rules"></p></div>
+    <div class="card"><h3>Quy chế cộng điểm</h3><div id="rules"></div></div>
   </section>
 
   <section id="p-gopy" hidden>
@@ -139,6 +143,18 @@ td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
 <div class="sheet" id="sheet" hidden><div class="panel" role="dialog" aria-modal="true" aria-labelledby="dName" id="panel"></div></div>
 
 <script>
+/* Khi mở trong app cài trên điện thoại: trang vỏ báo khoảng an toàn để đầu và chân trang cân đối. */
+(function () {
+  var dau = true;
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object' || d.eco !== 'vo' || !/^https:\/\//.test(e.origin) || e.source !== window.top) return;
+    if (d.vien) { document.documentElement.style.setProperty('--sat', (Number(d.vien.t) || 0) + 'px'); document.documentElement.style.setProperty('--sab', (Number(d.vien.b) || 0) + 'px'); }
+    if (dau) { dau = false; try { e.source.postMessage({ eco: 'ho-tro-vien' }, e.origin); } catch (x) {} }
+  });
+  if (window.top !== window) { try { window.top.postMessage({ eco: 'xin-chao' }, '*'); } catch (x) {} }
+})();
+
 var D = null, ban = 'Tất cả', q = '', dir = 'desc';
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -153,7 +169,14 @@ function napDuLieu(d) {
   $('term').textContent = d.ky ? 'Nhiệm kỳ ' + d.ky.nhiemKy + ' · Học kỳ ' + d.ky.hocKy : 'Chưa bắt đầu học kỳ';
   renderBans(); render();
   $('types').innerHTML = d.loaiHoatDong.map(function (l) { return '<tr><td>' + esc(l.ten) + '</td><td class="n">' + l.diem + '</td></tr>'; }).join('') || '<tr><td colspan="2" class="hint">Chưa có loại hoạt động.</td></tr>';
-  $('rules').textContent = d.quyChe || 'Ban điều hành chưa đăng quy chế.';
+  var qc = String(d.quyChe || '').trim();
+  if (/^https:\/\/\S+$/.test(qc)) {
+    $('rules').innerHTML = '<p style="margin:0 0 12px;color:var(--muted)">Quy chế cộng điểm nằm trong một file riêng.</p><a class="btn-link" target="_blank" rel="noopener"></a>';
+    var a = $('rules').querySelector('a'); a.href = qc; a.textContent = 'Xem quy chế';
+  } else {
+    $('rules').innerHTML = '<p class="rules"></p>';
+    $('rules').firstChild.textContent = qc || 'Ban điều hành chưa đăng quy chế.';
+  }
   $('pins').innerHTML = d.ghim.length ? d.ghim.map(function (g) {
     return '<a class="pin" href="' + esc(g.link) + '" target="_blank" rel="noopener"><span class="ico">↗</span><div><div class="t">' + esc(g.tieuDe) + '</div><div class="u">' + esc(g.link) + '</div></div></a>';
   }).join('') : '<p class="hint">Chưa có link nào được ghim.</p>';

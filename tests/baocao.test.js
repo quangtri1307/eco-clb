@@ -70,7 +70,8 @@ test('timTieuDeMauLog và kiemTraFileLog', () => {
   assert.deepStrictEqual(t, { dong: 2, cot: { stt: 0, ten: 1, ban: 2, sdt: 3 }, cotBuoi: 4 });
   assert.strictEqual(L.timTieuDeMauLog([['a', 'b']]), null);
   const TVs = [{ HoVaTen: 'An', Ban: 'PG' }];
-  assert.strictEqual(L.kiemTraFileLog({ tenFile: 'Log T10', nguoi: ['an'], buoi: ['Buổi 1'] }, TVs).loi, '');
-  assert.match(L.kiemTraFileLog({ tenFile: 'x', nguoi: ['an'], buoi: [' '] }, TVs).loi, /chưa đặt tên/);
-  assert.match(L.kiemTraFileLog({ tenFile: 'x', nguoi: [], buoi: ['a'] }, TVs).loi, /thành viên/);
+  assert.strictEqual(L.kiemTraFileLog({ coMau: true, tenFile: 'Log T10', nguoi: ['an'], buoi: ['Buổi 1'] }, TVs).loi, '');
+  assert.match(L.kiemTraFileLog({ coMau: true, tenFile: 'x', nguoi: ['an'], buoi: [' '] }, TVs).loi, /chưa đặt tên/);
+  assert.match(L.kiemTraFileLog({ coMau: true, tenFile: 'x', nguoi: [], buoi: ['a'] }, TVs).loi, /thành viên/);
+  assert.match(L.kiemTraFileLog({ tenFile: 'Log T10', nguoi: ['an'], buoi: ['Buổi 1'] }, TVs).loi, /file mẫu/);
 });
