@@ -193,7 +193,19 @@ function khoiTaoCoSoDuLieu() {
   if (macDinh && macDinh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(macDinh);
 }
 
+/** Bản cập nhật thêm tab hoặc cột mới thì tự thêm vào sheet ở lần dùng đầu tiên, không cần ai mở menu. */
+var DA_KIEM_TRA_BANG_ = false;
+function damBaoCauTrucBang() {
+  if (DA_KIEM_TRA_BANG_) return;
+  DA_KIEM_TRA_BANG_ = true;
+  var mau = JSON.stringify(BANG), kho = PropertiesService.getScriptProperties();
+  if (kho.getProperty('CauTrucBang') === mau) return;
+  khoiTaoCoSoDuLieu();
+  kho.setProperty('CauTrucBang', mau);
+}
+
 function bangDuLieu(ten) {
+  damBaoCauTrucBang();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(ten);
   if (!sh && BANG[ten]) { khoiTaoCoSoDuLieu(); sh = ss.getSheetByName(ten); } // tab mới thêm ở bản cập nhật
