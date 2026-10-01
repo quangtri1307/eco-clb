@@ -9,7 +9,8 @@
 </head>
 <body>
 <div id="app"></div>
-<script>window.ECO_GOOGLE_CLIENT_ID = <?!= JSON.stringify(googleClientId || '') ?>;</script>
+<script>window.ECO_LOGO = <?!= JSON.stringify(include('LogoDesk').trim()) ?>;
+window.ECO_GOOGLE_CLIENT_ID = <?!= JSON.stringify(googleClientId || '') ?>;</script>
 <?!= include('DeskChung') ?>
 <?!= include('DeskViec') ?>
 <?!= include('DeskMail') ?>

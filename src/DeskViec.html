@@ -278,7 +278,7 @@ VIEWS.gopy = function () {
   goiPhien('layGopY').then(function (ds) {
     if (page !== 'gopy') return;
     $('#main').innerHTML = '<div class="head"><div><h2>Góp ý ẩn danh</h2><p class="lead">Gửi từ ECOBoard, không có tên người gửi. Bấm vào góp ý mới để đánh dấu đã đọc. Mail báo góp ý mới bật hoặc tắt trong Cài đặt.</p></div></div>' +
-      '<div style="display:grid;gap:10px;max-width:820px">' + (ds.length ? ds.map(function (g) {
+      '<div style="display:grid;gap:10px">' + (ds.length ? ds.map(function (g) {
         return '<div class="card" ' + (g.daDoc ? '' : 'data-doc="' + g.thoiGian + '" style="cursor:pointer;border-left:4px solid var(--info)"') + '><div class="row sb"><span class="hint">' + ngayDayDu(g.thoiGian) + '</span>' + (g.daDoc ? '<span class="pill p-mute">Đã đọc</span>' : '<span class="pill p-info">Mới</span>') + '</div><p style="margin:6px 0 0;white-space:pre-wrap">' + esc(g.noiDung) + '</p></div>';
       }).join('') : rong(ic('chat') + 'Chưa có góp ý nào.')) + '</div>';
     $$('[data-doc]').forEach(function (c) {
@@ -314,13 +314,13 @@ VIEWS.caidat = function () {
   if (sub) {
     var g = SET.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
     var it = g[1].filter(function (x) { return x[0] === sub; })[0];
-    $('#main').innerHTML = '<div><button class="back" id="back">' + ic('left', 16) + 'Cài đặt</button><div class="crumb" style="margin-top:6px">' + g[0] + '</div><h2 style="margin:0;font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px;max-width:860px"></div>';
+    $('#main').innerHTML = '<div><button class="back" id="back">' + ic('left', 16) + 'Cài đặt</button><div class="crumb" style="margin-top:6px">' + g[0] + '</div><h2 style="margin:0;font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px"></div>';
     $('#back').onclick = function () { sub = null; VIEWS.caidat(); };
     SUB[sub]();
     return;
   }
   $('#main').innerHTML = '<div class="head"><div><h2>Cài đặt</h2><p class="lead">Mọi thành viên ban điều hành đều sửa được. Không cần mở sheet hay sửa code.</p></div></div>' +
-    '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="sq" placeholder="Tìm trong cài đặt, ví dụ: mật khẩu, điểm, ghim…" aria-label="Tìm trong cài đặt"></div><div id="slists" style="display:grid;gap:14px;max-width:760px"></div>';
+    '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="sq" placeholder="Tìm trong cài đặt, ví dụ: mật khẩu, điểm, ghim…" aria-label="Tìm trong cài đặt"></div><div id="slists" style="display:grid;gap:14px"></div>';
   var ve = function (q) {
     q = boDau(q || '');
     var html = SET.map(function (g) {
@@ -384,7 +384,7 @@ var SUB = {
   due: function () {
     var opts = [0, 1, 2, 3, 5, 7];
     if (opts.indexOf(CD.sapDenHanNgay) < 0) opts.push(CD.sapDenHanNgay);
-    $('#subbody').innerHTML = '<div class="card form" style="max-width:440px"><label class="f">Task được coi là “sắp đến hạn” khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label><div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></div>';
+    $('#subbody').innerHTML = '<div class="card form"><label class="f">Task được coi là “sắp đến hạn” khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label><div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></div>';
     $('#save').onclick = function () { luuVa($('#save'), $('#m'), 'luuSapDenHan', [Number($('#dd').value)]); };
   },
   zalo: function () {
@@ -441,7 +441,7 @@ var SUB = {
   mailcfg: function () {
     $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
     goiPhien('layCaiDatMail').then(function (m) {
-      $('#subbody').innerHTML = '<form class="card form" id="mc" style="max-width:600px"><p class="hint" style="margin:0">Thư gửi đi từ: <b>' + esc(m.emailClb) + '</b></p>' +
+      $('#subbody').innerHTML = '<form class="card form" id="mc"><p class="hint" style="margin:0">Thư gửi đi từ: <b>' + esc(m.emailClb) + '</b></p>' +
         '<label class="f">Tên người gửi hiển thị <small>Ví dụ: CLB ECO. Bỏ trống để dùng tên của tài khoản Google</small><input type="text" id="mc-t" maxlength="100" value="' + esc(m.tenNguoiGui) + '"></label>' +
         '<label class="f">Ứng cử viên được xem<select id="mc-u"><option value="tatca"' + (m.cheDoUcv === 'tatca' ? ' selected' : '') + '>Toàn bộ hộp thư CLB</option><option value="rieng"' + (m.cheDoUcv === 'rieng' ? ' selected' : '') + '>Chỉ thư do chính mình gửi (và thư trả lời)</option></select></label>' +
         '<div class="row"><button class="btn sm" id="mc-b">Lưu</button><span id="m"></span></div></form>';
