@@ -24,6 +24,7 @@ src/            Mã chạy trên Google Apps Script (chép nguyên vào trình s
   Desk.gs       Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
   Zalo.gs       Nhắc việc qua bot Zalo
   Mail.gs       Mail: hộp thư ứng cử viên, BOD duyệt, thư mẫu, gửi hàng loạt, hẹn giờ
+  BaoCao.gs     Báo cáo, xuất Excel và tạo file đăng ký log
   Desk.html     Giao diện ECODesk
   appsscript.json  Cấu hình dự án Apps Script
 tests/          Kiểm thử tự động cho Logic.gs (chạy: npm test)
