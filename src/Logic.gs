@@ -33,7 +33,11 @@ var BANG = {
   TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao'],
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
-  KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi']
+  KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
+  ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet'],
+  ThuMau: ['ThoiGianTao', 'ThuMuc', 'TieuDe', 'NoiDung', 'NguoiSua', 'ThoiGianSua'],
+  DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
+  LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua']
 };
 
 /** Ba kiểu tải danh sách thành viên ở phần hậu kỳ. */
@@ -236,9 +240,9 @@ function taiKhoanBodCanCo(thanhVien) {
 
 /** Chức năng mỗi vai trò được dùng. */
 var QUYEN = {
-  BOD: ['congdiem', 'task', 'mail', 'baocao', 'gopy', 'log', 'caidat'],
+  BOD: ['congdiem', 'task', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat'],
   HR: ['task'],
-  UCV: ['mail']
+  UCV: ['mail', 'hopthu']
 };
 
 function coQuyen(vaiTro, chucNang) {
@@ -453,6 +457,140 @@ function timMaTrongTin(tin, dsMa) {
   return '';
 }
 
+/* ===================== Mail ===================== */
+
+/** Các thao tác ứng cử viên được đề nghị. Mọi thao tác làm thay đổi hộp thư đều chờ BOD duyệt. */
+var THAO_TAC_MAIL = {
+  SOAN: 'Soạn thư mới', TRA_LOI: 'Trả lời', TRA_LOI_TAT_CA: 'Trả lời tất cả', CHUYEN_TIEP: 'Chuyển tiếp',
+  LUU_TRU: 'Lưu trữ', VE_HOP_THU: 'Chuyển về hộp thư đến', XOA: 'Chuyển vào thùng rác',
+  GAN_NHAN: 'Gắn nhãn', BO_NHAN: 'Bỏ nhãn', THU_RAC: 'Báo cáo thư rác'
+};
+var TRANG_THAI_VIEC = { NHAP: 'Nháp', CHO: 'Chờ duyệt', DUYET: 'Đã duyệt', SUA: 'Cần sửa lại', TU_CHOI: 'Từ chối', LOI: 'Lỗi khi thực hiện' };
+
+function emailHopLe(e) {
+  return /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]+$/.test(String(e || '').trim());
+}
+
+/** Tách chuỗi nhiều email (phẩy, chấm phẩy, xuống dòng, khoảng trắng). Trả về { ds, sai }. Bỏ trùng. */
+function tachEmail(chuoi) {
+  var ds = [], sai = [], daCo = {};
+  String(chuoi || '').split(/[\s,;]+/).forEach(function (x) {
+    var m = /<([^>]+)>/.exec(x);
+    var e = (m ? m[1] : x).trim().replace(/^mailto:/i, '');
+    if (!e) return;
+    if (!emailHopLe(e)) { sai.push(e); return; }
+    var k = e.toLowerCase();
+    if (!daCo[k]) { daCo[k] = true; ds.push(e); }
+  });
+  return { ds: ds, sai: sai };
+}
+
+/** Kiểm tra một việc mail của ứng cử viên. Trả về '' nếu hợp lệ. */
+function kiemTraViecMail(v) {
+  v = v || {};
+  var tt = v.thaoTac;
+  var hopLe = Object.keys(THAO_TAC_MAIL).some(function (k) { return THAO_TAC_MAIL[k] === tt; });
+  if (!hopLe) return 'Thao tác không hợp lệ.';
+  if (tt !== THAO_TAC_MAIL.SOAN && !v.maThu) return 'Thiếu thư cần thao tác.';
+  if (tt === THAO_TAC_MAIL.SOAN || tt === THAO_TAC_MAIL.CHUYEN_TIEP) {
+    var den = tachEmail(v.den);
+    if (den.sai.length) return 'Email chưa đúng: ' + den.sai.join(', ');
+    if (!den.ds.length) return 'Bạn chưa nhập người nhận.';
+  }
+  var cc = tachEmail(v.cc), bcc = tachEmail(v.bcc);
+  if (cc.sai.length || bcc.sai.length) return 'Email chưa đúng: ' + cc.sai.concat(bcc.sai).join(', ');
+  if (tt === THAO_TAC_MAIL.SOAN && !String(v.tieuDe || '').trim()) return 'Bạn chưa nhập tiêu đề.';
+  if ((tt === THAO_TAC_MAIL.SOAN || tt === THAO_TAC_MAIL.TRA_LOI || tt === THAO_TAC_MAIL.TRA_LOI_TAT_CA) && !String(v.noiDung || '').trim()) return 'Bạn chưa nhập nội dung.';
+  if ((tt === THAO_TAC_MAIL.GAN_NHAN || tt === THAO_TAC_MAIL.BO_NHAN) && !String(v.nhan || '').trim()) return 'Bạn chưa chọn nhãn.';
+  if (String(v.tieuDe || '').length > 250) return 'Tiêu đề dài quá 250 ký tự.';
+  if (String(v.noiDung || '').length > 40000) return 'Nội dung dài quá.';
+  return '';
+}
+
+/** Các chỗ {TenCot} có trong thư mẫu, theo thứ tự xuất hiện, không trùng. */
+function timChoTrong(chu) {
+  var ds = [], re = /\{([^{}\n]{1,60})\}/g, m;
+  while ((m = re.exec(String(chu || '')))) if (ds.indexOf(m[1]) < 0) ds.push(m[1]);
+  return ds;
+}
+
+/**
+ * Thay {TenCot} bằng giá trị của người nhận. So khớp tên cột không phân biệt hoa thường, dấu và khoảng trắng.
+ * Trả về { chu, thieu[] } với thieu là các chỗ không có cột tương ứng (giữ nguyên trong thư).
+ */
+function thayTheMau(chu, duLieu) {
+  var theoKhoa = {};
+  Object.keys(duLieu || {}).forEach(function (k) { theoKhoa[chuanHoaTenCot(k)] = duLieu[k]; });
+  var thieu = [];
+  var kq = String(chu || '').replace(/\{([^{}\n]{1,60})\}/g, function (toan, ten) {
+    var k = chuanHoaTenCot(ten);
+    if (Object.prototype.hasOwnProperty.call(theoKhoa, k)) return String(theoKhoa[k] == null ? '' : theoKhoa[k]);
+    if (thieu.indexOf(ten) < 0) thieu.push(ten);
+    return toan;
+  });
+  return { chu: kq, thieu: thieu };
+}
+
+/** Đổi thư chữ thường sang HTML đơn giản (giữ xuống dòng, link bấm được). */
+function chuSangHtml(chu) {
+  var e = String(chu || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  e = e.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
+  return '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">' + e.replace(/\r?\n/g, '<br>') + '</div>';
+}
+
+/**
+ * Đọc bảng từ một sheet bất kỳ (dòng tiêu đề đầu tiên có chữ). Trả về { cot[], dong[{...}], cotEmail }.
+ * cotEmail là cột đoán là email (tên có chữ "email"/"mail", hoặc cột có nhiều email nhất).
+ */
+function docBangNgoai(giaTri) {
+  var v = giaTri || [];
+  var h = 0;
+  while (h < v.length && h < 10 && !v[h].some(function (c) { return String(c).trim(); })) h++;
+  if (h >= v.length) return { cot: [], dong: [], cotEmail: '' };
+  var cot = v[h].map(function (c, i) { return String(c).trim() || ('Cột ' + (i + 1)); });
+  var dong = [];
+  for (var r = h + 1; r < v.length; r++) {
+    if (!v[r].some(function (c) { return String(c).trim(); })) continue;
+    var o = {};
+    cot.forEach(function (c, i) { o[c] = v[r][i] instanceof Date ? v[r][i] : String(v[r][i] == null ? '' : v[r][i]).trim(); });
+    dong.push(o);
+  }
+  var cotEmail = cot.filter(function (c) { return /e-?mail|mail/.test(boDau(c).toLowerCase()); })[0] || '';
+  if (!cotEmail) {
+    var tot = 0;
+    cot.forEach(function (c) {
+      var n = dong.filter(function (d) { return emailHopLe(d[c]); }).length;
+      if (n > tot) { tot = n; cotEmail = c; }
+    });
+  }
+  return { cot: cot, dong: dong, cotEmail: cotEmail };
+}
+
+/**
+ * Chuẩn bị danh sách gửi hàng loạt. nguoiNhan: [{ email, duLieu{} }].
+ * Trả về { ds[{email, tieuDe, noiDung}], loi } — báo lỗi nếu email sai, thiếu cột, hay vượt giới hạn.
+ */
+function chuanBiGuiHangLoat(tieuDe, noiDung, nguoiNhan, gioiHan) {
+  if (!String(tieuDe || '').trim()) return { ds: [], loi: 'Thư chưa có tiêu đề.' };
+  if (!String(noiDung || '').trim()) return { ds: [], loi: 'Thư chưa có nội dung.' };
+  var ds = [], daCo = {}, thieu = [], sai = [];
+  (nguoiNhan || []).forEach(function (n) {
+    var e = String(n.email || '').trim();
+    if (!emailHopLe(e)) { sai.push(e || '(trống)'); return; }
+    if (daCo[e.toLowerCase()]) return;
+    daCo[e.toLowerCase()] = true;
+    var d = n.duLieu || {};
+    var a = thayTheMau(tieuDe, d), b = thayTheMau(noiDung, d);
+    a.thieu.concat(b.thieu).forEach(function (t) { if (thieu.indexOf(t) < 0) thieu.push(t); });
+    ds.push({ email: e, tieuDe: a.chu, noiDung: b.chu });
+  });
+  if (sai.length) return { ds: [], loi: 'Có ' + sai.length + ' email chưa đúng: ' + sai.slice(0, 5).join(', ') + (sai.length > 5 ? '…' : '') };
+  if (thieu.length) return { ds: [], loi: 'Không tìm thấy thông tin cho: ' + thieu.map(function (t) { return '{' + t + '}'; }).join(', ') + '. Sửa thư hoặc chọn nguồn có cột tương ứng.' };
+  if (!ds.length) return { ds: [], loi: 'Chưa có người nhận nào.' };
+  if (gioiHan != null && ds.length > gioiHan) return { ds: [], loi: 'Gửi ' + ds.length + ' thư nhưng hôm nay tài khoản CLB chỉ còn gửi được ' + gioiHan + ' thư. Bớt người nhận hoặc hẹn giờ sang ngày mai.' };
+  return { ds: ds, loi: '' };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
@@ -464,6 +602,9 @@ if (typeof module !== 'undefined') {
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe, soNgayGiua: soNgayGiua, hienNgay: hienNgay,
     trangThaiTask: trangThaiTask, kiemTraTask: kiemTraTask, taoDongTask: taoDongTask, chonTaskCanNhac: chonTaskCanNhac,
-    moTaHan: moTaHan, soanTinNhac: soanTinNhac, chiaTin: chiaTin, timMaTrongTin: timMaTrongTin
+    moTaHan: moTaHan, soanTinNhac: soanTinNhac, chiaTin: chiaTin, timMaTrongTin: timMaTrongTin,
+    THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe, tachEmail: tachEmail,
+    kiemTraViecMail: kiemTraViecMail, timChoTrong: timChoTrong, thayTheMau: thayTheMau, chuSangHtml: chuSangHtml,
+    docBangNgoai: docBangNgoai, chuanBiGuiHangLoat: chuanBiGuiHangLoat
   };
 }

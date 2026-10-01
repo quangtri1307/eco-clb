@@ -20,6 +20,7 @@ Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw fi
 | `src/Desk.gs` | Bấm **+ → Tập lệnh**, đặt tên `Desk` |
 | `src/Desk.html` | Bấm **+ → HTML**, đặt tên `Desk` |
 | `src/Zalo.gs` | Bấm **+ → Tập lệnh**, đặt tên `Zalo` |
+| `src/Mail.gs` | Bấm **+ → Tập lệnh**, đặt tên `Mail` |
 | `src/appsscript.json` | Bấm **Cài đặt dự án** (bánh răng) → bật **Hiển thị tệp kê khai "appsscript.json"**, quay lại trình soạn, mở `appsscript.json` và dán đè |
 
 Bấm biểu tượng **Lưu** (đĩa mềm).
@@ -43,7 +44,7 @@ Bấm biểu tượng **Lưu** (đĩa mềm).
 
 Chép lại các file đã thay đổi như bước 2, lưu, rồi vào **Triển khai → Quản lý các lần triển khai → biểu tượng bút chì → Phiên bản: Phiên bản mới → Triển khai**. Link ECOBoard giữ nguyên.
 
-Nếu bản mới cần thêm quyền (ví dụ bản có bot Zalo cần quyền gửi yêu cầu ra ngoài và chạy theo lịch), hãy cấp lại quyền một lần: trong Apps Script chọn hàm `khoiTaoCoSoDuLieu` ở thanh trên cùng, bấm **Chạy**, rồi **Cho phép** như bước 3.
+Nếu bản mới cần thêm quyền (ví dụ bản có bot Zalo cần quyền gửi yêu cầu ra ngoài và chạy theo lịch, bản có Mail cần quyền đọc và gửi Gmail, lưu tệp vào Drive), hãy cấp lại quyền một lần: trong Apps Script chọn hàm `khoiTaoCoSoDuLieu` ở thanh trên cùng, bấm **Chạy**, rồi **Cho phép** như bước 3.
 
 ## Bật nhắc việc qua Zalo
 

@@ -163,6 +163,13 @@ svg text{fill:var(--muted);font-family:var(--f-body);font-size:11px}
 .top{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 [hidden]{display:none!important}
 #subbody{display:grid;gap:14px}
+.chimobile{display:none}
+@media (max-width:780px){
+  .chimobile{display:inline-flex}
+  .mail.doc .mlist,.mail.doc .folders{display:none}
+  .mail:not(.doc) .mread{display:none}
+  .mail{min-height:0}
+}
 body{margin:0}
 </style>
 
@@ -239,7 +246,7 @@ function shell() {
   if (!NGUOI) { $('#app').innerHTML = loginView(); bindLogin(); return; }
   var items = flat();
   if (!page || (page !== 'matkhau' && !items.some(function (x) { return x[0] === page; }))) page = items[0][0];
-  var badge = function (k) { return k === 'gopy' && soGopYMoi ? '<span class="badge">' + soGopYMoi + '</span>' : ''; };
+  var badge = function (k) { var n = k === 'gopy' ? soGopYMoi : k === 'mail' ? soViecCho : 0; return n ? '<span class="badge">' + n + '</span>' : ''; };
   var bot = BOTTOM[NGUOI.vaiTro].map(function (k) { return items.filter(function (x) { return x[0] === k; })[0]; });
   var coThem = items.length > bot.length;
   $('#app').innerHTML = '<div class="top"><div class="logo" aria-label="Logo ECODesk">LOGO<br>DESK</div><h1>ECODesk</h1></div>' +
@@ -289,7 +296,19 @@ function bindLogin() {
 }
 function demGopYMoi() {
   if (!NGUOI || NGUOI.vaiTro !== 'BOD') return;
-  goiPhien('layGopY').then(function (ds) { soGopYMoi = ds.filter(function (g) { return !g.daDoc; }).length; if (soGopYMoi) shell(); }).catch(function () {});
+  goiPhien('layGopY').then(function (ds) { soGopYMoi = ds.filter(function (g) { return !g.daDoc; }).length; capNhatHuyHieu(); }).catch(function () {});
+  goiPhien('demViecChoDuyet').then(function (n) { soViecCho = n; capNhatHuyHieu(); }).catch(function () {});
+}
+/** Cập nhật số trên menu mà không vẽ lại trang. */
+function capNhatHuyHieu() {
+  [['gopy', soGopYMoi], ['mail', soViecCho]].forEach(function (x) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-p="' + x[0] + '"]'), function (b) {
+      var c = b.querySelector('.badge');
+      if (!x[1]) { if (c) c.remove(); return; }
+      if (!c) { c = document.createElement('span'); c.className = 'badge'; b.appendChild(c); }
+      c.textContent = x[1];
+    });
+  });
 }
 
 /* ---------- Chọn người (dùng chung) ---------- */
@@ -452,6 +471,465 @@ VIEWS.task = function () {
   }).catch(loiTai);
 };
 
+/* ---------- Mail (dùng chung) ---------- */
+var TT_VIEC = { 'Nháp': 'p-mute', 'Chờ duyệt': 'p-warn', 'Đã duyệt': 'p-ok', 'Cần sửa lại': 'p-bad', 'Từ chối': 'p-mute', 'Lỗi khi thực hiện': 'p-bad' };
+function khungThu(html) {
+  var doc = '<base target="_blank"><style>body{font-family:Arial,sans-serif;font-size:14px;margin:0;word-break:break-word;color:#1b2416;background:#fff}img{max-width:100%;height:auto}</style>' + html;
+  return '<iframe class="mbody" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="' + esc(doc) + '" style="width:100%;border:1px solid var(--line);border-radius:8px;min-height:120px;background:#fff" onload="try{this.style.height=(this.contentDocument.body.scrollHeight+28)+\'px\'}catch(e){}"></iframe>';
+}
+function kichThuoc(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function veLuong(l, coTai) {
+  return '<h3>' + esc(l.tieuDe) + '</h3><div class="row">' + l.nhan.map(function (n) { return '<span class="pill p-info">' + esc(n) + '</span>'; }).join('') + (l.trongThungRac ? '<span class="pill p-mute">Thùng rác</span>' : '') + (l.laThuRac ? '<span class="pill p-bad">Thư rác</span>' : '') + '</div>' +
+    l.thu.map(function (m) {
+      return '<div style="display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px"><div class="row" style="justify-content:space-between"><b style="font-size:13px">' + esc(m.tu) + '</b><span class="hint">' + ngayDayDu(m.ngay) + '</span></div><div class="hint">Tới: ' + esc(m.den) + (m.cc ? ' · Cc: ' + esc(m.cc) : '') + '</div>' + khungThu(m.html) +
+        (m.dinhKem.length ? '<div class="row">' + m.dinhKem.map(function (a, i) { return coTai ? '<button class="btn ghost sm" data-tai="' + esc(m.ma) + '" data-i="' + i + '">' + ic('file', 14) + esc(a.ten) + ' · ' + kichThuoc(a.kichThuoc) + '</button>' : '<span class="pill p-mute">' + esc(a.ten) + '</span>'; }).join('') + '</div>' : '') + '</div>';
+    }).join('');
+}
+function ganTaiDinhKem(maThu, msg) {
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tai]'), function (b) {
+    b.onclick = function () {
+      b.disabled = true;
+      goiPhien('taiDinhKem', maThu, b.getAttribute('data-tai'), Number(b.getAttribute('data-i'))).then(function (f) {
+        b.disabled = false;
+        var bin = atob(f.base64), arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([arr], { type: f.loai })); a.download = f.ten;
+        document.body.appendChild(a); a.click(); a.remove();
+      }).catch(function (err) { b.disabled = false; thongBao(msg(), 'loi', err.message); });
+    };
+  });
+}
+function docTep(input) {
+  return Promise.all(Array.prototype.map.call(input.files || [], function (f) {
+    return new Promise(function (ok, loi) {
+      if (f.size > 10 * 1048576) { loi(new Error('Tệp "' + f.name + '" lớn hơn 10MB.')); return; }
+      var r = new FileReader();
+      r.onload = function () { ok({ ten: f.name, loai: f.type || 'application/octet-stream', base64: String(r.result).split(',')[1] || '' }); };
+      r.onerror = function () { loi(new Error('Không đọc được tệp ' + f.name)); };
+      r.readAsDataURL(f);
+    });
+  }));
+}
+VIEWS.mail = function () { if (NGUOI.vaiTro === 'BOD') mailBOD(); else mailUCV(); };
+
+/* ---------- Mail của ứng cử viên ---------- */
+function mailUCV() {
+  var M = { thuMuc: 'Hộp thư đến', tim: '', batDau: 0, ds: [], coThem: false, nhan: [], cheDo: 'tatca', sel: null, viec: [], mo: false };
+  var THU_MUC = ['Hộp thư đến', 'Đã gửi', 'Lưu trữ', 'Thư rác', 'Thùng rác'];
+  $('#main').innerHTML = '<div><h2>Mail</h2><p class="lead">Hộp thư của tài khoản CLB. Đọc thư thoải mái; còn gửi, trả lời, chuyển tiếp, lưu trữ, gắn nhãn, xoá… sẽ chờ BOD duyệt rồi mới thực hiện.</p></div><div class="mail" id="mail"><div class="folders" id="mf"></div><div class="mlist" id="ml"></div><div class="mread" id="mr"></div></div>';
+  var msg = function () { return $('#mrm'); };
+  var veThuMuc = function () {
+    var soSua = M.viec.filter(function (v) { return v.trangThai === 'Cần sửa lại' || v.trangThai === 'Lỗi khi thực hiện'; }).length;
+    var muc = M.cheDo === 'rieng' ? ['Thư của tôi'] : THU_MUC.concat(M.nhan);
+    $('#mf').innerHTML = '<button class="btn" data-soan="1">' + ic('edit', 16) + 'Soạn thư</button>' +
+      muc.map(function (x, i) { return '<button class="nav" data-mf="' + esc(x) + '"' + (x === M.thuMuc ? ' aria-current="page"' : '') + '>' + (i >= THU_MUC.length ? ic('folder', 16) : '') + esc(x) + '</button>'; }).join('') +
+      '<button class="nav" data-mf="Việc của tôi"' + (M.thuMuc === 'Việc của tôi' ? ' aria-current="page"' : '') + '>' + ic('check', 16) + 'Việc của tôi' + (soSua ? '<span class="badge">' + soSua + '</span>' : '') + '</button>';
+    $('#mf').querySelector('[data-soan]').onclick = function () { soan({ thaoTac: 'Soạn thư mới' }); };
+    Array.prototype.forEach.call($('#mf').querySelectorAll('[data-mf]'), function (b) {
+      b.onclick = function () { M.thuMuc = b.getAttribute('data-mf'); M.batDau = 0; M.tim = ''; M.sel = null; M.mo = false; veThuMuc(); taiDs(); };
+    });
+  };
+  var moDoc = function (co) { M.mo = co; $('#mail').classList.toggle('doc', co); };
+  var nutVe = '<button class="back chimobile" data-ve="1">' + ic('left', 16) + 'Danh sách</button>';
+  var ganVe = function () { var b = $('#mr').querySelector('[data-ve]'); if (b) b.onclick = function () { moDoc(false); }; };
+
+  var taiDs = function (them) {
+    if (M.thuMuc === 'Việc của tôi') { veViec(); return; }
+    if (!them) $('#ml').innerHTML = '<p class="muted" style="padding:12px">Đang tải…</p>';
+    goiPhien('layHopThu', M.thuMuc, M.tim, M.batDau).then(function (d) {
+      M.cheDo = d.cheDo; M.nhan = d.nhan; M.coThem = d.coThem;
+      if (d.cheDo === 'rieng' && M.thuMuc !== 'Thư của tôi') { M.thuMuc = 'Thư của tôi'; }
+      M.ds = them ? M.ds.concat(d.ds) : d.ds;
+      veThuMuc(); veDs();
+      if (!M.sel && !$('#mr').innerHTML) $('#mr').innerHTML = '<p class="muted">Chọn một thư để đọc.</p>';
+    }).catch(function (err) { $('#ml').innerHTML = '<p class="err" style="padding:12px">' + esc(err.message) + '</p>'; });
+  };
+  var veDs = function () {
+    $('#ml').innerHTML = '<div style="padding:8px;border-bottom:1px solid var(--line)"><input type="search" id="mq" value="' + esc(M.tim) + '" placeholder="Tìm thư…" aria-label="Tìm thư"></div>' +
+      (M.ds.length ? M.ds.map(function (t) {
+        return '<button class="mi" data-mi="' + esc(t.ma) + '"' + (t.ma === M.sel ? ' aria-current="true"' : '') + '><div class="t1"><b' + (t.chuaDoc ? '' : ' style="font-weight:500"') + '>' + esc(t.tu.replace(/<.*>/, '').trim() || t.tu) + (t.soThu > 1 ? ' <span class="hint">' + t.soThu + '</span>' : '') + '</b><span class="d">' + ngayGio(t.ngay) + '</span></div><span class="s"' + (t.chuaDoc ? ' style="font-weight:700"' : '') + '>' + esc(t.tieuDe) + '</span><span class="s hint">' + esc(t.doan) + '</span></button>';
+      }).join('') : '<p class="muted" style="padding:12px">Không có thư nào.</p>') +
+      (M.coThem ? '<div style="padding:8px"><button class="btn ghost sm" id="mmore">Xem thêm</button></div>' : '');
+    var q = $('#mq'), hen = null;
+    q.onkeydown = function (e) { if (e.key === 'Enter') { M.tim = q.value.trim(); M.batDau = 0; taiDs(); } };
+    q.oninput = function () { clearTimeout(hen); if (M.cheDo === 'rieng') hen = setTimeout(function () { M.tim = q.value.trim(); taiDs(); }, 300); };
+    if ($('#mmore')) $('#mmore').onclick = function () { M.batDau += 30; taiDs(true); };
+    Array.prototype.forEach.call($('#ml').querySelectorAll('[data-mi]'), function (b) {
+      b.onclick = function () { M.sel = b.getAttribute('data-mi'); Array.prototype.forEach.call($('#ml').querySelectorAll('.mi'), function (x) { x.setAttribute('aria-current', x === b); }); docLuong(M.sel); };
+    });
+  };
+  var docLuong = function (ma) {
+    moDoc(true);
+    $('#mr').innerHTML = nutVe + '<p class="muted">Đang mở thư…</p>'; ganVe();
+    goiPhien('docLuongThu', ma).then(function (l) {
+      if (M.sel !== ma) return;
+      var T = function (k, nhan, kieu) { return '<button class="btn ' + (kieu || 'ghost') + ' sm" data-tt="' + k + '">' + nhan + '</button>'; };
+      $('#mr').innerHTML = nutVe + veLuong(l, true) +
+        '<div class="row" style="border-top:1px solid var(--line);padding-top:10px">' + T('Trả lời', 'Trả lời', ' ') + T('Trả lời tất cả', 'Trả lời tất cả') + T('Chuyển tiếp', 'Chuyển tiếp') +
+        (l.trongHopThu ? T('Lưu trữ', 'Lưu trữ') : T('Chuyển về hộp thư đến', 'Về hộp thư đến')) + T('Gắn nhãn', 'Gắn nhãn') + (l.nhan.length ? T('Bỏ nhãn', 'Bỏ nhãn') : '') +
+        (l.trongThungRac ? '' : T('Chuyển vào thùng rác', 'Xoá')) + (l.laThuRac ? '' : T('Báo cáo thư rác', 'Thư rác')) + '</div><div id="mx"></div><p class="hint" style="margin:0">Mỗi nút tạo một việc gửi BOD duyệt.</p><span id="mrm"></span>';
+      ganVe(); ganTaiDinhKem(ma, msg);
+      Array.prototype.forEach.call($('#mr').querySelectorAll('[data-tt]'), function (b) {
+        b.onclick = function () {
+          var tt = b.getAttribute('data-tt');
+          if (tt === 'Trả lời' || tt === 'Trả lời tất cả' || tt === 'Chuyển tiếp') { soan({ thaoTac: tt, maThu: ma, tieuDeThu: l.tieuDe, tieuDe: tt === 'Chuyển tiếp' ? 'Fwd: ' + l.tieuDe : '' }); return; }
+          var nhanHtml = tt === 'Gắn nhãn' ? '<input type="text" id="mxn" list="mxl" placeholder="Tên nhãn, có sẵn hoặc mới"><datalist id="mxl">' + M.nhan.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>'
+            : tt === 'Bỏ nhãn' ? '<select id="mxn">' + l.nhan.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</select>' : '';
+          $('#mx').innerHTML = '<div class="box"><b>' + esc(tt) + '</b>' + nhanHtml + '<div class="row"><button class="btn sm" id="mxg">Gửi BOD duyệt</button><button class="btn ghost sm" id="mxh">Thôi</button></div></div>';
+          $('#mxh').onclick = function () { $('#mx').innerHTML = ''; };
+          $('#mxg').onclick = function () {
+            $('#mxg').disabled = true;
+            goiPhien('luuViecMail', { thaoTac: tt, maThu: ma, nhan: $('#mxn') ? $('#mxn').value : '' }, true, null).then(function () {
+              $('#mx').innerHTML = ''; thongBao(msg(), 'ok', 'Đã gửi BOD duyệt: ' + tt); napViec();
+            }).catch(function (err) { $('#mxg').disabled = false; thongBao(msg(), 'loi', err.message); });
+          };
+        };
+      });
+    }).catch(function (err) { $('#mr').innerHTML = nutVe + '<p class="err">' + esc(err.message) + '</p>'; ganVe(); });
+  };
+
+  /* Soạn thư, trả lời, chuyển tiếp (kể cả sửa việc nháp hoặc cần sửa lại) */
+  var soan = function (v, thoiGianCu) {
+    moDoc(true);
+    var coNguoiNhan = v.thaoTac === 'Soạn thư mới' || v.thaoTac === 'Chuyển tiếp';
+    var coTieuDe = coNguoiNhan;
+    $('#mr').innerHTML = nutVe + '<form class="form" id="cf"><h3 style="margin:0">' + esc(v.thaoTac) + (v.tieuDeThu ? ': ' + esc(v.tieuDeThu) : '') + '</h3>' +
+      (v.ghiChu ? '<div class="box"><b>Ghi chú của BOD</b><span style="white-space:pre-wrap">' + esc(v.ghiChu) + '</span></div>' : '') +
+      (coNguoiNhan ? '<label class="f">Tới <small>Nhiều email cách nhau bằng dấu phẩy</small><input type="text" id="c-to" value="' + esc(v.den || '') + '"></label>' : '') +
+      '<details' + (v.cc || v.bcc ? ' open' : '') + '><summary class="hint" style="cursor:pointer">Cc, Bcc</summary><div class="grid2" style="margin-top:8px"><label class="f">Cc<input type="text" id="c-cc" value="' + esc(v.cc || '') + '"></label><label class="f">Bcc<input type="text" id="c-bcc" value="' + esc(v.bcc || '') + '"></label></div></details>' +
+      (coTieuDe ? '<label class="f">Tiêu đề<input type="text" id="c-s" maxlength="250" value="' + esc(v.tieuDe || '') + '"></label>' : '') +
+      '<label class="f">Nội dung' + (v.thaoTac === 'Chuyển tiếp' ? ' <small>Không bắt buộc, thư gốc được kèm phía dưới</small>' : '') + '<textarea id="c-b" rows="9">' + esc(v.noiDung || '') + '</textarea></label>' +
+      '<div class="f" style="display:grid;gap:6px"><b style="font-size:13px">Đính kèm <small class="hint">Mỗi tệp tối đa 10MB</small></b>' +
+      (v.dinhKem && v.dinhKem.length ? v.dinhKem.map(function (f) { return '<label class="row" style="font-weight:400"><input type="checkbox" data-giu="' + esc(f.id) + '" checked>' + esc(f.ten) + '</label>'; }).join('') : '') +
+      '<input type="file" id="c-f" multiple></div>' +
+      '<div class="row"><button class="btn" id="c-g">Gửi BOD duyệt</button><button type="button" class="btn ghost" id="c-n">Lưu nháp</button><button type="button" class="btn ghost" id="c-h">Huỷ</button><span id="mrm"></span></div></form>';
+    ganVe();
+    $('#c-h').onclick = function () { moDoc(false); $('#mr').innerHTML = '<p class="muted">Chọn một thư để đọc.</p>'; };
+    var luu = function (guiDuyet, nut) {
+      nut.disabled = true; $('#mrm').innerHTML = '<span class="hint">Đang lưu…</span>';
+      docTep($('#c-f')).then(function (tep) {
+        return goiPhien('luuViecMail', {
+          thaoTac: v.thaoTac, maThu: v.maThu || '', den: $('#c-to') ? $('#c-to').value : '', cc: $('#c-cc').value, bcc: $('#c-bcc').value,
+          tieuDe: $('#c-s') ? $('#c-s').value : '', noiDung: $('#c-b').value,
+          tepGiu: Array.prototype.map.call(document.querySelectorAll('[data-giu]:checked'), function (x) { return x.getAttribute('data-giu'); }), tepMoi: tep
+        }, guiDuyet, thoiGianCu || null);
+      }).then(function () {
+        napViec(); M.thuMuc = 'Việc của tôi'; veThuMuc(); veViec();
+        setTimeout(function () { $('#mr').innerHTML = '<span class="toast">' + (guiDuyet ? 'Đã gửi BOD duyệt' : 'Đã lưu nháp') + '</span>'; }, 50);
+      }).catch(function (err) { nut.disabled = false; thongBao($('#mrm'), 'loi', err.message); });
+    };
+    $('#cf').onsubmit = function (e) { e.preventDefault(); luu(true, $('#c-g')); };
+    $('#c-n').onclick = function () { luu(false, $('#c-n')); };
+  };
+
+  /* Việc của tôi */
+  var napViec = function () { return goiPhien('layViecCuaToi').then(function (ds) { M.viec = ds; veThuMuc(); if (M.thuMuc === 'Việc của tôi') veViec(); }).catch(function () {}); };
+  var veViec = function () {
+    $('#ml').innerHTML = M.viec.length ? M.viec.map(function (v, i) {
+      return '<button class="mi" data-vi="' + i + '"><div class="t1"><b>' + esc(v.thaoTac) + '</b><span class="d">' + ngayGio(v.thoiGian) + '</span></div><span class="s">' + esc(v.tieuDe || v.tieuDeThu || v.den || '') + '</span><span class="pill ' + (TT_VIEC[v.trangThai] || 'p-mute') + '">' + esc(v.trangThai) + '</span></button>';
+    }).join('') : '<p class="muted" style="padding:12px">Bạn chưa có việc nào.</p>';
+    Array.prototype.forEach.call($('#ml').querySelectorAll('[data-vi]'), function (b) {
+      b.onclick = function () {
+        Array.prototype.forEach.call($('#ml').querySelectorAll('.mi'), function (x) { x.setAttribute('aria-current', x === b); });
+        var v = M.viec[Number(b.getAttribute('data-vi'))];
+        var sua = v.trangThai === 'Nháp' || v.trangThai === 'Cần sửa lại';
+        var xoa = sua || v.trangThai === 'Từ chối';
+        moDoc(true);
+        $('#mr').innerHTML = nutVe + '<h3>' + esc(v.thaoTac) + (v.tieuDeThu ? ': ' + esc(v.tieuDeThu) : '') + '</h3><div class="row"><span class="pill ' + (TT_VIEC[v.trangThai] || 'p-mute') + '">' + esc(v.trangThai) + '</span><span class="hint">' + ngayDayDu(v.thoiGian) + (v.nguoiDuyet ? ' · ' + esc(v.nguoiDuyet) + ' xử lý lúc ' + ngayDayDu(v.thoiGianDuyet) : '') + '</span></div>' +
+          (v.den ? '<div class="hint">Tới: ' + esc(v.den) + (v.cc ? ' · Cc: ' + esc(v.cc) : '') + (v.bcc ? ' · Bcc: ' + esc(v.bcc) : '') + '</div>' : '') +
+          (v.nhan ? '<div class="hint">Nhãn: ' + esc(v.nhan) + '</div>' : '') + (v.tieuDe ? '<b>' + esc(v.tieuDe) + '</b>' : '') + (v.noiDung ? '<div class="body">' + esc(v.noiDung) + '</div>' : '') +
+          (v.dinhKem.length ? '<div class="row">' + v.dinhKem.map(function (f) { return '<span class="pill p-mute">' + esc(f.ten) + '</span>'; }).join('') + '</div>' : '') +
+          (v.ghiChu ? '<div class="box"><b>Ghi chú của BOD</b><span style="white-space:pre-wrap">' + esc(v.ghiChu) + '</span></div>' : '') +
+          '<div class="row">' + (sua ? '<button class="btn sm" id="vs">Sửa</button>' : '') + (v.trangThai === 'Nháp' ? '<button class="btn ghost sm" id="vg">Gửi BOD duyệt</button>' : '') + (xoa ? '<button class="btn ghost sm" id="vx">Xoá</button>' : '') + '<span id="mrm"></span></div>';
+        ganVe();
+        if ($('#vs')) $('#vs').onclick = function () { soan(v, v.thoiGian); };
+        if ($('#vg')) $('#vg').onclick = function () { $('#vg').disabled = true; goiPhien('luuViecMail', v, true, v.thoiGian).then(function () { napViec(); $('#mr').innerHTML = '<span class="toast">Đã gửi BOD duyệt</span>'; }).catch(function (err) { $('#vg').disabled = false; thongBao(msg(), 'loi', err.message); }); };
+        if ($('#vx')) $('#vx').onclick = function () {
+          if ($('#vx').getAttribute('data-ok') !== '1') { $('#vx').setAttribute('data-ok', '1'); $('#vx').textContent = 'Bấm lần nữa để xoá'; $('#vx').classList.add('bad'); return; }
+          goiPhien('xoaViecMail', v.thoiGian).then(function () { $('#mr').innerHTML = ''; napViec(); }).catch(function (err) { thongBao(msg(), 'loi', err.message); });
+        };
+      };
+    });
+  };
+  veThuMuc(); taiDs(); napViec();
+}
+
+/* ---------- Mail của BOD ---------- */
+var soViecCho = 0;
+function mailBOD(tabDau, mauDung) {
+  var tab = tabDau || 'duyet';
+  $('#main').innerHTML = '<div class="head"><div><h2>Mail</h2><p class="lead">Mail gửi đi dưới tên tài khoản CLB. Gmail thường chỉ gửi được khoảng 100 người mỗi ngày.</p></div></div>' +
+    '<div class="seg" id="mtab">' + [['duyet', 'Duyệt việc UCV'], ['mau', 'Thư mẫu'], ['hangloat', 'Gửi hàng loạt'], ['lich', 'Đã lên lịch']].map(function (x) {
+      return '<button data-t="' + x[0] + '" aria-pressed="' + (x[0] === tab) + '">' + x[1] + (x[0] === 'duyet' && soViecCho ? ' <span class="pill p-bad">' + soViecCho + '</span>' : '') + '</button>';
+    }).join('') + '</div><div id="mbody" style="display:grid;gap:14px"></div>';
+  var di = function (t, them) { tab = t; Array.prototype.forEach.call(document.querySelectorAll('#mtab button'), function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-t') === t); }); BOD_MAIL[t](them); };
+  $('#mtab').onclick = function (e) { var b = e.target.closest('[data-t]'); if (b) di(b.getAttribute('data-t')); };
+  BOD_MAIL.di = di;
+  di(tab, mauDung);
+}
+var BOD_MAIL = {};
+
+BOD_MAIL.duyet = function () {
+  var loc = 'cho', ds = [], sel = -1;
+  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  var ve = function () {
+    var hien = ds.map(function (v, i) { return [v, i]; }).filter(function (x) { return loc === 'tatca' || x[0].trangThai === 'Chờ duyệt'; });
+    $('#mbody').innerHTML = '<div class="seg" id="dloc" style="justify-self:start"><button data-l="cho" aria-pressed="' + (loc === 'cho') + '">Chờ duyệt</button><button data-l="tatca" aria-pressed="' + (loc === 'tatca') + '">Tất cả</button></div>' +
+      '<div class="mail" id="dmail" style="grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)"><div class="mlist">' +
+      (hien.length ? hien.map(function (x) {
+        var v = x[0];
+        return '<button class="mi" data-di="' + x[1] + '"' + (x[1] === sel ? ' aria-current="true"' : '') + '><div class="t1"><b>' + esc(v.nguoiTao) + '</b><span class="d">' + ngayGio(v.thoiGian) + '</span></div><span class="s">' + esc(v.thaoTac) + ': ' + esc(v.tieuDe || v.tieuDeThu || v.den) + '</span><span class="pill ' + (TT_VIEC[v.trangThai] || 'p-mute') + '">' + esc(v.trangThai) + '</span></button>';
+      }).join('') : '<p class="muted" style="padding:12px">' + (loc === 'cho' ? 'Không có việc nào chờ duyệt.' : 'Chưa có việc nào.') + '</p>') +
+      '</div><div class="mread" id="dr"><p class="muted">Chọn một việc để xem.</p></div></div>';
+    $('#dloc').onclick = function (e) { var b = e.target.closest('[data-l]'); if (b) { loc = b.getAttribute('data-l'); sel = -1; ve(); } };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-di]'), function (b) { b.onclick = function () { sel = Number(b.getAttribute('data-di')); ve(); chiTiet(ds[sel]); }; });
+    if (sel >= 0 && ds[sel]) chiTiet(ds[sel]);
+  };
+  var chiTiet = function (v) {
+    $('#dmail').classList.add('doc');
+    $('#dr').innerHTML = '<button class="back chimobile" id="dve">' + ic('left', 16) + 'Danh sách</button><h3>' + esc(v.thaoTac) + (v.tieuDeThu ? ': ' + esc(v.tieuDeThu) : '') + '</h3>' +
+      '<div class="hint">' + esc(v.nguoiTao) + ' (ứng cử viên) · ' + ngayDayDu(v.thoiGian) + '</div>' +
+      (v.den ? '<div><b style="font-size:13px">Tới:</b> ' + esc(v.den) + (v.cc ? ' · <b style="font-size:13px">Cc:</b> ' + esc(v.cc) : '') + (v.bcc ? ' · <b style="font-size:13px">Bcc:</b> ' + esc(v.bcc) : '') + '</div>' : '') +
+      (v.nhan ? '<div><b style="font-size:13px">Nhãn:</b> ' + esc(v.nhan) + '</div>' : '') + (v.tieuDe ? '<div><b style="font-size:13px">Tiêu đề:</b> ' + esc(v.tieuDe) + '</div>' : '') +
+      (v.noiDung ? '<div class="body">' + esc(v.noiDung) + '</div>' : '') +
+      (v.dinhKem.length ? '<div class="row">' + v.dinhKem.map(function (f) { return '<span class="pill p-mute">' + ic('file', 12) + ' ' + esc(f.ten) + '</span>'; }).join('') + '</div>' : '') +
+      (v.maThu ? '<details id="dgoc"><summary style="cursor:pointer;font-weight:600">Xem thư gốc</summary><div id="dgocb" style="display:grid;gap:10px;margin-top:8px"><p class="muted">Đang tải…</p></div></details>' : '') +
+      (v.trangThai === 'Chờ duyệt' ? '<div class="box"><b>Duyệt việc này</b><textarea id="dn" rows="2" placeholder="Ghi chú cho ứng cử viên (không bắt buộc)"></textarea><div class="row"><button class="btn sm" data-qd="Đã duyệt">Duyệt và thực hiện</button><button class="btn ghost sm" data-qd="Cần sửa lại">Cần sửa lại</button><button class="btn bad sm" data-qd="Từ chối">Từ chối</button><span id="dm"></span></div></div>'
+        : '<div class="box"><b>' + esc(v.trangThai) + (v.nguoiDuyet ? ' · ' + esc(v.nguoiDuyet) + ' · ' + ngayDayDu(v.thoiGianDuyet) : '') + '</b>' + (v.ghiChu ? '<span style="white-space:pre-wrap">' + esc(v.ghiChu) + '</span>' : '') + '</div>');
+    $('#dve').onclick = function () { $('#dmail').classList.remove('doc'); };
+    if ($('#dgoc')) $('#dgoc').ontoggle = function () {
+      if (!$('#dgoc').open || $('#dgoc').getAttribute('data-xong')) return;
+      $('#dgoc').setAttribute('data-xong', '1');
+      goiPhien('xemLuongKhiDuyet', v.maThu).then(function (l) { $('#dgocb').innerHTML = veLuong(l, true); ganTaiDinhKem(v.maThu, function () { return $('#dgocb'); }); })
+        .catch(function (err) { $('#dgocb').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-qd]'), function (b) {
+      b.onclick = function () {
+        var qd = b.getAttribute('data-qd');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-qd]'), function (x) { x.disabled = true; });
+        $('#dm').innerHTML = '<span class="hint">' + (qd === 'Đã duyệt' ? 'Đang thực hiện trên Gmail…' : 'Đang lưu…') + '</span>';
+        goiPhien('duyetViecMail', v.thoiGian, v.nguoiTao, qd, $('#dn').value).then(function () {
+          soViecCho = Math.max(0, soViecCho - 1); capNhatHuyHieu(); BOD_MAIL.duyet();
+        }).catch(function (err) {
+          Array.prototype.forEach.call(document.querySelectorAll('[data-qd]'), function (x) { x.disabled = false; });
+          thongBao($('#dm'), 'loi', err.message);
+        });
+      };
+    });
+  };
+  goiPhien('layViecDuyet').then(function (d) {
+    ds = d; soViecCho = d.filter(function (v) { return v.trangThai === 'Chờ duyệt'; }).length; capNhatHuyHieu(); ve();
+  }).catch(function (err) { $('#mbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+};
+
+BOD_MAIL.mau = function () {
+  var ds = [], thuMuc = null;
+  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  var ve = function () {
+    var cacThuMuc = [];
+    ds.forEach(function (m) { if (cacThuMuc.indexOf(m.thuMuc) < 0) cacThuMuc.push(m.thuMuc); });
+    cacThuMuc.sort();
+    if (!thuMuc || cacThuMuc.indexOf(thuMuc) < 0) thuMuc = cacThuMuc[0] || null;
+    var trong = ds.filter(function (m) { return m.thuMuc === thuMuc; });
+    $('#mbody').innerHTML = '<div class="tpl"><div class="folders">' + cacThuMuc.map(function (k) { return '<button class="nav" data-fo="' + esc(k) + '"' + (k === thuMuc ? ' aria-current="page"' : '') + '>' + ic('folder', 16) + esc(k) + '<span class="hint" style="margin-left:auto">' + ds.filter(function (m) { return m.thuMuc === k; }).length + '</span></button>'; }).join('') +
+      '<button class="nav" data-moi="1" style="color:var(--accent)">' + ic('plus', 16) + 'Thư mẫu mới</button></div>' +
+      '<div class="tlist">' + (thuMuc ? '<div class="row" style="justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)"><b>' + esc(thuMuc) + '</b><button class="btn ghost sm" id="doiten">Đổi tên thư mục</button></div>' : '') +
+      (trong.length ? trong.map(function (m) { var i = ds.indexOf(m); return '<div class="titem"><div><b>' + esc(m.tieuDe) + '</b><span class="s">' + esc(m.noiDung.replace(/\s+/g, ' ').slice(0, 120)) + '</span></div><span class="hint">' + (m.thoiGianSua ? ngayGio(m.thoiGianSua) : '') + '</span><button class="btn ghost sm" data-sua="' + i + '">Sửa</button><button class="btn sm" data-dung="' + i + '">Dùng để gửi</button></div>'; }).join('')
+        : '<p class="muted" style="padding:14px">Chưa có thư mẫu nào. Bấm “Thư mẫu mới” để tạo.</p>') +
+      '<p class="hint" style="padding:10px 14px">Trong thư, viết {TenCot} ở chỗ muốn thay bằng thông tin riêng của từng người nhận, ví dụ {HoVaTen}, {Ban}, hoặc tên một cột trong sheet bạn tải lên.</p><div id="mm" style="padding:0 14px 14px"></div></div></div>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-fo]'), function (b) { b.onclick = function () { thuMuc = b.getAttribute('data-fo'); ve(); }; });
+    $('#mbody').querySelector('[data-moi]').onclick = function () { sua(null); };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sua]'), function (b) { b.onclick = function () { sua(ds[Number(b.getAttribute('data-sua'))]); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-dung]'), function (b) { b.onclick = function () { BOD_MAIL.di('hangloat', ds[Number(b.getAttribute('data-dung'))]); }; });
+    if ($('#doiten')) $('#doiten').onclick = function () {
+      $('#mm').innerHTML = '<div class="row"><input type="text" id="tm2" value="' + esc(thuMuc) + '" style="max-width:260px" aria-label="Tên thư mục mới"><button class="btn sm" id="tm2b">Lưu</button><span id="tm2m"></span></div>';
+      $('#tm2b').onclick = function () { $('#tm2b').disabled = true; goiPhien('doiTenThuMuc', thuMuc, $('#tm2').value).then(function () { thuMuc = $('#tm2').value.trim(); tai(); }).catch(function (err) { $('#tm2b').disabled = false; thongBao($('#tm2m'), 'loi', err.message); }); };
+    };
+  };
+  var sua = function (m) {
+    var cacThuMuc = [];
+    ds.forEach(function (x) { if (cacThuMuc.indexOf(x.thuMuc) < 0) cacThuMuc.push(x.thuMuc); });
+    $('#mbody').innerHTML = '<form class="card form" id="tf2"><h3 style="margin:0">' + (m ? 'Sửa thư mẫu' : 'Thư mẫu mới') + '</h3>' +
+      '<label class="f">Thư mục <small>Chọn có sẵn hoặc gõ tên mới</small><input type="text" id="t-f" list="t-fl" value="' + esc(m ? m.thuMuc : (thuMuc || '')) + '" maxlength="80"><datalist id="t-fl">' + cacThuMuc.map(function (k) { return '<option value="' + esc(k) + '">'; }).join('') + '</datalist></label>' +
+      '<label class="f">Tiêu đề<input type="text" id="t-s" maxlength="250" value="' + esc(m ? m.tieuDe : '') + '"></label>' +
+      '<label class="f">Nội dung <small>Viết {TenCot} để chèn thông tin riêng của từng người</small><textarea id="t-b" rows="12">' + esc(m ? m.noiDung : '') + '</textarea></label>' +
+      '<div class="row"><button class="btn" id="t-l">Lưu</button><button type="button" class="btn ghost" id="t-h">Quay lại</button>' + (m ? '<button type="button" class="btn ghost" id="t-x">Xoá</button>' : '') + '<span id="t-m"></span></div></form>';
+    $('#t-h').onclick = ve;
+    $('#tf2').onsubmit = function (e) {
+      e.preventDefault(); $('#t-l').disabled = true;
+      goiPhien('luuThuMau', { thuMuc: $('#t-f').value, tieuDe: $('#t-s').value, noiDung: $('#t-b').value }, m ? m.thoiGianTao : null).then(function () { thuMuc = $('#t-f').value.trim() || 'Chung'; tai(); })
+        .catch(function (err) { $('#t-l').disabled = false; thongBao($('#t-m'), 'loi', err.message); });
+    };
+    if ($('#t-x')) $('#t-x').onclick = function () {
+      if ($('#t-x').getAttribute('data-ok') !== '1') { $('#t-x').setAttribute('data-ok', '1'); $('#t-x').textContent = 'Bấm lần nữa để xoá'; $('#t-x').classList.add('bad'); return; }
+      goiPhien('xoaThuMau', m.thoiGianTao).then(tai).catch(function (err) { thongBao($('#t-m'), 'loi', err.message); });
+    };
+  };
+  var tai = function () { goiPhien('layThuMau').then(function (d) { ds = d; ve(); }).catch(function (err) { $('#mbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; }); };
+  tai();
+};
+
+/* Gửi hàng loạt: 1 Thư → 2 Người nhận → 3 Xem lại và gửi */
+function khoaCot(s) { return boDau(s).replace(/[^a-z0-9]/g, ''); }
+function thayMau(chu, d) {
+  var k = {}; Object.keys(d || {}).forEach(function (x) { k[khoaCot(x)] = d[x]; });
+  var thieu = [];
+  var kq = String(chu || '').replace(/\{([^{}\n]{1,60})\}/g, function (toan, ten) { var c = khoaCot(ten); if (Object.prototype.hasOwnProperty.call(k, c)) return String(k[c] == null ? '' : k[c]); if (thieu.indexOf(ten) < 0) thieu.push(ten); return toan; });
+  return { chu: kq, thieu: thieu };
+}
+BOD_MAIL.hangloat = function (mau) {
+  var W = { buoc: 1, tieuDe: mau ? mau.tieuDe : '', noiDung: mau ? mau.noiDung : '', nguon: 'tv', nguoiNhan: [], moTa: '', sheet: null, nguonDl: null, mau: [] };
+  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  Promise.all([goiPhien('layNguonGui'), goiPhien('layThuMau')]).then(function (kq) { W.nguonDl = kq[0]; W.mau = kq[1]; ve(); })
+    .catch(function (err) { $('#mbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  var buocHtml = function () {
+    return '<div class="steps">' + [[1, 'Thư'], [2, 'Người nhận'], [3, 'Xem lại và gửi']].map(function (x) { return '<button class="step" data-b="' + x[0] + '"' + (x[0] === W.buoc ? ' aria-current="step"' : '') + '><span>' + x[0] + '</span>' + x[1] + '</button>'; }).join('') + '</div>';
+  };
+  var ve = function () {
+    $('#mbody').innerHTML = buocHtml() + '<div id="wb"></div>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-b]'), function (b) { b.onclick = function () { var n = Number(b.getAttribute('data-b')); if (n === 1 || (n === 2 && W.tieuDe) || (n === 3 && W.nguoiNhan.length)) { luuBuoc(); W.buoc = n; ve(); } }; });
+    [null, b1, b2, b3][W.buoc]();
+  };
+  var luuBuoc = function () { if ($('#w-s')) { W.tieuDe = $('#w-s').value; W.noiDung = $('#w-b').value; } };
+  var b1 = function () {
+    $('#wb').innerHTML = '<div class="card form"><label class="f">Bắt đầu từ thư mẫu <small>Không bắt buộc</small><select id="w-m"><option value="">Viết thư mới</option>' + W.mau.map(function (m, i) { return '<option value="' + i + '">' + esc(m.thuMuc + ' · ' + m.tieuDe) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f">Tiêu đề<input type="text" id="w-s" maxlength="250" value="' + esc(W.tieuDe) + '"></label><label class="f">Nội dung <small>Viết {TenCot} để chèn thông tin riêng của từng người</small><textarea id="w-b" rows="12">' + esc(W.noiDung) + '</textarea></label>' +
+      '<div class="row"><button class="btn" id="w-1">Tiếp: chọn người nhận</button><span id="w-1m"></span></div></div>';
+    $('#w-m').onchange = function () { var m = W.mau[Number($('#w-m').value)]; if (m) { $('#w-s').value = m.tieuDe; $('#w-b').value = m.noiDung; } };
+    $('#w-1').onclick = function () { luuBuoc(); if (!W.tieuDe.trim() || !W.noiDung.trim()) { thongBao($('#w-1m'), 'loi', 'Thư cần có tiêu đề và nội dung.'); return; } W.buoc = 2; ve(); };
+  };
+  var b2 = function () {
+    var NG = [['tv', 'users', 'Thành viên CLB', 'Lọc theo ban, chọn từng người'], ['db', 'addr', 'Danh bạ', 'CLB khác, đối tác (sửa trong Cài đặt)'], ['tay', 'edit', 'Nhập tay', 'Gõ hoặc dán email'], ['sheet', 'sheet', 'Từ Google Sheet', 'Dán link, chọn dòng, chọn cột email']];
+    $('#wb').innerHTML = '<div class="card form"><div class="src">' + NG.map(function (x) { return '<button type="button" class="srcb" data-ng="' + x[0] + '" aria-pressed="' + (x[0] === W.nguon) + '"><b>' + ic(x[1], 16) + x[2] + '</b><span>' + x[3] + '</span></button>'; }).join('') + '</div><div id="w-src"></div>' +
+      '<div class="row"><button class="btn" id="w-2">Tiếp: xem lại</button><span id="w-2m"></span></div></div>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ng]'), function (b) { b.onclick = function () { W.nguon = b.getAttribute('data-ng'); b2(); }; });
+    var lay = NGUON[W.nguon]();
+    $('#w-2').onclick = function () {
+      var kq = lay();
+      if (kq.loi) { thongBao($('#w-2m'), 'loi', kq.loi); return; }
+      if (!kq.ds.length) { thongBao($('#w-2m'), 'loi', 'Bạn chưa chọn người nhận nào.'); return; }
+      W.nguoiNhan = kq.ds; W.moTa = kq.moTa; W.buoc = 3; ve();
+    };
+  };
+  var choTrongHint = function (cot) { return '<p class="hint" style="margin:0">Thông tin chèn được: ' + cot.map(function (c) { return '{' + esc(c) + '}'; }).join(' ') + '</p>'; };
+  var NGUON = {
+    tv: function () {
+      var tv = W.nguonDl.thanhVien.map(function (t) { return { ten: t.HoVaTen, ban: t.Ban + (t.Email ? '' : ' · chưa có email'), nhom: String(t.Ban).trim().split(/\s+/)[0].toUpperCase() }; });
+      $('#w-src').innerHTML = picker('wp', tv) + choTrongHint(W.nguonDl.cotThanhVien);
+      var chon = bindPicker('wp');
+      return function () {
+        var ten = chon(), thieu = [];
+        var ds = W.nguonDl.thanhVien.filter(function (t) { return ten.indexOf(t.HoVaTen) >= 0; }).filter(function (t) { if (!t.Email) { thieu.push(t.HoVaTen); return false; } return true; }).map(function (t) { return { email: t.Email, duLieu: t }; });
+        return { ds: ds, moTa: 'Thành viên CLB · ' + ds.length + ' người', loi: thieu.length ? 'Chưa có email: ' + thieu.join(', ') + '. Bỏ chọn những người này hoặc bổ sung email trên sheet thành viên.' : '' };
+      };
+    },
+    db: function () {
+      var db = W.nguonDl.danhBa, nhom = [];
+      db.forEach(function (d) { if (nhom.indexOf(d.Nhom) < 0) nhom.push(d.Nhom); });
+      $('#w-src').innerHTML = db.length ? nhom.map(function (n) {
+        return '<div class="box"><label class="row" style="font-weight:600"><input type="checkbox" data-nhom="' + esc(n) + '">' + esc(n) + '</label>' + db.map(function (d, i) { return d.Nhom === n ? '<label class="row" style="padding-left:22px"><input type="checkbox" data-db="' + i + '" data-n="' + esc(n) + '">' + esc(d.Ten) + ' <span class="hint">' + esc(d.Email) + '</span></label>' : ''; }).join('') + '</div>';
+      }).join('') + choTrongHint(['Ten', 'Email', 'Nhom', 'GhiChu']) : '<p class="muted">Danh bạ trống. Thêm trong Cài đặt → Danh bạ gửi hàng loạt.</p>';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-nhom]'), function (c) { c.onchange = function () { Array.prototype.forEach.call(document.querySelectorAll('[data-db]'), function (x) { if (x.getAttribute('data-n') === c.getAttribute('data-nhom')) x.checked = c.checked; }); }; });
+      return function () {
+        var ds = Array.prototype.map.call(document.querySelectorAll('[data-db]:checked'), function (c) { var d = db[Number(c.getAttribute('data-db'))]; return { email: d.Email, duLieu: d }; });
+        return { ds: ds, moTa: 'Danh bạ · ' + ds.length + ' địa chỉ', loi: '' };
+      };
+    },
+    tay: function () {
+      $('#w-src').innerHTML = '<label class="f">Email người nhận <small>Mỗi dòng một email, hoặc cách nhau bằng dấu phẩy</small><textarea id="w-t" rows="6"></textarea></label>' + choTrongHint(['Email']);
+      return function () {
+        var tach = String($('#w-t').value).split(/[\s,;]+/).filter(Boolean);
+        var sai = tach.filter(function (e) { return !/^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]+$/.test(e); });
+        return { ds: tach.filter(function (e) { return sai.indexOf(e) < 0; }).map(function (e) { return { email: e, duLieu: { Email: e } }; }), moTa: 'Nhập tay · ' + tach.length + ' địa chỉ', loi: sai.length ? 'Email chưa đúng: ' + sai.join(', ') : '' };
+      };
+    },
+    sheet: function () {
+      $('#w-src').innerHTML = '<div class="grid2"><label class="f">Link Google Sheet <small>Sheet phải chia sẻ cho tài khoản CLB</small><input type="text" id="w-l" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(W.sheet ? W.sheet.link : '') + '"></label><label class="f">Tab<select id="w-tab">' + (W.sheet ? W.sheet.tabs.map(function (t) { return '<option' + (t === W.sheet.tab ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') : '<option value="">Tab đầu tiên</option>') + '</select></label></div><div class="row"><button type="button" class="btn ghost sm" id="w-ld">Đọc sheet</button><span id="w-lm"></span></div><div id="w-sd"></div>';
+      var veSheet = function () {
+        var s = W.sheet;
+        if (!s) return;
+        $('#w-sd').innerHTML = '<p class="hint">' + esc(s.tenFile) + ' · ' + s.dong.length + ' dòng</p><label class="f" style="max-width:320px">Cột chứa email người nhận<select id="w-ce">' + s.cot.map(function (c) { return '<option' + (c === s.cotEmail ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
+          '<div class="tscroll" style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px"><table><thead><tr><th><input type="checkbox" id="w-all" checked aria-label="Chọn tất cả"></th>' + s.cot.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          s.dong.map(function (d, i) { return '<tr><td><input type="checkbox" data-r="' + i + '" checked></td>' + s.cot.map(function (c) { return '<td>' + esc(d[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + choTrongHint(s.cot);
+        $('#w-all').onchange = function () { Array.prototype.forEach.call(document.querySelectorAll('[data-r]'), function (x) { x.checked = $('#w-all').checked; }); };
+      };
+      $('#w-ld').onclick = function () {
+        $('#w-ld').disabled = true; $('#w-lm').innerHTML = '<span class="hint">Đang đọc…</span>';
+        var link = $('#w-l').value.trim();
+        var tabCu = W.sheet && W.sheet.link === link ? $('#w-tab').value : '';
+        goiPhien('docSheetGui', link, tabCu).then(function (s) { s.link = link; W.sheet = s; $('#w-ld').disabled = false; $('#w-lm').innerHTML = ''; NGUON.sheet(); })
+          .catch(function (err) { $('#w-ld').disabled = false; thongBao($('#w-lm'), 'loi', err.message); });
+      };
+      $('#w-tab').onchange = function () { if (W.sheet) $('#w-ld').click(); };
+      veSheet();
+      return function () {
+        if (!W.sheet) return { ds: [], loi: 'Bạn chưa đọc sheet.' };
+        var ce = $('#w-ce').value;
+        var ds = Array.prototype.map.call(document.querySelectorAll('[data-r]:checked'), function (c) { var d = W.sheet.dong[Number(c.getAttribute('data-r'))]; return { email: String(d[ce] || '').trim(), duLieu: d }; });
+        var trong = ds.filter(function (x) { return !x.email; }).length;
+        return { ds: ds.filter(function (x) { return x.email; }), moTa: 'Sheet ' + W.sheet.tenFile + ' · ' + ds.length + ' dòng', loi: trong ? 'Có ' + trong + ' dòng đã chọn không có email ở cột "' + ce + '".' : '' };
+      };
+    }
+  };
+  var b3 = function () {
+    var thieu = [];
+    W.nguoiNhan.forEach(function (n) { thayMau(W.tieuDe, n.duLieu).thieu.concat(thayMau(W.noiDung, n.duLieu).thieu).forEach(function (t) { if (thieu.indexOf(t) < 0) thieu.push(t); }); });
+    var xem = W.nguoiNhan.slice(0, 3);
+    var conLai = W.nguonDl.conLai;
+    var homNayStr = new Date(Date.now() + 3600e3 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    $('#wb').innerHTML = '<div class="card form"><div class="row"><span class="pill p-info">' + W.nguoiNhan.length + ' người nhận</span><span class="hint">' + esc(W.moTa) + ' · Hôm nay tài khoản CLB còn gửi được khoảng ' + conLai + ' thư.</span></div>' +
+      (thieu.length ? '<p class="err" style="margin:0">Không tìm thấy thông tin cho: ' + thieu.map(function (t) { return '{' + esc(t) + '}'; }).join(', ') + '. Quay lại bước 1 sửa thư, hoặc chọn nguồn có cột tương ứng.</p>' : '') +
+      '<b style="font-size:13px">Xem trước ' + xem.length + ' thư đầu</b>' + xem.map(function (n) { return '<div class="preview"><div class="hint">Tới: ' + esc(n.email) + '</div><b>' + esc(thayMau(W.tieuDe, n.duLieu).chu) + '</b>\n\n' + esc(thayMau(W.noiDung, n.duLieu).chu) + '</div>'; }).join('') +
+      '<div class="seg" id="w-k" style="justify-self:start"><button data-k="ngay" aria-pressed="true">Gửi ngay</button><button data-k="hen" aria-pressed="false">Hẹn giờ</button></div>' +
+      '<label class="f" id="w-hl" hidden style="max-width:280px">Gửi lúc<input type="datetime-local" id="w-h" value="' + homNayStr + '"></label>' +
+      '<div class="row"><button class="btn" id="w-g"' + (thieu.length ? ' disabled' : '') + '>' + ic('mail', 16) + 'Gửi ' + W.nguoiNhan.length + ' thư</button><span id="w-gm"></span></div></div>';
+    var kieu = 'ngay';
+    $('#w-k').onclick = function (e) { var b = e.target.closest('[data-k]'); if (!b) return; kieu = b.getAttribute('data-k'); Array.prototype.forEach.call(document.querySelectorAll('#w-k button'), function (x) { x.setAttribute('aria-pressed', x === b); }); $('#w-hl').hidden = kieu !== 'hen'; $('#w-g').innerHTML = ic(kieu === 'hen' ? 'clock' : 'mail', 16) + (kieu === 'hen' ? 'Lên lịch gửi ' : 'Gửi ') + W.nguoiNhan.length + ' thư'; };
+    $('#w-g').onclick = function () {
+      var hen = kieu === 'hen' ? new Date($('#w-h').value).getTime() : null;
+      if (kieu === 'hen' && !hen) { thongBao($('#w-gm'), 'loi', 'Chọn giờ gửi.'); return; }
+      $('#w-g').disabled = true; $('#w-gm').innerHTML = '<span class="hint">' + (hen ? 'Đang lên lịch…' : 'Đang gửi, đừng đóng trang…') + '</span>';
+      goiPhien('guiHangLoat', { tieuDe: W.tieuDe, noiDung: W.noiDung, nguoiNhan: W.nguoiNhan, moTaNguon: W.moTa, henGio: hen }).then(function (kq) {
+        $('#wb').innerHTML = '<div class="card"><span class="toast">' + (kq.henGio ? 'Đã lên lịch gửi ' + kq.soNguoi + ' thư' : 'Đã gửi ' + kq.daGui + ' thư') + '</span>' + (kq.loi && kq.loi.length ? '<p class="err">Lỗi: ' + esc(kq.loi.join('; ')) + '</p>' : '') + '<div class="row" style="margin-top:10px"><button class="btn ghost sm" id="w-moi">Gửi đợt khác</button>' + (kq.henGio ? '<button class="btn ghost sm" id="w-xl">Xem thư đã lên lịch</button>' : '') + '</div></div>';
+        $('#w-moi').onclick = function () { BOD_MAIL.hangloat(); };
+        if ($('#w-xl')) $('#w-xl').onclick = function () { BOD_MAIL.di('lich'); };
+      }).catch(function (err) { $('#w-g').disabled = false; thongBao($('#w-gm'), 'loi', err.message); });
+    };
+  };
+};
+
+BOD_MAIL.lich = function () {
+  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  var TT = { 'Đã lên lịch': 'p-info', 'Đang gửi': 'p-warn', 'Đã gửi': 'p-ok', 'Đã huỷ': 'p-mute', 'Lỗi': 'p-bad' };
+  goiPhien('layLichGui').then(function (ds) {
+    $('#mbody').innerHTML = '<div class="card tscroll" style="padding:4px 8px"><table><thead><tr><th>Thư</th><th>Người nhận</th><th>Gửi lúc</th><th>Trạng thái</th><th></th></tr></thead><tbody>' +
+      (ds.length ? ds.map(function (l, i) {
+        return '<tr><td><b>' + esc(l.tieuDe) + '</b><div class="hint">' + esc(l.nguoiTao) + ' lên lịch · ' + ngayGio(l.thoiGianTao) + '</div></td><td>' + l.soNguoi + '<div class="hint">' + esc(l.moTaNguon) + '</div></td><td style="white-space:nowrap">' + ngayDayDu(l.thoiGianGui) + '</td><td><span class="pill ' + (TT[l.trangThai] || 'p-mute') + '">' + esc(l.trangThai) + '</span>' + (l.ketQua ? '<div class="hint">' + esc(l.ketQua) + '</div>' : '') + '</td>' +
+          '<td style="white-space:nowrap;text-align:right">' + (l.trangThai === 'Đã lên lịch' ? '<button class="btn ghost sm" data-ls="' + i + '">Sửa</button> <button class="btn ghost sm" data-lh="' + i + '">Huỷ</button>' : '') + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" class="muted">Chưa có thư nào được lên lịch.</td></tr>') + '</tbody></table></div><div id="lsua"></div><p class="hint">Thư hẹn giờ được gửi trong vòng 10 phút sau giờ hẹn.</p>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-lh]'), function (b) {
+      b.onclick = function () {
+        if (b.getAttribute('data-ok') !== '1') { b.setAttribute('data-ok', '1'); b.textContent = 'Bấm lần nữa để huỷ'; b.classList.add('bad'); return; }
+        b.disabled = true; goiPhien('huyLichGui', ds[Number(b.getAttribute('data-lh'))].thoiGianTao).then(BOD_MAIL.lich).catch(function (err) { b.disabled = false; thongBao($('#lsua'), 'loi', err.message); });
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ls]'), function (b) {
+      b.onclick = function () {
+        var l = ds[Number(b.getAttribute('data-ls'))];
+        var gio = new Date(l.thoiGianGui - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        $('#lsua').innerHTML = '<form class="card form" id="lf2"><h3 style="margin:0">Sửa thư đã lên lịch</h3><label class="f" style="max-width:280px">Gửi lúc<input type="datetime-local" id="l-h" value="' + gio + '"></label><label class="f">Tiêu đề<input type="text" id="l-s" value="' + esc(l.tieuDe) + '"></label><label class="f">Nội dung<textarea id="l-b" rows="10">' + esc(l.noiDung) + '</textarea></label><div class="row"><button class="btn sm" id="l-l">Lưu</button><button type="button" class="btn ghost sm" id="l-x">Đóng</button><span id="l-m"></span></div></form>';
+        $('#lsua').scrollIntoView({ behavior: 'smooth' });
+        $('#l-x').onclick = function () { $('#lsua').innerHTML = ''; };
+        $('#lf2').onsubmit = function (e) {
+          e.preventDefault(); $('#l-l').disabled = true;
+          goiPhien('suaLichGui', l.thoiGianTao, { thoiGianGui: new Date($('#l-h').value).getTime(), tieuDe: $('#l-s').value, noiDung: $('#l-b').value }).then(BOD_MAIL.lich)
+            .catch(function (err) { $('#l-l').disabled = false; thongBao($('#l-m'), 'loi', err.message); });
+        };
+      };
+    });
+  }).catch(function (err) { $('#mbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+};
+
 /* ---------- Góp ý ---------- */
 VIEWS.gopy = function () {
   dangTai();
@@ -467,7 +945,7 @@ VIEWS.gopy = function () {
         if (!c.hasAttribute('data-doc')) return;
         var pill = c.querySelector('.pill'); pill.className = 'pill p-mute'; pill.textContent = 'Đã đọc'; c.removeAttribute('data-doc'); c.style.cursor = '';
         soGopYMoi = Math.max(0, soGopYMoi - 1);
-        Array.prototype.forEach.call(document.querySelectorAll('[data-p="gopy"] .badge'), function (b) { if (soGopYMoi) b.textContent = soGopYMoi; else b.remove(); });
+        capNhatHuyHieu();
         goiPhien('danhDauDaDoc', thoiGian).catch(function () {});
       };
     });
@@ -499,7 +977,8 @@ var SET = [
   ['Cộng điểm', [['types', 'star', 'Loại hoạt động và điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', '); }, 'điểm loại hoạt động seeding staff log']]],
   ['ECOBoard', [['rules', 'book', 'Quy chế cộng điểm', function () { return CD.quyChe ? 'Hiện ở tab Quy chế trên ECOBoard' : 'Chưa có nội dung'; }, 'quy chế luật'], ['pins', 'pin', 'Bảng ghim', function () { return CD.ghim.length + ' link đang ghim'; }, 'link ghim']]],
   ['Task và nhắc việc', [['due', 'clock', 'Quy định sắp đến hạn', function () { return 'Còn ' + CD.sapDenHanNgay + ' ngày trở xuống'; }, 'sắp đến hạn task hạn chót'], ['zalo', 'bell', 'Bot Zalo nhắc việc', function () { return CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + ' / ' + CD.zalo.tong + ' người' : 'Chưa có bot'; }, 'zalo bot nhắc token mã kết nối giờ nhắc trễ hạn']]],
-  ['Người dùng', [['hr', 'users', 'Ban nhân sự được vào ECODesk', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' người'; }, 'ban nhân sự hr quyền'], ['accounts', 'lock', 'Tài khoản và mật khẩu', function () { return 'Đặt lại mật khẩu cho mọi người'; }, 'mật khẩu tài khoản đặt lại']]]
+  ['Mail', [['mailcfg', 'mail', 'Gửi mail và quyền xem của ứng cử viên', function () { return CD.mail.cheDoUcv === 'rieng' ? 'UCV chỉ xem thư của mình' : 'UCV xem toàn bộ hộp thư'; }, 'mail tên người gửi ứng cử viên ucv xem hộp thư'], ['contacts', 'addr', 'Danh bạ gửi hàng loạt', function () { return CD.mail.soDanhBa + ' địa chỉ'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
+  ['Người dùng', [['hr', 'users', 'Ban nhân sự được vào ECODesk', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' người'; }, 'ban nhân sự hr quyền'], ['ucv', 'users', 'Ứng cử viên', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' người'; }, 'ứng cử viên ucv tài khoản mail'], ['accounts', 'lock', 'Tài khoản và mật khẩu', function () { return 'Đặt lại mật khẩu cho mọi người'; }, 'mật khẩu tài khoản đặt lại']]]
 ];
 function napCaiDat() { return goiPhien('layCaiDatDesk').then(function (d) { CD = d; return d; }); }
 VIEWS.caidat = function () {
@@ -619,15 +1098,43 @@ var SUB = {
       });
     }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   },
-  hr: function () {
-    var hr = CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; });
+  mailcfg: function () {
+    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
+    goiPhien('layCaiDatMail').then(function (m) {
+      $('#subbody').innerHTML = '<form class="card form" id="mc" style="max-width:560px"><p class="hint" style="margin:0">Thư gửi đi từ: <b>' + esc(m.emailClb) + '</b></p>' +
+        '<label class="f">Tên người gửi hiển thị <small>Ví dụ: CLB ECO. Bỏ trống để dùng tên của tài khoản Google</small><input type="text" id="mc-t" maxlength="100" value="' + esc(m.tenNguoiGui) + '"></label>' +
+        '<label class="f">Ứng cử viên được xem<select id="mc-u"><option value="tatca"' + (m.cheDoUcv === 'tatca' ? ' selected' : '') + '>Toàn bộ hộp thư CLB</option><option value="rieng"' + (m.cheDoUcv === 'rieng' ? ' selected' : '') + '>Chỉ thư do chính mình gửi (và thư trả lời)</option></select></label>' +
+        '<div class="row"><button class="btn sm" id="mc-b">Lưu</button><span id="m"></span></div></form>';
+      $('#mc').onsubmit = function (e) { e.preventDefault(); luuVa($('#mc-b'), $('#m'), 'luuCaiDatMail', [{ tenNguoiGui: $('#mc-t').value, cheDoUcv: $('#mc-u').value }]); };
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  },
+  contacts: function () {
+    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
+    goiPhien('layCaiDatMail').then(function (m) {
+      var ds = m.danhBa.slice();
+      var ve = function () {
+        $('#subbody').innerHTML = '<div class="card"><p class="hint" style="margin-top:0">Danh bạ dùng khi gửi hàng loạt, ví dụ các CLB khác hay đối tác. Nhóm giúp chọn cả nhóm một lần.</p><datalist id="dbn">' + ds.map(function (d) { return d.nhom; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist><div class="tscroll"><table><thead><tr><th>Nhóm</th><th>Tên</th><th>Email</th><th>Ghi chú</th><th></th></tr></thead><tbody>' +
+          ds.map(function (d, i) { return '<tr><td><input type="text" id="dg' + i + '" list="dbn" value="' + esc(d.nhom) + '" aria-label="Nhóm"></td><td><input type="text" id="dt' + i + '" value="' + esc(d.ten) + '" aria-label="Tên"></td><td><input type="email" id="de' + i + '" value="' + esc(d.email) + '" aria-label="Email"></td><td><input type="text" id="dc' + i + '" value="' + esc(d.ghiChu) + '" aria-label="Ghi chú"></td><td><button class="btn ghost sm" data-x="' + i + '">Xoá</button></td></tr>'; }).join('') +
+          '</tbody></table></div>' + (ds.length ? '' : '<p class="hint">Chưa có ai.</p>') + '<div class="row" style="margin-top:10px"><button class="btn ghost sm" id="add">' + ic('plus', 14) + 'Thêm người</button><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></div>';
+        var doc = function () { ds = ds.map(function (_, i) { return { nhom: $('#dg' + i).value, ten: $('#dt' + i).value, email: $('#de' + i).value, ghiChu: $('#dc' + i).value }; }); };
+        $('#add').onclick = function () { doc(); ds.push({ nhom: ds.length ? ds[ds.length - 1].nhom : '', ten: '', email: '', ghiChu: '' }); ve(); $('#dt' + (ds.length - 1)).focus(); };
+        Array.prototype.forEach.call(document.querySelectorAll('[data-x]'), function (b) { b.onclick = function () { doc(); ds.splice(Number(b.getAttribute('data-x')), 1); ve(); }; });
+        $('#save').onclick = function () { doc(); luuVa($('#save'), $('#m'), 'luuDanhBa', [ds]); };
+      };
+      ve();
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  },
+  hr: function (vaiTro) {
+    vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
+    var hr = CD.taiKhoan.filter(function (t) { return t.vaiTro === vaiTro; });
     var daCo = {}; CD.taiKhoan.forEach(function (t) { daCo[t.email.toLowerCase()] = true; });
     var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()]; });
     $('#subbody').innerHTML = '<div class="card form"><h3 style="margin:0">Đang có quyền</h3>' + (hr.length ? '<div class="tscroll"><table><tbody>' + hr.map(function (t) { return '<tr><td>' + esc(t.ten) + '</td><td class="muted">' + esc(t.email) + '</td><td style="text-align:right"><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="hint" style="margin:0">Chưa có ai.</p>') + '<span id="m1"></span></div>' +
-      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau.</small><input type="text" id="hp" autocomplete="off"></label><div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>Thêm vào ban nhân sự</button><span id="m2"></span></div></form>';
-    Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.onclick = function () { luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(); }); }; });
-    $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value], function () { SUB.hr(); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
+      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau.</small><input type="text" id="hp" autocomplete="off"></label><div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm ứng cử viên' : 'Thêm vào ban nhân sự') + '</button><span id="m2"></span></div></form>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.onclick = function () { luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
+    $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
   },
+  ucv: function () { SUB.hr('UCV'); },
   accounts: function () {
     $('#subbody').innerHTML = '<div class="card"><div class="tscroll"><table><thead><tr><th>Người</th><th>Vai trò</th><th></th></tr></thead><tbody>' + CD.taiKhoan.map(function (t, i) {
       return '<tr><td>' + esc(t.ten) + '<div class="hint">' + esc(t.email) + '</div></td><td>' + (VAI_TRO[t.vaiTro] || esc(t.vaiTro)) + '</td><td><div class="row" style="flex-wrap:nowrap;justify-content:flex-end"><input type="text" id="np' + i + '" placeholder="Mật khẩu mới" aria-label="Mật khẩu mới cho ' + esc(t.ten) + '" style="max-width:160px"><button class="btn ghost sm" data-rs="' + i + '">Đặt lại</button></div></td></tr>';
