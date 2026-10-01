@@ -3,7 +3,7 @@
 Mã nguồn của hai ứng dụng chạy trên Google Apps Script, dữ liệu lưu trong Google Sheet của tài khoản CLB.
 
 - **ECOBoard**: trang công khai cho thành viên xem điểm cộng, bảng ghim, quy chế và gửi góp ý ẩn danh. Không cần đăng nhập.
-- **ECODesk**: trang làm việc cho ban điều hành, ban nhân sự và ứng cử viên. Có đăng nhập. *(đang xây dựng)*
+- **ECODesk**: trang làm việc cho ban điều hành, ban nhân sự và ứng cử viên. Có đăng nhập. *(đã có: đăng nhập, cộng điểm, góp ý, cài đặt; đang làm: task, mail, báo cáo, file log)*
 
 ## Tài liệu
 
@@ -21,6 +21,8 @@ src/            Mã chạy trên Google Apps Script (chép nguyên vào trình s
   Logic.gs      Các hàm tính toán thuần (có kiểm thử)
   Board.html    Giao diện ECOBoard
   HauKy.html    Hộp thoại tải danh sách trong Google Sheet
+  Desk.gs       Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, góp ý, cài đặt
+  Desk.html     Giao diện ECODesk
   appsscript.json  Cấu hình dự án Apps Script
 tests/          Kiểm thử tự động cho Logic.gs (chạy: npm test)
 docs/           Tài liệu
