@@ -19,18 +19,17 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | LichSuDiem | ThoiGian, HoVaTen, LoaiHoatDong, TenHoatDong, Diem, NguoiCong, NhiemKy, HocKy | Mỗi lần cộng điểm là một dòng. Không bao giờ xoá. Điểm được ghi lại tại thời điểm cộng, nên đổi số điểm của loại hoạt động không làm đổi lịch sử. |
 | KyHoatDong | NhiemKy, HocKy, BatDau, KieuTaiLen | Dòng cuối là kỳ hiện tại. |
 | LuuTruThanhVien | NhiemKy, HocKy, HoVaTen, Ban | Danh sách thành viên ở đầu mỗi học kỳ, dùng để biết ai được xem điểm học kỳ 1. |
-| LoaiHoatDong | TenLoai, Diem | Staff, Log, Tham gia hoạt động, Seeding. |
+| LoaiHoatDong | TenLoai, Diem | Mặc định Staff, Log, Tham gia hoạt động; BOD thêm hoặc sửa trong Cài đặt. |
 | BangGhim | TieuDe, DuongDan | Link ghim trên ECOBoard. |
 | GopY | ThoiGian, NoiDung, DaDoc | Góp ý ẩn danh. |
 | TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
 | Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
 | KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai trong BOD và ban nhân sự đã kết nối bot Zalo. |
-| ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet | Mỗi thao tác mail của ứng cử viên (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. |
-| ThuMau | ThoiGianTao, ThuMuc, TieuDe, NoiDung, NguoiSua, ThoiGianSua | Thư mẫu của BOD, chia theo thư mục. |
+| ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet, TuyChon | Mỗi thao tác mail của ứng cử viên (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. TuyChon (JSON) ghi thư viết dạng HTML và có trích dẫn thư cũ hay không. |
 | DanhBa | Nhom, Ten, Email, GhiChu | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
 | FileLog | ThoiGian, TenFile, DuongDan, SoNguoi, SoBuoi, NguoiTao | Các file đăng ký log đã tạo. |
-| LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. |
+| LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua, MaNhap | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. MaNhap là mã thư nháp Gmail; đến giờ gửi mới đọc lại thư nháp nên sửa trong Gmail trước giờ gửi vẫn được. |
 
 Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần dùng đầu tiên.
 
@@ -87,28 +86,33 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Mọi thao tác thay đổi hộp thư của UCV (soạn, trả lời, trả lời tất cả, chuyển tiếp, lưu trữ, về hộp thư đến, xoá, báo thư rác, gắn và bỏ nhãn) thành một dòng ViecMail. BOD chọn Đã duyệt (thực hiện ngay trên Gmail), Cần sửa lại, hoặc Từ chối, kèm ghi chú.
 - Tệp UCV đính kèm được lưu ở thư mục Drive "ECO - Đính kèm mail" (tự tạo; mã thư mục ở CaiDat `ThuMucDinhKemId`).
 - Nội dung thư đến hiển thị trong khung riêng không chạy được mã (sandbox), nên thư lạ không ảnh hưởng ECODesk.
-- Gửi hàng loạt: chọn thư (từ thư mẫu hoặc viết mới), người nhận (thành viên, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{TenCot}` được thay bằng thông tin người nhận, so khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi.
+- BOD không viết thư trong app. Thư mẫu là thư nháp trong Gmail của CLB; app liệt kê, xem trước và mở thẳng thư nháp trong Gmail. Có nút mở Gmail CLB.
+- UCV viết thư trong app (khung soạn có định dạng, đính kèm, trích dẫn thư cũ, chữ ký CLB) rồi gửi BOD duyệt. Chữ ký sửa ở Cài đặt (CaiDat `ChuKyThu`, `DungChuKy`).
+- Gửi hàng loạt: chọn một thư nháp Gmail (giữ nguyên định dạng, ảnh trong thư và tệp đính kèm), người nhận (thành viên, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{TenCot}` được thay bằng thông tin người nhận, so khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi.
 - Thư hẹn giờ: lịch chạy `guiThuDaLenLich` mỗi 10 phút (tự cài lần đầu hẹn giờ) gửi các thư đã đến giờ.
 
 ### Báo cáo (`src/BaoCao.gs`)
 
 - Chọn khoảng thời gian: tháng, học kỳ, nhiệm kỳ (lấy từ tab KyHoatDong: một học kỳ kéo dài đến ngày trước học kỳ sau), hoặc tự chọn.
 - Xem theo thành viên, theo ban (PR CAP, PR DES… gộp thành PR), hoặc cả CLB. Chỉ tính người đang có trong danh sách thành viên; người đã rời CLB không còn trong báo cáo nhưng lịch sử vẫn nằm trong sheet.
-- Chỉ số: điểm; số lần mỗi loại hoạt động (Seeding tách theo tên hoạt động, ví dụ comment, react); task đã xong (theo ngày xong); task trễ hạn (hạn chót nằm trong khoảng, xong sau hạn hoặc chưa xong mà đã quá hạn).
+- Chỉ tính thành viên, không tính BOD. Chỉ số: điểm; số lần mỗi loại hoạt động; task đã xong (theo ngày xong); task trễ hạn (hạn chót nằm trong khoảng, xong sau hạn hoặc chưa xong mà đã quá hạn).
 - Biểu đồ chia mốc theo ngày (khoảng ≤ 31 ngày), theo tuần (≤ 120 ngày), hoặc theo tháng.
 - Xuất Excel: tạo Google Sheet tạm, tải về dạng .xlsx rồi chuyển sheet tạm vào thùng rác.
 
 ### File đăng ký log
 
 - Cài đặt có link Google Sheet mẫu (`LinkMauLog`) và thư mục Drive để lưu (`LinkThuMucLog`).
-- Tạo file: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Không có mẫu thì tạo bảng đơn giản.
+- Tạo file: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Chưa có file mẫu thì không cho tạo.
 
 ### Cài đặt
 
 | Mục | Lưu ở |
 |---|---|
 | Loại hoạt động và điểm | tab LoaiHoatDong |
-| Quy chế cộng điểm | CaiDat, khoá `QuyChe` |
+| Quy chế cộng điểm (link file Docs) | CaiDat, khoá `QuyChe` |
+| Mail báo góp ý mới về tài khoản CLB | CaiDat, khoá `BaoGopYQuaMail` (`tat` là tắt) |
+| Chữ ký thư | CaiDat, khoá `ChuKyThu`, `DungChuKy` |
+| Client ID đăng nhập Google | CaiDat, khoá `GoogleClientId` |
 | Bảng ghim | tab BangGhim |
 | Số ngày coi là sắp đến hạn | CaiDat, khoá `SapDenHanNgay` (mặc định 2) |
 | Bot Zalo | CaiDat, khoá `ZaloToken`, `ZaloTenBot`, `ZaloGioNhac`, `ZaloNhacSapDenHan`, `ZaloNhacTre`, `ZaloLanNhacCuoi`; người nhận ở tab KetNoiZalo |
@@ -123,4 +127,6 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - `pwa/sw.js` giữ sẵn file của trang vỏ (cần cho việc cài app); dữ liệu luôn lấy trực tiếp từ Apps Script.
 - Trang vỏ được đưa lên GitHub Pages từ nhánh `gh-pages` (bản sao của thư mục `pwa/`).
 - Đăng nhập Google: ECODesk (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Bấm nút thì trang vỏ hiện nút đăng nhập chính thức của Google, nhận mã xác nhận (ID token) rồi gửi vào ECODesk. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email và tạo phiên như đăng nhập mật khẩu.
+- Ghi nhớ đăng nhập: phiên ECODesk có hạn 60 ngày và tự gia hạn mỗi lần mở. Phiên lưu cả trong khung lẫn ở trang vỏ (`eco_desk_phien`), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.
+- Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app (`vien`). App trả lời `ho-tro-vien` thì trang vỏ cho khung tràn toàn màn hình; app cũ không trả lời thì khung vẫn chừa phần trên như trước. App gửi `mau` để trang vỏ đổi màu thanh trạng thái theo giao diện sáng/tối.
 - Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.

@@ -3,7 +3,7 @@
  * Mọi hàm gọi từ giao diện đều nhận "phien" (mã phiên đăng nhập) làm tham số đầu tiên.
  */
 
-var THOI_HAN_PHIEN_NGAY = 30;
+var THOI_HAN_PHIEN_NGAY = 60; // Ghi nhớ đăng nhập: mỗi lần mở ECODesk, hạn được kéo dài thêm 60 ngày.
 var GIOI_HAN_SAI_MAT_KHAU = 8;
 
 /* ===================== Đăng nhập ===================== */
@@ -55,10 +55,19 @@ function dangXuat(phien) {
   return true;
 }
 
-/** Trả về người dùng của phiên, hoặc null nếu phiên hết hạn. */
+/** Trả về người dùng của phiên, hoặc null nếu phiên hết hạn. Mỗi lần mở app thì gia hạn phiên. */
 function layNguoiDung(phien) {
   var u = docPhien(phien);
-  return u ? thongTinNguoiDung(u) : null;
+  if (!u) return null;
+  var props = PropertiesService.getScriptProperties();
+  try {
+    var p = JSON.parse(props.getProperty('phien_' + phien));
+    if (p.hetHan - Date.now() < (THOI_HAN_PHIEN_NGAY - 1) * 864e5) {
+      p.hetHan = Date.now() + THOI_HAN_PHIEN_NGAY * 864e5;
+      props.setProperty('phien_' + phien, JSON.stringify(p));
+    }
+  } catch (e) { /* không gia hạn được thì thôi */ }
+  return thongTinNguoiDung(u);
 }
 
 function doiMatKhau(phien, matKhauCu, matKhauMoi) {
@@ -71,7 +80,8 @@ function doiMatKhau(phien, matKhauCu, matKhauMoi) {
 }
 
 function thongTinNguoiDung(tk) {
-  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: String(tk.VaiTro) };
+  var vaiTro = String(tk.VaiTro);
+  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, gmail: vaiTro === 'BOD' ? linkGmail('#inbox') : '' };
 }
 
 function timTaiKhoan(email) {
@@ -132,7 +142,7 @@ function layDuLieuCongDiem(phien) {
   var ky = layKyHienTai();
   return {
     ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
-    thanhVien: docBang('ThanhVien').map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan(tv.Ban) }; }),
+    thanhVien: docBang('ThanhVien').filter(khongPhaiBod).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan(tv.Ban) }; }),
     loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     ganDay: lichSuGanDay(ky, 30)
   };
@@ -156,7 +166,7 @@ function congDiem(phien, yeuCau) {
   var khoa = LockService.getScriptLock();
   khoa.waitLock(30000);
   try {
-    var kq = taoDongCongDiem(yeuCau, docBang('ThanhVien'), docBang('LoaiHoatDong'), String(tk.HoVaTen), layKyHienTai(), new Date());
+    var kq = taoDongCongDiem(yeuCau, docBang('ThanhVien').filter(khongPhaiBod), docBang('LoaiHoatDong'), String(tk.HoVaTen), layKyHienTai(), new Date());
     if (kq.loi) throw new Error(kq.loi);
     themDong('LichSuDiem', kq.dong);
     xoaBoNhoTam();
@@ -210,6 +220,7 @@ function layCaiDatDesk(phien) {
   return {
     loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     quyChe: String(layCaiDat('QuyChe') || ''),
+    baoGopY: baoGopYQuaMail(),
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan(),
     mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length },
@@ -233,11 +244,36 @@ function luuLoaiHoatDong(phien, ds) {
   return true;
 }
 
-function luuQuyChe(phien, noiDung) {
+/** Quy chế cộng điểm là một link (thường là file Google Docs). Bỏ trống để ẩn. */
+function luuQuyChe(phien, link) {
   canDangNhap(phien, 'caidat');
-  datCaiDat('QuyChe', String(noiDung || '').slice(0, 20000));
+  var l = String(link || '').trim();
+  if (l && !linkHopLe(l)) throw new Error('Link quy chế phải bắt đầu bằng http:// hoặc https://');
+  datCaiDat('QuyChe', l);
   xoaBoNhoTam();
   return true;
+}
+
+/** Có gửi mail báo về tài khoản CLB khi có góp ý mới không. Mặc định là có. */
+function baoGopYQuaMail() {
+  return String(layCaiDat('BaoGopYQuaMail') || '') !== 'tat';
+}
+
+function luuBaoGopY(phien, bat) {
+  canDangNhap(phien, 'caidat');
+  datCaiDat('BaoGopYQuaMail', bat ? 'bat' : 'tat');
+  return true;
+}
+
+/** Gửi mail báo góp ý mới về hộp thư CLB. Tối đa một mail mỗi 10 phút để không tốn lượt gửi mail trong ngày. */
+function thongBaoGopYMoi(noiDung) {
+  if (!baoGopYQuaMail()) return;
+  var cache = CacheService.getScriptCache();
+  if (cache.get('daBaoGopY')) return;
+  cache.put('daBaoGopY', '1', 600);
+  var chu = 'Có góp ý ẩn danh mới gửi từ ECOBoard:\n\n' + String(noiDung).slice(0, 3000) +
+    '\n\nMở ECODesk, mục Góp ý để xem tất cả. Trong 10 phút tới nếu có thêm góp ý thì sẽ không gửi mail nữa.\nTắt thông báo này trong ECODesk: Cài đặt, Thông báo góp ý.';
+  MailApp.sendEmail(emailClb(), 'ECOBoard: có góp ý mới', chu, { name: 'ECOBoard' });
 }
 
 function luuGhim(phien, ds) {

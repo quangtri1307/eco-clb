@@ -42,7 +42,7 @@ function duLieuBaoCao() {
     task: docBang('Task').map(function (t) {
       return { nguoi: String(t.NguoiPhuTrach), hanChot: ngayChuoi(t.HanChot), trangThaiLuu: String(t.TrangThai || TRANG_THAI_TASK.GIAO), ngayXong: ngayCuaThoiGian(t.ThoiGianXong) };
     }),
-    thanhVien: docBang('ThanhVien').map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan(t.Ban) }; }),
+    thanhVien: docBang('ThanhVien').filter(khongPhaiBod).map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan(t.Ban) }; }),
     loai: docBang('LoaiHoatDong').map(function (l) { return String(l.TenLoai); })
   };
 }
@@ -121,7 +121,7 @@ function layDuLieuLog(phien) {
   canDangNhap(phien, 'log');
   return {
     thanhVien: docBang('ThanhVien').map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
-    coMau: !!layCaiDat('LinkMauLog'), coThuMuc: !!layCaiDat('LinkThuMucLog'),
+    linkMau: String(layCaiDat('LinkMauLog') || ''), linkThuMuc: String(layCaiDat('LinkThuMucLog') || ''),
     ganDay: docBang('FileLog').map(function (f) {
       return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan), soNguoi: Number(f.SoNguoi) || 0, soBuoi: Number(f.SoBuoi) || 0, nguoiTao: String(f.NguoiTao) };
     }).sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 20)
@@ -132,22 +132,16 @@ function layDuLieuLog(phien) {
 function taoFileLog(phien, yc) {
   var tk = canDangNhap(phien, 'log');
   var tv = docBang('ThanhVien');
-  var k = kiemTraFileLog(yc, tv);
+  var maMau = maTuLink(layCaiDat('LinkMauLog'));
+  var k = kiemTraFileLog({ coMau: !!maMau, tenFile: yc && yc.tenFile, nguoi: yc && yc.nguoi, buoi: yc && yc.buoi }, tv);
   if (k.loi) throw new Error(k.loi);
 
-  var maMau = maTuLink(layCaiDat('LinkMauLog'));
   var maThuMuc = maTuLink(layCaiDat('LinkThuMucLog'));
   var thuMuc = null;
   if (maThuMuc) { try { thuMuc = DriveApp.getFolderById(maThuMuc); } catch (e) { throw new Error('Không mở được thư mục lưu file log. Kiểm tra lại link trong Cài đặt.'); } }
   var file;
-  if (maMau) {
-    try { file = DriveApp.getFileById(maMau).makeCopy(k.tenFile, thuMuc || DriveApp.getRootFolder()); }
-    catch (e) { throw new Error('Không chép được sheet mẫu. Kiểm tra lại link mẫu trong Cài đặt.'); }
-  } else {
-    var moi = SpreadsheetApp.create(k.tenFile);
-    file = DriveApp.getFileById(moi.getId());
-    if (thuMuc) file.moveTo(thuMuc);
-  }
+  try { file = DriveApp.getFileById(maMau).makeCopy(k.tenFile, thuMuc || DriveApp.getRootFolder()); }
+  catch (e) { throw new Error('Không chép được file mẫu. Kiểm tra lại link file mẫu.'); }
   var ss = SpreadsheetApp.openById(file.getId());
   var sh = ss.getSheets()[0];
   var v = sh.getDataRange().getValues();
@@ -187,7 +181,7 @@ function taoFileLog(phien, yc) {
 }
 
 function luuCaiDatLog(phien, cd) {
-  canDangNhap(phien, 'caidat');
+  canDangNhap(phien, 'log');
   cd = cd || {};
   var mau = String(cd.linkMau || '').trim(), thuMuc = String(cd.linkThuMuc || '').trim();
   if (mau) {

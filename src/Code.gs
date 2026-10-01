@@ -14,7 +14,7 @@ function doGet(e) {
   trang.googleClientId = laDesk ? String(layCaiDat('GoogleClientId') || '') : '';
   return trang.evaluate()
     .setTitle(laDesk ? 'ECODesk' : 'ECOBoard')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -165,6 +165,7 @@ function guiGopY(noiDung) {
   if (dem >= GIOI_HAN_GOP_Y_MOI_PHUT) throw new Error('Đang có nhiều góp ý gửi cùng lúc, bạn thử lại sau một phút nhé.');
   cache.put('demGopY', String(dem + 1), 60);
   themDong('GopY', [{ ThoiGian: new Date(), NoiDung: String(noiDung).trim(), DaDoc: false }]);
+  try { thongBaoGopYMoi(String(noiDung).trim()); } catch (e) { /* không gửi được mail báo thì góp ý vẫn được lưu */ }
   return true;
 }
 
@@ -186,7 +187,7 @@ function khoiTaoCoSoDuLieu() {
     }
   });
   if (!docBang('LoaiHoatDong').length) {
-    themDong('LoaiHoatDong', ['Staff', 'Log', 'Tham gia hoạt động', 'Seeding'].map(function (t) { return { TenLoai: t, Diem: 0 }; }));
+    themDong('LoaiHoatDong', ['Staff', 'Log', 'Tham gia hoạt động'].map(function (t) { return { TenLoai: t, Diem: 0 }; }));
   }
   var macDinh = ss.getSheetByName('Sheet1') || ss.getSheetByName('Trang tính1');
   if (macDinh && macDinh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(macDinh);

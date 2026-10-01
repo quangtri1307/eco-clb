@@ -34,10 +34,9 @@ var BANG = {
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
-  ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet'],
-  ThuMau: ['ThoiGianTao', 'ThuMuc', 'TieuDe', 'NoiDung', 'NguoiSua', 'ThoiGianSua'],
+  ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet', 'TuyChon'],
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
-  LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua'],
+  LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua', 'MaNhap'],
   FileLog: ['ThoiGian', 'TenFile', 'DuongDan', 'SoNguoi', 'SoBuoi', 'NguoiTao']
 };
 
@@ -228,6 +227,11 @@ function kiemTraGopY(noiDung) {
   if (!s) return 'Bạn chưa viết góp ý.';
   if (s.length > 2000) return 'Góp ý dài quá 2000 ký tự, bạn rút gọn giúp nhé.';
   return '';
+}
+
+/** Người thuộc ban điều hành không tham gia cộng điểm và không có trong báo cáo. */
+function khongPhaiBod(tv) {
+  return nhomBan(tv.Ban !== undefined ? tv.Ban : tv.ban) !== 'BOD';
 }
 
 /** Danh sách tài khoản BOD cần có theo danh sách thành viên mới (Ban = BOD, có email). */
@@ -504,7 +508,7 @@ function kiemTraViecMail(v) {
   if ((tt === THAO_TAC_MAIL.SOAN || tt === THAO_TAC_MAIL.TRA_LOI || tt === THAO_TAC_MAIL.TRA_LOI_TAT_CA) && !String(v.noiDung || '').trim()) return 'Bạn chưa nhập nội dung.';
   if ((tt === THAO_TAC_MAIL.GAN_NHAN || tt === THAO_TAC_MAIL.BO_NHAN) && !String(v.nhan || '').trim()) return 'Bạn chưa chọn nhãn.';
   if (String(v.tieuDe || '').length > 250) return 'Tiêu đề dài quá 250 ký tự.';
-  if (String(v.noiDung || '').length > 40000) return 'Nội dung dài quá.';
+  if (String(v.noiDung || '').length > 45000) return 'Nội dung dài quá. Nếu bạn dán từ nơi khác, thử dán lại không kèm định dạng (Ctrl+Shift+V).';
   return '';
 }
 
@@ -537,6 +541,61 @@ function chuSangHtml(chu) {
   var e = String(chu || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   e = e.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
   return '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">' + e.replace(/\r?\n/g, '<br>') + '</div>';
+}
+
+/** Bỏ thẻ HTML, lấy chữ thường (dùng làm bản chữ của thư HTML và kiểm tra thư trống). */
+function htmlSangChu(html) {
+  return String(html || '')
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+    .replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * Lọc HTML do người dùng soạn trước khi lưu và gửi: bỏ thẻ chạy được, thuộc tính on…, link javascript:.
+ * Giao diện đã lọc một lần; đây là lớp chặn thứ hai ở máy chủ.
+ */
+function lamSachHtml(html) {
+  return String(html || '')
+    .replace(/<(script|style|iframe|object|embed|form|textarea|select|button|meta|link|base|frame|frameset|applet|noscript)\b[\s\S]*?(<\/\1\s*>|$)/gi, '')
+    .replace(/<\/?(script|style|iframe|object|embed|form|input|textarea|select|button|meta|link|base|frame|frameset|applet|noscript)\b[^>]*>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(href|src)\s*=\s*("|')\s*(javascript|vbscript|data(?!:image\/)):[^"']*\2/gi, '$1=$2#$2');
+}
+
+/** Đổi giá trị thành chữ an toàn để chèn vào HTML. */
+function escHtmlChu(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Chuẩn bị gửi hàng loạt từ một thư nháp Gmail. mau: { tieuDe, html }; nguoiNhan: [{ email, duLieu{} }].
+ * Thay {TenCot} ở tiêu đề và nội dung (giá trị chèn vào HTML được escape).
+ * Trả về { ds[{email, tieuDe, html, chu}], loi }.
+ */
+function chuanBiGuiTuNhap(mau, nguoiNhan, gioiHan) {
+  mau = mau || {};
+  if (!String(mau.tieuDe || '').trim()) return { ds: [], loi: 'Thư nháp chưa có tiêu đề. Mở Gmail, thêm tiêu đề cho thư nháp rồi thử lại.' };
+  if (!htmlSangChu(mau.html) && !/<img/i.test(String(mau.html || ''))) return { ds: [], loi: 'Thư nháp chưa có nội dung.' };
+  var ds = [], daCo = {}, thieu = [], sai = [];
+  (nguoiNhan || []).forEach(function (n) {
+    var e = String(n.email || '').trim();
+    if (!emailHopLe(e)) { sai.push(e || '(trống)'); return; }
+    if (daCo[e.toLowerCase()]) return;
+    daCo[e.toLowerCase()] = true;
+    var d = n.duLieu || {}, dHtml = {};
+    Object.keys(d).forEach(function (k) { dHtml[k] = escHtmlChu(d[k]); });
+    var a = thayTheMau(mau.tieuDe, d), b = thayTheMau(mau.html, dHtml);
+    a.thieu.concat(b.thieu).forEach(function (t) { if (thieu.indexOf(t) < 0) thieu.push(t); });
+    ds.push({ email: e, tieuDe: a.chu, html: b.chu, chu: htmlSangChu(b.chu) });
+  });
+  if (sai.length) return { ds: [], loi: 'Có ' + sai.length + ' email chưa đúng: ' + sai.slice(0, 5).join(', ') + (sai.length > 5 ? '…' : '') };
+  if (thieu.length) return { ds: [], loi: 'Không tìm thấy thông tin cho: ' + thieu.map(function (t) { return '{' + t + '}'; }).join(', ') + '. Sửa thư nháp hoặc chọn nguồn có cột tương ứng.' };
+  if (!ds.length) return { ds: [], loi: 'Chưa có người nhận nào.' };
+  if (gioiHan != null && ds.length > gioiHan) return { ds: [], loi: 'Gửi ' + ds.length + ' thư nhưng hôm nay tài khoản CLB chỉ còn gửi được ' + gioiHan + ' thư. Bớt người nhận hoặc hẹn giờ sang ngày mai.' };
+  return { ds: ds, loi: '' };
 }
 
 /**
@@ -738,6 +797,7 @@ function timTieuDeMauLog(values) {
 /** Kiểm tra yêu cầu tạo file log. Trả về { loi, tenFile, nguoi[], buoi[] }. */
 function kiemTraFileLog(yc, thanhVien) {
   yc = yc || {};
+  if (!yc.coMau) return { loi: 'Chưa có file mẫu. Dán link file mẫu rồi mới tạo được file đăng ký log.' };
   var tenFile = String(yc.tenFile || '').trim();
   if (!tenFile) return { loi: 'Bạn chưa đặt tên file.' };
   var theoTen = {};
@@ -772,7 +832,8 @@ if (typeof module !== 'undefined') {
     boDau: boDau, chuanHoaTenCot: chuanHoaTenCot, nhomBan: nhomBan, nhanDienCot: nhanDienCot,
     docDanhSachThanhVien: docDanhSachThanhVien, tenNhiemKy: tenNhiemKy, tinhKyMoi: tinhKyMoi,
     dongThanhDoiTuong: dongThanhDoiTuong, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
-    linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo,
+    linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo, khongPhaiBod: khongPhaiBod,
+    htmlSangChu: htmlSangChu, lamSachHtml: lamSachHtml, chuanBiGuiTuNhap: chuanBiGuiTuNhap,
     coQuyen: coQuyen, kiemTraMatKhauMoi: kiemTraMatKhauMoi, taoDongCongDiem: taoDongCongDiem,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe, soNgayGiua: soNgayGiua, hienNgay: hienNgay,

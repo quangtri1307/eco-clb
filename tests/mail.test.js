@@ -58,3 +58,26 @@ test('chuanBiGuiHangLoat', () => {
   assert.match(L.chuanBiGuiHangLoat('x', 'y', [{ email: 'sai' }], 10).loi, /chưa đúng/);
   assert.match(L.chuanBiGuiHangLoat('', 'y', nn, 10).loi, /tiêu đề/);
 });
+
+test('htmlSangChu và lamSachHtml', () => {
+  assert.strictEqual(L.htmlSangChu('<div>Chào <b>bạn</b></div><div><br></div><p>A &amp; B</p>'), 'Chào bạn\n\nA & B');
+  assert.strictEqual(L.htmlSangChu('<div><br></div>'), '');
+  const s = L.lamSachHtml('<p onclick="x()">Hi</p><script>alert(1)</script><a href="javascript:alert(1)">l</a><img src="data:image/png;base64,AA"><iframe src="x"></iframe>');
+  assert.doesNotMatch(s, /onclick|script|javascript|iframe/i);
+  assert.match(s, /<p>Hi<\/p>/);
+  assert.match(s, /data:image\/png/);
+});
+
+test('chuanBiGuiTuNhap thay chỗ trống, escape giá trị trong HTML', () => {
+  const mau = { tieuDe: 'Chào {HoVaTen}', html: '<p>Bạn {Họ và tên} ở ban {Ban}</p>' };
+  const kq = L.chuanBiGuiTuNhap(mau, [{ email: 'a@x.com', duLieu: { HoVaTen: 'A <B>', Ban: 'PG' } }, { email: 'A@x.com', duLieu: {} }], 10);
+  assert.strictEqual(kq.loi, '');
+  assert.strictEqual(kq.ds.length, 1);
+  assert.strictEqual(kq.ds[0].tieuDe, 'Chào A <B>');
+  assert.strictEqual(kq.ds[0].html, '<p>Bạn A &lt;B&gt; ở ban PG</p>');
+  assert.strictEqual(kq.ds[0].chu, 'Bạn A <B> ở ban PG');
+  assert.match(L.chuanBiGuiTuNhap(mau, [{ email: 'a@x.com', duLieu: { HoVaTen: 'A' } }], 10).loi, /\{Ban\}/);
+  assert.match(L.chuanBiGuiTuNhap({ tieuDe: '', html: '<p>x</p>' }, [], 10).loi, /tiêu đề/);
+  assert.match(L.chuanBiGuiTuNhap({ tieuDe: 'x', html: '<div><br></div>' }, [], 10).loi, /nội dung/);
+  assert.match(L.chuanBiGuiTuNhap({ tieuDe: 'x', html: 'y' }, [{ email: 'a@x.com' }, { email: 'b@x.com' }], 1).loi, /chỉ còn/);
+});

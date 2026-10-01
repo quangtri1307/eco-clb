@@ -25,11 +25,37 @@
     return /^https:\/\/([a-z0-9-]+\.)*googleusercontent\.com$/.test(origin) || origin === 'https://script.google.com';
   }
 
-  var nguon = null, nguonOrigin = '';
+  /* Khoảng an toàn (tai thỏ, thanh điều hướng) đo bằng CSS env() để app bên trong tự chừa chỗ. */
+  var do_ = document.createElement('div');
+  do_.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;top:0;left:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+  document.body.appendChild(do_);
+  function vien() {
+    var c = getComputedStyle(do_);
+    return { t: parseFloat(c.paddingTop) || 0, r: parseFloat(c.paddingRight) || 0, b: parseFloat(c.paddingBottom) || 0, l: parseFloat(c.paddingLeft) || 0 };
+  }
+  /* Ghi nhớ đăng nhập ECODesk ngay ở trang vỏ (bộ nhớ của khung bên trong hay bị điện thoại xoá). */
+  var KHOA_PHIEN = 'eco_' + app + '_phien';
+  function docPhien() { try { return localStorage.getItem(KHOA_PHIEN) || ''; } catch (e) { return ''; } }
+  function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); } catch (e) {} }
+
+  var nguon = null, nguonOrigin = '', appCon = null, appOrigin = '';
+  function guiVo() { if (appCon) { try { appCon.postMessage({ eco: 'vo', vien: vien(), phien: app === 'desk' ? docPhien() : '' }, appOrigin); } catch (e) {} } }
+  window.addEventListener('resize', guiVo);
+  window.addEventListener('orientationchange', function () { setTimeout(guiVo, 300); });
+
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (!d || typeof d !== 'object' || !laTrangAppsScript(e.origin)) return;
-    if (d.eco === 'xin-chao') { e.source.postMessage({ eco: 'vo' }, e.origin); return; }
+    if (d.eco === 'xin-chao') { appCon = e.source; appOrigin = e.origin; guiVo(); return; }
+    /* App mới tự chừa khoảng an toàn: cho khung tràn toàn màn hình để đầu và chân app cân đối. */
+    if (d.eco === 'ho-tro-vien') { document.body.classList.add('tran'); return; }
+    if (d.eco === 'phien' && app === 'desk') { luuPhien(String(d.phien || '')); return; }
+    if (d.eco === 'mau') {
+      var mau = /^#[0-9a-f]{6}$/i.test(d.mau) ? d.mau : '#274e13', nen = /^#[0-9a-f]{6}$/i.test(d.nen) ? d.nen : '#274e13';
+      var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', mau);
+      document.documentElement.style.background = mau; khung.style.background = nen;
+      return;
+    }
     if (d.eco === 'dang-nhap-google' && app === 'desk' && d.clientId) {
       nguon = e.source; nguonOrigin = e.origin;
       moGoogle(String(d.clientId));
