@@ -23,7 +23,7 @@ src/            Mã chạy trên Google Apps Script (chép nguyên vào trình s
   Logic.gs      Các hàm tính toán thuần (có kiểm thử)
   Board.html    Giao diện ECOBoard
   HauKy.html    Hộp thoại tải danh sách trong Google Sheet
-  Desk.gs       Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
+  MayChuDesk.gs Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
   Zalo.gs       Nhắc việc qua bot Zalo
   Mail.gs       Mail: hộp thư ứng cử viên, BOD duyệt, thư mẫu, gửi hàng loạt, hẹn giờ
   BaoCao.gs     Báo cáo, xuất Excel và tạo file đăng ký log
