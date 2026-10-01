@@ -35,7 +35,7 @@ Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw fi
 | `src/Logic.gs` | Bấm **+ → Tập lệnh**, đặt tên `Logic` |
 | `src/Board.html` | Bấm **+ → HTML**, đặt tên `Board` |
 | `src/HauKy.html` | Bấm **+ → HTML**, đặt tên `HauKy` |
-| `src/Desk.gs` | Bấm **+ → Tập lệnh**, đặt tên `Desk` |
+| `src/MayChuDesk.gs` | Bấm **+ → Tập lệnh**, đặt tên `MayChuDesk` (không đặt `Desk` vì Apps Script không cho trùng tên với `Desk.html`) |
 | `src/Desk.html` | Bấm **+ → HTML**, đặt tên `Desk` |
 | `src/Zalo.gs` | Bấm **+ → Tập lệnh**, đặt tên `Zalo` |
 | `src/Mail.gs` | Bấm **+ → Tập lệnh**, đặt tên `Mail` |
