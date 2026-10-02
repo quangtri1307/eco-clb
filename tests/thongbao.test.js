@@ -51,3 +51,37 @@ test('base64Url, gocDiaChi, chuanHoaCachNhan', () => {
   assert.deepStrictEqual(L.chuanHoaCachNhan(''), ['zalo']);
   assert.deepStrictEqual(L.chuanHoaCachNhan(['app', 'xyz']), ['app']);
 });
+
+test('maHoaAesGcm khớp với AES-128-GCM chuẩn', () => {
+  const crypto = require('node:crypto');
+  for (const n of [0, 1, 15, 16, 17, 100, 1000]) {
+    const khoa = crypto.randomBytes(16), nonce = crypto.randomBytes(12), dl = crypto.randomBytes(n);
+    const c = crypto.createCipheriv('aes-128-gcm', khoa, nonce);
+    const mong = Buffer.concat([c.update(dl), c.final(), c.getAuthTag()]);
+    assert.deepStrictEqual(Buffer.from(L.maHoaAesGcm(Array.from(khoa), Array.from(nonce), Array.from(dl))), mong);
+  }
+});
+
+test('maHoaThongBaoDay giải mã được như trình duyệt (RFC 8291)', () => {
+  const crypto = require('node:crypto');
+  const hmac = (k, d) => Array.from(crypto.createHmac('sha256', Buffer.from(k)).update(Buffer.from(d)).digest());
+  const may = crypto.createECDH('prime256v1'); may.generateKeys();
+  const auth = crypto.randomBytes(16), salt = crypto.randomBytes(16);
+  const tam = crypto.createECDH('prime256v1'); tam.generateKeys();
+  const noiDung = Buffer.from(JSON.stringify({ tieuDe: 'Thử', noiDung: 'Nhắc deadline: nộp báo cáo' }));
+  const than = Buffer.from(L.maHoaThongBaoDay(Array.from(noiDung), Array.from(may.getPublicKey()), Array.from(auth), Array.from(tam.getPrivateKey()), Array.from(salt), hmac));
+  // Phía máy nhận: đọc tiêu đề rồi giải mã.
+  const s = than.subarray(0, 16), rs = than.readUInt32BE(16), idlen = than[20], cong = than.subarray(21, 21 + idlen), ma = than.subarray(21 + idlen);
+  assert.strictEqual(rs, 4096); assert.strictEqual(idlen, 65);
+  const chung = may.computeSecret(cong);
+  const H = (k, d) => crypto.createHmac('sha256', k).update(d).digest();
+  const ikm = H(H(auth, chung), Buffer.concat([Buffer.from('WebPush: info\0'), may.getPublicKey(), cong, Buffer.from([1])]));
+  const prk = H(s, ikm);
+  const cek = H(prk, Buffer.from('Content-Encoding: aes128gcm\0\x01')).subarray(0, 16);
+  const nonce = H(prk, Buffer.from('Content-Encoding: nonce\0\x01')).subarray(0, 12);
+  const d = crypto.createDecipheriv('aes-128-gcm', cek, nonce);
+  d.setAuthTag(ma.subarray(ma.length - 16));
+  const ro = Buffer.concat([d.update(ma.subarray(0, ma.length - 16)), d.final()]);
+  assert.strictEqual(ro[ro.length - 1], 2);
+  assert.deepStrictEqual(ro.subarray(0, -1), noiDung);
+});

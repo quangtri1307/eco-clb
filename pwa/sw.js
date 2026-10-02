@@ -1,5 +1,5 @@
 /* Service worker tối giản: giữ sẵn các file của trang vỏ để app mở nhanh và cài được lên màn hình chính. */
-var BO_NHO = 'eco-vo-6';
+var BO_NHO = 'eco-vo-7';
 var TEP = ['./config.js', './vo.js', './vo.css', './board/', './board/index.html', './board/manifest.webmanifest', './desk/', './desk/index.html', './desk/manifest.webmanifest',
   './icons/board-192.png', './icons/board-512.png', './icons/desk-192.png', './icons/desk-512.png',
   './icons/tab-board.png', './icons/tab-desk.png', './icons/apple-board.png', './icons/apple-desk.png', './icons/badge-96.png'];
@@ -22,9 +22,15 @@ self.addEventListener('fetch', function (e) {
 });
 
 /* ---------- Thông báo của ECODesk ---------- */
-/* Máy chủ chỉ báo "có tin mới" (không kèm nội dung); service worker hỏi lại nội dung bằng mã riêng của máy. */
+/*
+ * Máy chủ gửi kèm nội dung đã mã hoá (trình duyệt tự giải mã) nên hiện ngay. iPhone chỉ cho rất ít thời gian,
+ * phải hiện thông báo ngay chứ không kịp hỏi lại máy chủ. Máy bật từ bản cũ (tin không có nội dung) thì
+ * hỏi lại nội dung bằng mã riêng của máy, quá 4 giây thì hiện câu chung.
+ */
 self.addEventListener('push', function (e) {
   var mac = { tieuDe: 'ECODesk', noiDung: 'Bạn có thông báo mới.' };
+  var co = null;
+  try { co = e.data ? e.data.json() : null; } catch (loi) { co = null; }
   var hien = function (ds) {
     return Promise.all((ds.length ? ds : [mac]).slice(-3).map(function (t, i) {
       return self.registration.showNotification(t.tieuDe === 'ECODesk' ? 'ECODesk' : 'ECODesk: ' + t.tieuDe, {
@@ -32,14 +38,16 @@ self.addEventListener('push', function (e) {
       });
     }));
   };
-  e.waitUntil(caches.open('eco-tb').then(function (c) { return c.match(self.registration.scope + 'tb-may'); })
+  if (co && co.tieuDe) { e.waitUntil(hien([co])); return; }
+  var hoiLai = caches.open('eco-tb').then(function (c) { return c.match(self.registration.scope + 'tb-may'); })
     .then(function (r) { return r ? r.json() : null; })
     .then(function (may) {
       if (!may || !may.khoa || !may.url) return [];
       return fetch(may.url + '?tb=' + encodeURIComponent(may.khoa)).then(function (r) { return r.json(); }).then(function (kq) { return (kq && kq.ds) || []; });
     })
-    .catch(function () { return []; })
-    .then(hien));
+    .catch(function () { return []; });
+  var choToiDa = new Promise(function (ok) { setTimeout(function () { ok([]); }, 4000); });
+  e.waitUntil(Promise.race([hoiLai, choToiDa]).then(hien));
 });
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();

@@ -38,7 +38,7 @@ var BANG = {
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
   LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua', 'MaNhap'],
   FileLog: ['ThoiGian', 'TenFile', 'DuongDan', 'SoNguoi', 'SoBuoi', 'NguoiTao'],
-  ThietBi: ['Email', 'DiaChi', 'Khoa', 'TenMay', 'ThoiGian', 'LayCuoi'],
+  ThietBi: ['Email', 'DiaChi', 'Khoa', 'TenMay', 'ThoiGian', 'LayCuoi', 'P256dh', 'Auth'],
   ThongBao: ['ThoiGian', 'Email', 'TieuDe', 'NoiDung']
 };
 
@@ -920,6 +920,102 @@ function kyP256(bam, khoaRieng, hmac) {
   }
   throw new Error('Không ký được.');
 }
+/*
+ * Mã hoá nội dung thông báo đẩy (RFC 8291, aes128gcm) để điện thoại hiện thông báo ngay, không phải hỏi lại máy chủ.
+ * iPhone chỉ cho service worker rất ít thời gian; hỏi lại Apps Script thường quá chậm nên thông báo không hiện.
+ */
+var AES_ = null;
+function aes_() {
+  if (AES_) return AES_;
+  var sbox = [], x = 1, y = 1, i;
+  // Sinh bảng S-box của AES bằng phép nhân trong GF(2^8).
+  do {
+    x = (x ^ ((x << 1) & 255) ^ (x & 128 ? 0x1b : 0)) & 255;
+    y ^= (y << 1) & 255; y ^= (y << 2) & 255; y ^= (y << 4) & 255; y &= 255; if (y & 128) y ^= 0x09;
+    var b = y ^ ((y << 1) | (y >> 7)) ^ ((y << 2) | (y >> 6)) ^ ((y << 3) | (y >> 5)) ^ ((y << 4) | (y >> 4));
+    sbox[x] = (b ^ 0x63) & 255;
+  } while (x !== 1);
+  sbox[0] = 0x63;
+  AES_ = { sbox: sbox };
+  return AES_;
+}
+function xtime_(a) { return ((a << 1) ^ (a & 128 ? 0x1b : 0)) & 255; }
+function moRongKhoaAes_(khoa) {
+  var S = aes_().sbox, w = khoa.slice(0, 16), rcon = 1;
+  for (var i = 16; i < 176; i += 4) {
+    var t = w.slice(i - 4, i);
+    if (i % 16 === 0) { t = [S[t[1]] ^ rcon, S[t[2]], S[t[3]], S[t[0]]]; rcon = xtime_(rcon); }
+    for (var j = 0; j < 4; j++) w.push(w[i - 16 + j] ^ t[j]);
+  }
+  return w;
+}
+function maHoaKhoiAes_(w, vao) {
+  var S = aes_().sbox, s = [], r, c, i;
+  for (i = 0; i < 16; i++) s[i] = vao[i] ^ w[i];
+  for (r = 1; r <= 10; r++) {
+    var t = [];
+    for (i = 0; i < 16; i++) t[i] = S[s[(i + 4 * (i % 4)) % 16]]; // SubBytes + ShiftRows (cột chính)
+    if (r < 10) {
+      for (c = 0; c < 16; c += 4) {
+        var a0 = t[c], a1 = t[c + 1], a2 = t[c + 2], a3 = t[c + 3], e = a0 ^ a1 ^ a2 ^ a3;
+        t[c] ^= e ^ xtime_(a0 ^ a1); t[c + 1] ^= e ^ xtime_(a1 ^ a2); t[c + 2] ^= e ^ xtime_(a2 ^ a3); t[c + 3] ^= e ^ xtime_(a3 ^ a0);
+      }
+    }
+    for (i = 0; i < 16; i++) s[i] = t[i] ^ w[16 * r + i];
+  }
+  return s;
+}
+function nhanGf128_(X, Y) {
+  var Z = [], V = Y.slice(), i, j;
+  for (i = 0; i < 16; i++) Z[i] = 0;
+  for (i = 0; i < 128; i++) {
+    if ((X[i >> 3] >> (7 - (i & 7))) & 1) for (j = 0; j < 16; j++) Z[j] ^= V[j];
+    var cuoi = V[15] & 1;
+    for (j = 15; j > 0; j--) V[j] = ((V[j] >> 1) | ((V[j - 1] & 1) << 7)) & 255;
+    V[0] >>= 1;
+    if (cuoi) V[0] ^= 0xe1;
+  }
+  return Z;
+}
+/** AES-128-GCM: trả về bản mã nối thẻ xác thực 16 byte. Nonce 12 byte, không có dữ liệu kèm (AAD). */
+function maHoaAesGcm(khoa, nonce, duLieu) {
+  var w = moRongKhoaAes_(khoa), H = maHoaKhoiAes_(w, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  var dem = function (n) { return nonce.slice(0, 12).concat([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]); };
+  var ra = [], g = [], i, j;
+  for (i = 0; i < 16; i++) g[i] = 0;
+  for (i = 0; i < duLieu.length; i += 16) {
+    var k = maHoaKhoiAes_(w, dem(2 + i / 16)), khoi = [];
+    for (j = 0; j < 16 && i + j < duLieu.length; j++) { var m = (duLieu[i + j] ^ k[j]) & 255; ra.push(m); khoi.push(m); }
+    while (khoi.length < 16) khoi.push(0);
+    for (j = 0; j < 16; j++) g[j] ^= khoi[j];
+    g = nhanGf128_(g, H);
+  }
+  var bit = duLieu.length * 8, dai = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (bit >>> 24) & 255, (bit >>> 16) & 255, (bit >>> 8) & 255, bit & 255];
+  for (j = 0; j < 16; j++) g[j] ^= dai[j];
+  g = nhanGf128_(g, H);
+  var e0 = maHoaKhoiAes_(w, dem(1));
+  for (j = 0; j < 16; j++) ra.push((g[j] ^ e0[j]) & 255);
+  return ra;
+}
+function chuSangByte_(s) { var b = []; for (var i = 0; i < s.length; i++) b.push(s.charCodeAt(i)); return b; }
+/**
+ * Thân tin Web Push đã mã hoá (RFC 8291). duLieu: byte nội dung; khoaMay: 65 byte p256dh của máy; auth: 16 byte;
+ * rieng: 32 byte khoá tạm của máy chủ; salt: 16 byte ngẫu nhiên; hmac(khoa, duLieu) như kyP256.
+ */
+function maHoaThongBaoDay(duLieu, khoaMay, auth, rieng, salt, hmac) {
+  var c = p256_();
+  if (khoaMay.length !== 65 || khoaMay[0] !== 4 || auth.length !== 16) throw new Error('Khoá của máy không hợp lệ.');
+  var cong = khoaCongP256(rieng);
+  var diem = nhanDiemP256_(byteSangSo_(rieng), [byteSangSo_(khoaMay.slice(1, 33)), byteSangSo_(khoaMay.slice(33, 65))]);
+  if (!diem) throw new Error('Khoá của máy không hợp lệ.');
+  var chung = soSangByte_(diem[0], 32);
+  var ikm = hmac(hmac(auth, chung), chuSangByte_('WebPush: info').concat([0], khoaMay, cong, [1]));
+  var prk = hmac(salt, ikm);
+  var cek = hmac(prk, chuSangByte_('Content-Encoding: aes128gcm').concat([0, 1])).slice(0, 16);
+  var nonce = hmac(prk, chuSangByte_('Content-Encoding: nonce').concat([0, 1])).slice(0, 12);
+  var ma = maHoaAesGcm(cek, nonce, duLieu.concat([2]));
+  return salt.slice(0, 16).concat([0, 0, 16, 0, 65], cong, ma);
+}
 /** Phần gốc (https://máy-chủ) của địa chỉ nhận thông báo đẩy; '' nếu không phải https. */
 function gocDiaChi(url) {
   var m = /^https:\/\/[^\/?#]+/i.exec(String(url || ''));
@@ -973,7 +1069,7 @@ if (typeof module !== 'undefined') {
     docBangNgoai: docBangNgoai, chuanBiGuiHangLoat: chuanBiGuiHangLoat,
     chiSoBaoCao: chiSoBaoCao, taskBiTre: taskBiTre, tongHopBaoCao: tongHopBaoCao, chiaMoc: chiaMoc, bieuDoBaoCao: bieuDoBaoCao,
     timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog, kiemTraTokenGoogle: kiemTraTokenGoogle,
-    base64Url: base64Url, khoaCongP256: khoaCongP256, kyP256: kyP256, gocDiaChi: gocDiaChi, diaChiDayHopLe: diaChiDayHopLe,
+    base64Url: base64Url, khoaCongP256: khoaCongP256, kyP256: kyP256, maHoaAesGcm: maHoaAesGcm, maHoaThongBaoDay: maHoaThongBaoDay, gocDiaChi: gocDiaChi, diaChiDayHopLe: diaChiDayHopLe,
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan, loaiCongTay: loaiCongTay, chuanHoaDsGio: chuanHoaDsGio
   };
 }

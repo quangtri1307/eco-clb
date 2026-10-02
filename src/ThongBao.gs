@@ -118,19 +118,27 @@ function guiLenApp(email, tieuDe, noiDung, baoCao) {
   if (!may.length) { ghi('App: chưa có máy nào bật thông báo.'); return false; }
   themDong('ThongBao', [{ ThoiGian: new Date(), Email: email, TieuDe: String(tieuDe).slice(0, 200), NoiDung: String(noiDung).slice(0, 3000) }]);
   var khoa = khoaVapid(), duoc = false, hong = [];
+  var noiDungByte = byteKhongDau_(Utilities.newBlob(JSON.stringify({ tieuDe: String(tieuDe).slice(0, 100), noiDung: String(noiDung).slice(0, 900) })).getBytes());
   may.forEach(function (m) {
     var diaChi = String(m.DiaChi);
     var ten = 'App (' + (m.TenMay || 'máy') + ')';
     if (!diaChiDayHopLe(diaChi)) { ghi(ten + ': địa chỉ nhận tin không hợp lệ (' + gocDiaChi(diaChi) + ').'); return; }
     var ma = 0, tl = '';
     try {
-      var res = UrlFetchApp.fetch(diaChi, {
+      var tuyChon = {
         method: 'post', payload: '', muteHttpExceptions: true,
         headers: { Authorization: 'vapid t=' + jwtVapid(gocDiaChi(diaChi), khoa) + ', k=' + khoa.cong, TTL: '86400', Urgency: 'high' }
-      });
+      };
+      // Máy có khoá mã hoá thì gửi kèm nội dung để hiện ngay. Máy bật từ bản cũ thì máy tự hỏi lại nội dung.
+      if (m.P256dh && m.Auth) {
+        tuyChon.payload = byteKy_(maHoaThongBaoDay(noiDungByte, byteBase64Url_(m.P256dh), byteBase64Url_(m.Auth), khoaTam_(), byteNgauNhien_(16), hmacGas_));
+        tuyChon.contentType = 'application/octet-stream';
+        tuyChon.headers['Content-Encoding'] = 'aes128gcm';
+      }
+      var res = UrlFetchApp.fetch(diaChi, tuyChon);
       ma = res.getResponseCode(); tl = String(res.getContentText() || '').replace(/\s+/g, ' ').slice(0, 160);
     } catch (e) { ghi(ten + ': lỗi mạng ' + e.message); return; } // lỗi mạng tạm thời: bỏ qua máy này lần này
-    if (ma >= 200 && ma < 300) { duoc = true; ghi(ten + ': máy chủ thông báo đã nhận (' + ma + ').'); }
+    if (ma >= 200 && ma < 300) { duoc = true; ghi(ten + ': máy chủ thông báo đã nhận (' + ma + ').' + (m.P256dh && m.Auth ? '' : ' Máy này bật từ bản cũ, nên bấm Gỡ rồi bật lại trên điện thoại để thông báo hiện chắc chắn.')); }
     else {
       ghi(ten + ': bị từ chối, mã ' + ma + (tl ? ' · ' + tl : '') + (ma === 404 || ma === 410 ? ' (máy đã tắt thông báo, đã gỡ khỏi danh sách)' : ''));
       if (ma === 404 || ma === 410) hong.push(diaChi); // máy đã tắt thông báo hoặc gỡ app
@@ -138,6 +146,22 @@ function guiLenApp(email, tieuDe, noiDung, baoCao) {
   });
   if (hong.length) ghiDeBang('ThietBi', docBang('ThietBi').filter(function (t) { return hong.indexOf(String(t.DiaChi)) < 0; }));
   return duoc;
+}
+
+function byteNgauNhien_(n) {
+  var ra = [];
+  while (ra.length < n) ra = ra.concat(byteKhongDau_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid() + Date.now())));
+  return ra.slice(0, n);
+}
+/** Khoá riêng tạm cho một lần gửi (32 byte hợp lệ trên P-256). */
+function khoaTam_() {
+  for (var lan = 0; lan < 5; lan++) { var b = byteNgauNhien_(32); try { khoaCongP256(b); return b; } catch (e) { /* thử số khác */ } }
+  throw new Error('Không tạo được khoá tạm.');
+}
+function byteBase64Url_(s) {
+  var t = String(s).replace(/=+$/, '');
+  while (t.length % 4) t += '=';
+  return byteKhongDau_(Utilities.base64DecodeWebSafe(t));
 }
 
 /** App trên điện thoại hỏi nội dung thông báo mới (gọi từ service worker, không cần đăng nhập, chỉ cần khoá riêng của máy). */
@@ -247,7 +271,9 @@ function luuThietBi(phien, tb) {
   if (!diaChiDayHopLe(diaChi)) throw new Error('Máy này chưa hỗ trợ thông báo của app.');
   if (!/^[A-Za-z0-9-]{20,80}$/.test(khoa)) throw new Error('Thiếu mã của máy. Bạn thử bật lại nhé.');
   var con = docBang('ThietBi').filter(function (t) { return String(t.DiaChi) !== diaChi; });
-  con.push({ Email: String(tk.Email), DiaChi: diaChi, Khoa: khoa, TenMay: String(tb.tenMay || '').slice(0, 80), ThoiGian: new Date(), LayCuoi: new Date() });
+  var p256dh = /^[A-Za-z0-9_-]{80,100}$/.test(String(tb.p256dh || '')) ? String(tb.p256dh) : '';
+  var auth = /^[A-Za-z0-9_-]{16,30}$/.test(String(tb.auth || '')) ? String(tb.auth) : '';
+  con.push({ Email: String(tk.Email), DiaChi: diaChi, Khoa: khoa, TenMay: String(tb.tenMay || '').slice(0, 80), ThoiGian: new Date(), LayCuoi: new Date(), P256dh: p256dh, Auth: auth });
   ghiDeBang('ThietBi', con);
   var cach = cachMacDinh(tk);
   if (cach.indexOf('app') < 0) { cach.push('app'); ghiCotTaiKhoan(String(tk.Email), 'NhanThongBao', chuanHoaCachNhan(cach).join(',')); }

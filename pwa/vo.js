@@ -127,7 +127,10 @@
       // Service worker cần mã này và link ứng dụng web để hỏi nội dung thông báo khi có tin.
       return caches.open('eco-tb').then(function (c) {
         return c.put(x.reg.scope + 'tb-may', new Response(JSON.stringify({ khoa: ma, url: url })));
-      }).then(function () { return { diaChi: x.sub.endpoint, khoa: ma, tenMay: tenMay() }; });
+      }).then(function () {
+        var k = (x.sub.toJSON && x.sub.toJSON().keys) || {};
+        return { diaChi: x.sub.endpoint, khoa: ma, tenMay: tenMay(), p256dh: k.p256dh || '', auth: k.auth || '' };
+      });
     });
   }
   function moHopThongBao(khoaCong) {
@@ -136,7 +139,7 @@
     hop.hidden = false;
     document.getElementById('tb-bat').onclick = function () {
       hop.hidden = true;
-      dangKyThongBao(khoaCong).then(function (kq) { baoApp({ eco: 'dang-ky-thong-bao', diaChi: kq.diaChi, khoa: kq.khoa, tenMay: kq.tenMay }); })
+      dangKyThongBao(khoaCong).then(function (kq) { baoApp({ eco: 'dang-ky-thong-bao', diaChi: kq.diaChi, khoa: kq.khoa, tenMay: kq.tenMay, p256dh: kq.p256dh, auth: kq.auth }); })
         .catch(function (e) { baoApp({ eco: 'thong-bao-loi', loi: e.message }); });
     };
     document.getElementById('tb-dong').onclick = function () { hop.hidden = true; baoApp({ eco: 'thong-bao-loi', loi: 'Bạn đã bỏ qua. Bấm lại khi muốn bật.' }); };
