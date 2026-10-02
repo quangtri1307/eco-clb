@@ -100,26 +100,33 @@
     var u = navigator.userAgent;
     return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'Máy khác';
   }
+  function henGio(hua, ms, loi) {
+    return new Promise(function (ok, hong) {
+      var t = setTimeout(function () { hong(new Error(loi)); }, ms);
+      hua.then(function (v) { clearTimeout(t); ok(v); }, function (e) { clearTimeout(t); hong(e); });
+    });
+  }
   function dangKyThongBao(khoaCong) {
     var tt = trangThaiThongBao();
     if (tt === 'can-cai') return Promise.reject(new Error('Trên iPhone, thêm ECODesk vào màn hình chính rồi mở từ đó mới bật được thông báo.'));
     if (tt !== 'co') return Promise.reject(new Error('Trình duyệt này không hỗ trợ thông báo của app.'));
     return Notification.requestPermission().then(function (q) {
       if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với ECODesk rồi thử lại.');
-      return navigator.serviceWorker.ready;
-    }).then(function (reg) {
-      // Lấy bản service worker mới nhất (bản cũ không biết hiện thông báo) trước khi đăng ký.
-      return reg.update().catch(function () {}).then(function () { return navigator.serviceWorker.ready; });
+      // Đăng ký (hoặc cập nhật) service worker ngay lúc này, không chờ trang tải xong.
+      return henGio(navigator.serviceWorker.register('../sw.js', { scope: './' }).then(function (reg) {
+        return reg.update().catch(function () {}).then(function () { return navigator.serviceWorker.ready; });
+      }), 25000, 'Máy chưa sẵn sàng nhận thông báo. Đóng hẳn app, mở lại rồi bật lại nhé.');
     }).then(function (reg) {
       var khoa = khoaSangByte(khoaCong);
-      return reg.pushManager.getSubscription().then(function (cu) { return cu ? cu.unsubscribe() : true; })
-        .then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: khoa }); });
-    }).then(function (sub) {
+      return henGio(reg.pushManager.getSubscription().then(function (cu) { return cu ? cu.unsubscribe() : true; })
+        .then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: khoa }); }), 25000,
+        'Không kết nối được máy chủ thông báo của điện thoại. Kiểm tra mạng rồi thử lại.').then(function (sub) { return { reg: reg, sub: sub }; });
+    }).then(function (x) {
       var ma = maNgauNhien();
       // Service worker cần mã này và link ứng dụng web để hỏi nội dung thông báo khi có tin.
       return caches.open('eco-tb').then(function (c) {
-        return c.put('./tb-may', new Response(JSON.stringify({ khoa: ma, url: url })));
-      }).then(function () { return { diaChi: sub.endpoint, khoa: ma, tenMay: tenMay() }; });
+        return c.put(x.reg.scope + 'tb-may', new Response(JSON.stringify({ khoa: ma, url: url })));
+      }).then(function () { return { diaChi: x.sub.endpoint, khoa: ma, tenMay: tenMay() }; });
     });
   }
   function moHopThongBao(khoaCong) {

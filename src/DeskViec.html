@@ -87,6 +87,7 @@ function moThongBao(sauKhiLuu) {
     $('#tbapp').onclick = function () {
       if (!coVo) { thongBao(m, 'loi', 'Mở ECODesk từ app đã cài trên điện thoại (ecotdn.github.io/desk) rồi bật ở đó.'); return; }
       if (VO_TB === 'can-cai') { thongBao(m, 'loi', 'Trên iPhone, cần thêm ECODesk vào màn hình chính (Chia sẻ → Thêm vào MH chính) rồi mở từ đó mới bật được thông báo.'); return; }
+      if (VO_TB === 'cu') { thongBao(m, 'loi', 'Trang vỏ trên ecotdn.github.io chưa phải bản mới nên chưa bật được. Cần tải bản trang vỏ mới lên, rồi đóng hẳn app và mở lại.'); return; }
       if (VO_TB === 'khong') { thongBao(m, 'loi', 'Trình duyệt này không hỗ trợ thông báo của app.'); return; }
       thongBao(m, 'cho', 'Bấm "Bật" ở hộp hiện ra rồi cho phép thông báo.');
       batThongBaoMay(tb.khoaCong).then(function (may) { return goiPhien('luuThietBi', may); })

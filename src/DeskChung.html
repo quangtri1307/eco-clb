@@ -106,7 +106,7 @@ window.addEventListener('message', function (e) {
   if (d.eco === 'vo') {
     var dau = !coVo;
     coVo = true; nguonVo = e.source; goiVo = e.origin;
-    if (d.thongBao) VO_TB = String(d.thongBao);
+    VO_TB = d.thongBao ? String(d.thongBao) : 'cu'; // trang vỏ cũ không gửi trạng thái thông báo
     if (d.vien) ['t', 'b', 'l', 'r'].forEach(function (k) { document.documentElement.style.setProperty('--sa' + k, (Number(d.vien[k]) || 0) + 'px'); });
     if (dau) {
       guiVo({ eco: 'ho-tro-vien' });
@@ -134,7 +134,9 @@ if (window.top !== window) { try { window.top.postMessage({ eco: 'xin-chao' }, '
 /** Nhờ trang vỏ xin quyền thông báo và đăng ký máy này. Trả về { diaChi, khoa, tenMay }. */
 function batThongBaoMay(khoaCong) {
   return new Promise(function (ok, loi) {
-    choThongBao = { ok: ok, loi: loi };
+    // Trang vỏ cũ không trả lời: báo lỗi thay vì chờ mãi.
+    var t = setTimeout(function () { if (choThongBao) { choThongBao = null; loi(new Error('Không bật được: trang vỏ trên điện thoại chưa trả lời. Đóng hẳn app, mở lại rồi bật lại.')); } }, 90000);
+    choThongBao = { ok: function (v) { clearTimeout(t); ok(v); }, loi: function (e) { clearTimeout(t); loi(e); } };
     guiVo({ eco: 'bat-thong-bao', khoaCong: khoaCong });
   });
 }
