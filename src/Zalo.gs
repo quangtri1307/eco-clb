@@ -48,11 +48,11 @@ function taoMaKetNoi() {
 }
 
 /**
- * Đảm bảo mỗi tài khoản ECODesk có một dòng trong tab KetNoiZalo (kèm mã kết nối).
+ * Đảm bảo mỗi tài khoản BOD và ban nhân sự có một dòng trong tab KetNoiZalo (kèm mã kết nối).
  * Trả về danh sách người nhận: [{ ten, vaiTro, ma, chatId, tenZalo }].
  */
 function dongBoNguoiNhanZalo() {
-  var tk = docBang('TaiKhoan').filter(function (t) { return t.HoVaTen; });
+  var tk = docBang('TaiKhoan').filter(function (t) { return t.HoVaTen && (t.VaiTro === 'BOD' || t.VaiTro === 'HR'); });
   var ketNoi = docBang('KetNoiZalo');
   var theoTen = {};
   ketNoi.forEach(function (k) { theoTen[String(k.HoVaTen)] = k; });
@@ -130,7 +130,7 @@ function ghiKetNoiZalo(ten, chatId, tenZalo) {
 function caiDatNhacZalo() {
   var sap = layCaiDat('ZaloNhacSapDenHan');
   return {
-    gioNhac: layCaiDat('ZaloGioNhac') === null ? 20 : Number(layCaiDat('ZaloGioNhac')),
+    dsGio: chuanHoaDsGio(layCaiDat('ZaloGioNhac')),
     nhacSapDenHan: sap === null ? true : (sap === true || sap === 'TRUE' || sap === 'true'),
     nhacTre: String(layCaiDat('ZaloNhacTre') || NHAC_TRE.MOI_NGAY)
   };
@@ -173,12 +173,14 @@ function baoTaskMoiChoBod(dong, nguoiTao) {
   } catch (e) { /* bỏ qua */ }
 }
 
-/** Cài lịch chạy nhacViecHangNgay mỗi ngày vào giờ đã chọn (thay lịch cũ nếu có). */
-function caiLichNhac(gio) {
+/** Cài lịch chạy nhacViecHangNgay mỗi ngày vào các giờ đã chọn (thay lịch cũ nếu có). */
+function caiLichNhac(dsGio) {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'nhacViecHangNgay') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('nhacViecHangNgay').timeBased().atHour(gio).everyDays(1).inTimezone(Session.getScriptTimeZone()).create();
+  chuanHoaDsGio(dsGio).forEach(function (gio) {
+    ScriptApp.newTrigger('nhacViecHangNgay').timeBased().atHour(gio).everyDays(1).inTimezone(Session.getScriptTimeZone()).create();
+  });
 }
 
 function coLichNhac() {
@@ -194,7 +196,7 @@ function layCaiDatZalo(phien) {
   try { lanCuoi = JSON.parse(layCaiDat('ZaloLanNhacCuoi') || 'null'); } catch (e) { lanCuoi = null; }
   return {
     coBot: !!layTokenZalo(), tenBot: String(layCaiDat('ZaloTenBot') || ''), coLich: coLichNhac(),
-    gioNhac: cd.gioNhac, nhacSapDenHan: cd.nhacSapDenHan, nhacTre: cd.nhacTre, lanCuoi: lanCuoi,
+    dsGio: cd.dsGio, nhacSapDenHan: cd.nhacSapDenHan, nhacTre: cd.nhacTre, lanCuoi: lanCuoi,
     nguoiNhan: dongBoNguoiNhanZalo().map(function (n) { return { ten: n.ten, vaiTro: n.vaiTro, ma: n.ma, daKetNoi: !!n.chatId, tenZalo: n.tenZalo }; })
   };
 }
@@ -203,7 +205,7 @@ function layCaiDatZalo(phien) {
 function luuCaiDatZalo(phien, cd) {
   canDangNhap(phien, 'caidat');
   cd = cd || {};
-  if (cd.gioNhac !== undefined) luuNhacViec(phien, cd);
+  if (cd.dsGio !== undefined) luuNhacViec(phien, cd);
   var token = String(cd.token || '').trim();
   if (token && token !== layTokenZalo()) {
     var bot;
@@ -220,29 +222,29 @@ function luuCaiDatZalo(phien, cd) {
 
 /**
  * Thời điểm nhắc deadline (BOD chỉnh): bao nhiêu ngày trước hạn thì coi là sắp đến hạn,
- * mấy giờ gửi nhắc mỗi ngày, có nhắc task sắp đến hạn không, nhắc task trễ thế nào.
+ * những giờ nào gửi nhắc mỗi ngày (có thể nhiều giờ), có nhắc task sắp đến hạn không, nhắc task trễ thế nào.
  */
 function luuNhacViec(phien, cd) {
   canDangNhap(phien, 'caidat');
   cd = cd || {};
-  var gio = Math.round(Number(cd.gioNhac));
-  if (!(gio >= 0 && gio <= 23)) throw new Error('Giờ nhắc phải từ 0 đến 23.');
+  if (!Array.isArray(cd.dsGio) || !cd.dsGio.length) throw new Error('Cần ít nhất một giờ nhắc.');
+  var dsGio = chuanHoaDsGio(cd.dsGio);
   if (cd.sapDenHanNgay !== undefined) {
     var n = Math.round(Number(cd.sapDenHanNgay));
     if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
     datCaiDat('SapDenHanNgay', n);
   }
   var nhacTre = [NHAC_TRE.MOI_NGAY, NHAC_TRE.MOT_LAN, NHAC_TRE.KHONG].indexOf(cd.nhacTre) >= 0 ? cd.nhacTre : NHAC_TRE.MOI_NGAY;
-  datCaiDat('ZaloGioNhac', gio);
+  datCaiDat('ZaloGioNhac', dsGio.join(', '));
   datCaiDat('ZaloNhacSapDenHan', !!cd.nhacSapDenHan);
   datCaiDat('ZaloNhacTre', nhacTre);
-  caiLichNhac(gio);
+  caiLichNhac(dsGio);
   return true;
 }
 
 /** Đọc tin mới gửi bot để kết nối. Ai đăng nhập cũng bấm được (để tự kết nối). */
 function kiemTraKetNoiZalo(phien) {
-  var tk = canDangNhap(phien);
+  var tk = canDangNhap(phien, 'task');
   if (!layTokenZalo()) throw new Error('Chưa có bot Zalo. Nhờ BOD nhập mã bot trong Cài đặt.');
   nhanTinMoiZalo();
   return trangThaiZaloCuaToi(String(tk.HoVaTen));

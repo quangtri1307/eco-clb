@@ -75,12 +75,9 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 ### Thông báo (`src/ThongBao.gs`)
 
-- Mọi tài khoản ECODesk nhận thông báo theo các cách mình chọn (ít nhất một): Zalo, app trên điện thoại, mail. `guiThongBao` gửi theo từng cách.
-  - BOD: nhắc task của mình (hằng ngày), task mới được giao, góp ý mới từ ECOBoard (`thongBaoGopYMoi`, tối đa mỗi 10 phút), thư UCV gửi chờ duyệt (`baoThuChoDuyet`). Hai loại sau bật/tắt ở Cài đặt > Báo cho BOD.
-  - Ban nhân sự: nhắc deadline task của thành viên không phải BOD (hằng ngày).
-  - UCV: kết quả duyệt thư (`baoKetQuaDuyet`, gọi sau khi BOD quyết định).
-- Trang Thông báo (`src/DeskTrangChu.html`): ai cũng chọn cách nhận, kết nối Zalo, bật app trên máy, xem và gỡ máy của mình, gửi thử. BOD thấy thêm phần cho mọi người: đổi cách nhận, gỡ máy (`goThietBi`, nhận diện máy bằng `maMay` là băm ngắn của địa chỉ đẩy tin), gửi thử cho một người hoặc tất cả bằng cách tự chọn (`guiThuThongBao`).
-- Mail: gửi bằng `MailApp` từ tài khoản CLB, tiêu đề `ECODesk: …`.
+- Nhắc deadline gửi theo cách mỗi người chọn (ít nhất một): Zalo, app trên điện thoại, mail. BOD nhận task của mình và task mới được giao; ban nhân sự nhận task của thành viên để nhắc lại. `guiThongBao` gửi theo từng cách.
+- Các thông báo khác chỉ gửi qua mail (`guiMailThongBao`): góp ý mới và thư UCV chờ duyệt cho mọi BOD (bật/tắt ở Cài đặt > Báo qua mail cho BOD), kết quả duyệt thư cho UCV.
+- Trang Nhắc deadline (`src/DeskTrangChu.html`): BOD mở trong Cài đặt > Nhắc deadline, ban nhân sự mở từ Menu. Ai cũng chọn cách nhận, kết nối Zalo, bật app, xem và gỡ máy của mình, gửi thử. BOD thấy thêm phần cho mọi người: đổi cách nhận, gỡ máy (`goThietBi`, nhận diện máy bằng `maMay`), gửi thử cho một người hoặc tất cả (`guiThuThongBao`).
 - App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
 - Bật app trên máy: ECODesk nhờ trang vỏ (`bat-thong-bao`) xin quyền và đăng ký, trang vỏ trả `dang-ky-thong-bao` để lưu vào ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
 
@@ -88,7 +85,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 - Gọi Zalo Bot API `https://bot-api.zapps.me/bot<mã bot>/<phương thức>` (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
 - Kết nối: mỗi tài khoản ECODesk có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
-- Giờ nhắc nằm cùng chỗ với số ngày sắp đến hạn (Cài đặt > Sắp đến hạn và giờ nhắc, `luuNhacViec`). Lưu sẽ cài một lịch chạy hằng ngày (`nhacViecHangNgay`) vào giờ đã chọn; lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger; UCV không nhận nhắc việc.
+- Giờ nhắc nằm cùng chỗ với số ngày sắp đến hạn (Cài đặt > Thời điểm nhắc deadline, `luuNhacViec`). Có thể chọn nhiều giờ (tối đa 6, CaiDat `ZaloGioNhac` dạng "8, 20"); mỗi giờ là một lịch chạy hằng ngày (`nhacViecHangNgay`); lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger; UCV không nhận nhắc việc.
 - Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
 - Khi BOD được giao task mới, người đó được báo ngay theo các cách đã chọn.
 
@@ -121,7 +118,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 | Mục | Lưu ở |
 |---|---|
-| Loại hoạt động và điểm | tab LoaiHoatDong |
+| Loại hoạt động và điểm | tab LoaiHoatDong; cột `CongTay` = `khong` nghĩa là chỉ hiện trên ECOBoard (cộng tự động), BOD không chọn được khi cộng điểm |
 | Quy chế cộng điểm (link file Docs) | CaiDat, khoá `QuyChe` |
 | Báo BOD khi có góp ý mới | CaiDat, khoá `BaoGopYQuaMail` (`tat` là tắt) |
 | Báo BOD khi UCV gửi thư chờ duyệt | CaiDat, khoá `BaoThuChoDuyet` (`tat` là tắt) |
@@ -134,7 +131,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Ban nhân sự, UCV, mật khẩu | tab TaiKhoan |
 | Quyền xem hộp thư của UCV | CaiDat, khoá `UcvXemHopThu` |
 | Ai nhận thông báo bằng cách nào | tab TaiKhoan, cột `NhanThongBao` (sửa ở trang Thông báo) |
-| Danh bạ gửi hàng loạt | tab DanhBa |
+| Danh bạ gửi hàng loạt | tab DanhBa; thành viên CLB có email luôn có sẵn (`danhBaThanhVien`), không cần nhập |
 | Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |
 
 ## Trang vỏ (`pwa/`) và đăng nhập Google
@@ -148,8 +145,9 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Icon: `tab-*.png` tách nền cho tab trình duyệt (cả trang Apps Script qua `setFaviconUrl`); `apple-*.png` vuông nền trắng cho iPhone (máy tự bo góc); `*-192/512.png` vuông nền trắng cho Android (máy tự cắt theo hình của máy); `badge-96.png` hình trắng cho thanh trạng thái Android. Trong app, logo hiện trong khung tròn.
 - Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.
 
-## Trang chủ và màn chờ (`src/DeskTrangChu.html`)
+## Trang chủ và màn chờ (`src/DungChung.html`, dùng cho cả ECOBoard và ECODesk)
 
-- Mở ECODesk là vào Trang chủ: lời chào theo giờ, một câu hỏi thăm ngẫu nhiên (danh sách `CAU_HOI`, sửa thoải mái), các ô tóm tắt theo vai trò (`layTrangChu`) và lối tắt.
-- Màn chờ dùng chung `cho()`: chiếc lá quay trong vòng tái chế kèm câu đùa (`CAU_CHO`).
+- Mở app là vào Trang chủ: khung chào có bầu trời đổi theo buổi (sáng, trưa, chiều, tối, khuya) và một câu hỏi thăm ngẫu nhiên (danh sách `CAU_HOI`, sửa thoải mái). ECODesk thêm các ô tóm tắt theo vai trò (`layTrangChu`); ECOBoard thêm 5 người dẫn đầu.
+- Màn chờ dùng chung `cho()`: lá bị gió thổi bay kèm câu đùa (`CAU_CHO`).
+- ECOBoard luôn dùng giao diện sáng và không hiện BOD (BOD không tham gia cộng điểm).
 - Màn đăng nhập và màn chờ có nền xanh đậm; `apGiaoDien` báo trang vỏ tô phần dưới màn hình cùng màu để không lộ vệt trắng.

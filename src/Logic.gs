@@ -27,7 +27,7 @@ var BANG = {
   LichSuDiem: ['ThoiGian', 'HoVaTen', 'LoaiHoatDong', 'TenHoatDong', 'Diem', 'NguoiCong', 'NhiemKy', 'HocKy'],
   KyHoatDong: ['NhiemKy', 'HocKy', 'BatDau', 'KieuTaiLen'],
   LuuTruThanhVien: ['NhiemKy', 'HocKy', 'HoVaTen', 'Ban'],
-  LoaiHoatDong: ['TenLoai', 'Diem'],
+  LoaiHoatDong: ['TenLoai', 'Diem', 'CongTay'],
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc'],
   TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien'],
@@ -306,7 +306,8 @@ function chuanHoaLoaiHoatDong(ds) {
     if (daCo[ten.toLowerCase()]) return { ds: [], loi: 'Loại "' + ten + '" bị trùng.' };
     if (!isFinite(diem) || diem < 0) return { ds: [], loi: 'Điểm của "' + ten + '" phải là số không âm.' };
     daCo[ten.toLowerCase()] = true;
-    kq.push({ TenLoai: ten, Diem: diem });
+    // CongTay = false: chỉ hiện trên ECOBoard (ví dụ điểm cộng tự động qua form), BOD không chọn được khi cộng điểm.
+    kq.push({ TenLoai: ten, Diem: diem, CongTay: ds[i].congTay === false ? 'khong' : 'co' });
   }
   if (!kq.length) return { ds: [], loi: 'Cần ít nhất một loại hoạt động.' };
   return { ds: kq, loi: '' };
@@ -931,6 +932,20 @@ function diaChiDayHopLe(url) {
   return !!g && String(url).length < 1000 && /^https:\/\/([a-z0-9-]+\.)*(fcm\.googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/.test(g);
 }
 
+/** Loại hoạt động BOD cộng tay được không (ô trống là có). */
+function loaiCongTay(l) {
+  return String(l.CongTay == null ? '' : l.CongTay).trim().toLowerCase() !== 'khong';
+}
+
+/** Các giờ nhắc mỗi ngày: "8, 20" hoặc 20 hoặc [8, 20]. Trống thì 20 giờ. Tối đa 6 giờ. */
+function chuanHoaDsGio(v) {
+  var ds = (Array.isArray(v) ? v : String(v == null ? '' : v).split(/[,;\s]+/)).map(function (x) { return String(x).trim() === '' ? NaN : Number(x); });
+  var kq = [];
+  ds.forEach(function (g) { g = Math.round(g); if (g >= 0 && g <= 23 && kq.indexOf(g) < 0) kq.push(g); });
+  kq.sort(function (a, b) { return a - b; });
+  return kq.length ? kq.slice(0, 6) : [20];
+}
+
 /** Các cách nhận thông báo. */
 var CACH_THONG_BAO = ['zalo', 'app', 'mail'];
 /** Chuẩn hoá lựa chọn cách nhận thông báo (chuỗi "zalo,mail" hoặc mảng). Trống thì mặc định Zalo. */
@@ -959,6 +974,6 @@ if (typeof module !== 'undefined') {
     chiSoBaoCao: chiSoBaoCao, taskBiTre: taskBiTre, tongHopBaoCao: tongHopBaoCao, chiaMoc: chiaMoc, bieuDoBaoCao: bieuDoBaoCao,
     timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog, kiemTraTokenGoogle: kiemTraTokenGoogle,
     base64Url: base64Url, khoaCongP256: khoaCongP256, kyP256: kyP256, gocDiaChi: gocDiaChi, diaChiDayHopLe: diaChiDayHopLe,
-    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan
+    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan, loaiCongTay: loaiCongTay, chuanHoaDsGio: chuanHoaDsGio
   };
 }

@@ -37,7 +37,8 @@ test('kiemTraMatKhauMoi', () => {
 });
 
 test('chuanHoaLoaiHoatDong bỏ dòng trống, chặn trùng và điểm âm', () => {
-  assert.deepStrictEqual(L.chuanHoaLoaiHoatDong([{ ten: ' Staff ', diem: '5' }, { ten: '', diem: 3 }]).ds, [{ TenLoai: 'Staff', Diem: 5 }]);
+  assert.deepStrictEqual(L.chuanHoaLoaiHoatDong([{ ten: ' Staff ', diem: '5' }, { ten: '', diem: 3 }]).ds, [{ TenLoai: 'Staff', Diem: 5, CongTay: 'co' }]);
+  assert.strictEqual(L.chuanHoaLoaiHoatDong([{ ten: 'Seeding', diem: 1, congTay: false }]).ds[0].CongTay, 'khong');
   assert.match(L.chuanHoaLoaiHoatDong([{ ten: 'A', diem: 1 }, { ten: 'a', diem: 2 }]).loi, /trùng/);
   assert.match(L.chuanHoaLoaiHoatDong([{ ten: 'A', diem: -1 }]).loi, /không âm/);
   assert.match(L.chuanHoaLoaiHoatDong([]).loi, /ít nhất/);
@@ -63,4 +64,21 @@ test('khongPhaiBod', () => {
   assert.strictEqual(L.khongPhaiBod({ HoVaTen: 'A', Ban: 'BOD' }), false);
   assert.strictEqual(L.khongPhaiBod({ ten: 'A', ban: 'bod ' }), false);
   assert.strictEqual(L.khongPhaiBod({ HoVaTen: 'A', Ban: 'PR CAP' }), true);
+});
+
+test('loaiCongTay: ô trống là có', () => {
+  assert.strictEqual(L.loaiCongTay({ TenLoai: 'A', Diem: 1 }), true);
+  assert.strictEqual(L.loaiCongTay({ CongTay: '' }), true);
+  assert.strictEqual(L.loaiCongTay({ CongTay: 'co' }), true);
+  assert.strictEqual(L.loaiCongTay({ CongTay: 'khong' }), false);
+});
+
+test('chuanHoaDsGio', () => {
+  assert.deepStrictEqual(L.chuanHoaDsGio(20), [20]);
+  assert.deepStrictEqual(L.chuanHoaDsGio('20, 8,8'), [8, 20]);
+  assert.deepStrictEqual(L.chuanHoaDsGio([7, 25, -1, 'x', 12]), [7, 12]);
+  assert.deepStrictEqual(L.chuanHoaDsGio(''), [20]);
+  assert.deepStrictEqual(L.chuanHoaDsGio(null), [20]);
+  assert.deepStrictEqual(L.chuanHoaDsGio('0'), [0]);
+  assert.strictEqual(L.chuanHoaDsGio([1, 2, 3, 4, 5, 6, 7, 8]).length, 6);
 });

@@ -1,0 +1,168 @@
+<style>
+/* =================== Dùng chung cho ECOBoard và ECODesk: màn chờ lá bay, khung chào theo giờ =================== */
+.nap{display:grid;justify-items:center;gap:8px;padding:26px 12px;text-align:center}
+.gio{position:relative;width:150px;height:64px;overflow:hidden}
+.gio .la{position:absolute;left:0;width:18px;height:18px;opacity:0;animation:la-bay 2.4s cubic-bezier(.45,.05,.55,.95) infinite}
+.gio .la svg{width:100%;height:100%;display:block}
+.gio .la:nth-child(1){top:22px;animation-delay:-.2s}
+.gio .la:nth-child(2){top:8px;width:14px;height:14px;animation-name:la-bay2;animation-delay:-.7s;animation-duration:2.1s}
+.gio .la:nth-child(3){top:36px;width:16px;height:16px;animation-delay:-1.3s;animation-duration:2.6s}
+.gio .la:nth-child(4){top:16px;width:12px;height:12px;animation-name:la-bay2;animation-delay:-1.75s}
+.gio .la:nth-child(5){top:30px;animation-delay:-2.1s;animation-duration:2.2s}
+.gio .vet{position:absolute;left:0;height:2px;border-radius:2px;background:currentColor;opacity:0;animation:gio-thoi 1.4s ease-in infinite}
+.gio .vet:nth-of-type(1){top:14px;width:42px;animation-delay:.2s}
+.gio .vet:nth-of-type(2){top:34px;width:60px;animation-delay:.7s}
+.gio .vet:nth-of-type(3){top:52px;width:34px;animation-delay:1.1s}
+.nap{color:var(--muted)}
+.nap-chu{font-size:13.5px;font-weight:600;color:var(--muted);transition:opacity .25s,transform .25s;max-width:30ch}
+.nap-chu.mo{opacity:0;transform:translateY(4px)}
+.nap.lon{color:rgb(255 255 255 / .55)}
+.nap.lon .gio{transform:scale(1.7);margin:26px 0 30px}
+.nap.lon .nap-chu{color:rgb(255 255 255 / .9);font-size:15px}
+@keyframes la-bay{0%{transform:translate(-24px,0) rotate(0);opacity:0}12%{opacity:1}35%{transform:translate(40px,-12px) rotate(140deg)}60%{transform:translate(85px,9px) rotate(250deg)}85%{transform:translate(130px,-6px) rotate(360deg);opacity:1}100%{transform:translate(160px,2px) rotate(420deg);opacity:0}}
+@keyframes la-bay2{0%{transform:translate(-24px,6px) rotate(40deg) scaleX(1);opacity:0}15%{opacity:1}40%{transform:translate(45px,14px) rotate(-60deg) scaleX(-1)}70%{transform:translate(100px,-4px) rotate(-170deg) scaleX(1)}100%{transform:translate(165px,10px) rotate(-260deg) scaleX(-1);opacity:0}}
+@keyframes gio-thoi{0%{transform:translateX(-60px) scaleX(.3);opacity:0}30%{opacity:.5}100%{transform:translateX(200px) scaleX(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.gio .la,.gio .vet{animation-duration:6s}}
+
+/* Khung chào: bầu trời đổi theo buổi */
+.chao{position:relative;overflow:hidden;border-radius:18px;padding:22px 20px;min-height:150px;display:flex;align-items:center;color:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .05),0 4px 14px rgb(0 0 0 / .06);isolation:isolate}
+.chao.sang{background:linear-gradient(180deg,#9fd3f5 0%,#cfe9c2 70%,#8cc152 100%)}
+.chao.trua{background:linear-gradient(180deg,#4fb3f0 0%,#8fd0f2 60%,#7cbf47 100%)}
+.chao.chieu{background:linear-gradient(180deg,#f7a35c 0%,#f3c27a 45%,#8a9a3c 100%)}
+.chao.toi{background:linear-gradient(180deg,#1d2b5c 0%,#2c3f74 55%,#1f4a2e 100%)}
+.chao.khuya{background:linear-gradient(180deg,#0b1230 0%,#141f45 60%,#0e2a17 100%)}
+.troi{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.troi .mt{position:absolute;right:28px;top:22px;width:58px;height:58px;border-radius:50%}
+.sang .troi .mt{background:#ffe08a;box-shadow:0 0 0 10px rgb(255 224 138 / .35),0 0 40px 18px rgb(255 214 102 / .5);animation:mt-moc 4s ease-out both,mt-sang 3s 4s ease-in-out infinite}
+.trua .troi .mt{top:14px;background:#fff3b0;box-shadow:0 0 0 12px rgb(255 243 176 / .35),0 0 50px 24px rgb(255 236 140 / .6);animation:mt-sang 2.4s ease-in-out infinite}
+.chieu .troi .mt{background:#ff8a4c;box-shadow:0 0 0 10px rgb(255 138 76 / .3),0 0 50px 22px rgb(255 120 60 / .45);animation:mt-lan 9s ease-in-out infinite alternate}
+.toi .troi .mt,.khuya .troi .mt{width:46px;height:46px;top:20px;background:transparent;box-shadow:-11px 7px 0 0 #fdf3c4;filter:drop-shadow(0 0 10px rgb(253 243 196 / .45));animation:trang-nhun 5s ease-in-out infinite}
+.troi .may{position:absolute;height:22px;width:70px;border-radius:999px;background:rgb(255 255 255 / .85);filter:blur(1px);animation:may-troi 26s linear infinite}
+.troi .may:before{content:"";position:absolute;width:34px;height:30px;border-radius:50%;background:inherit;left:12px;top:-14px}
+.troi .may.m1{top:22px;animation-delay:-6s}
+.troi .may.m2{top:64px;width:54px;transform:scale(.8);animation-duration:34s;animation-delay:-20s;opacity:.75}
+.chieu .troi .may{background:rgb(255 225 200 / .8)}
+.toi .troi .may,.khuya .troi .may{display:none}
+.saos{position:absolute;inset:0}
+.troi .sao{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;opacity:0}
+.toi .troi .sao,.khuya .troi .sao{animation:sao-nhay 2.6s ease-in-out infinite}
+.saos .sao:nth-of-type(1){left:52%;top:18%}.saos .sao:nth-of-type(2){left:64%;top:46%;animation-delay:.6s}.saos .sao:nth-of-type(3){left:72%;top:12%;animation-delay:1.2s}
+.saos .sao:nth-of-type(4){left:88%;top:62%;animation-delay:1.8s}.saos .sao:nth-of-type(5){left:42%;top:70%;animation-delay:.3s}.saos .sao:nth-of-type(6){left:94%;top:24%;animation-delay:2.1s}
+.saos .sao:nth-of-type(7){left:58%;top:84%;animation-delay:.9s}.saos .sao:nth-of-type(8){left:80%;top:32%;animation-delay:1.5s}
+.troi .sbang{position:absolute;top:16%;left:40%;width:90px;height:2px;border-radius:2px;background:linear-gradient(90deg,#fff,transparent);opacity:0;transform:rotate(-25deg)}
+.khuya .troi .sbang{animation:sao-bang 7s 1.5s ease-out infinite}
+.troi .chim{position:absolute;width:26px;height:12px;opacity:0}
+.troi .chim svg{width:100%;height:100%;display:block;stroke:rgb(40 40 40 / .55);fill:none;stroke-width:2;stroke-linecap:round}
+.sang .troi .chim,.chieu .troi .chim{animation:chim-bay 14s linear infinite}
+.troi .chim.c2{width:18px;animation-delay:-5s!important;top:12px}
+.troi .chim.c1{top:30px}
+.chao-chu{min-width:0;display:grid;gap:2px;max-width:min(620px,74%);text-shadow:0 1px 6px rgb(0 0 0 / .25)}
+.chao-chu>span{font-size:14px;font-weight:600;opacity:.95}
+.chao-chu h2{margin:0;font-size:26px;font-weight:800;line-height:1.15;overflow-wrap:anywhere;color:#fff}
+.chao-chu p{margin:8px 0 0;font-size:15px;line-height:1.45;background:rgb(0 0 0 / .2);border-radius:12px;padding:9px 12px;text-shadow:none;backdrop-filter:blur(2px)}
+@keyframes mt-moc{from{transform:translateY(46px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes mt-sang{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+@keyframes mt-lan{from{transform:translateY(0)}to{transform:translateY(26px)}}
+@keyframes trang-nhun{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
+@keyframes may-troi{from{left:110%}to{left:-30%}}
+@keyframes sao-nhay{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes sao-bang{0%{opacity:0;transform:rotate(-25deg) translateX(0)}4%{opacity:1}14%{opacity:0;transform:rotate(-25deg) translateX(-160px)}100%{opacity:0}}
+@keyframes chim-bay{0%{left:-10%;opacity:0;transform:translateY(0)}8%{opacity:1}50%{transform:translateY(-8px)}92%{opacity:1}100%{left:105%;opacity:0;transform:translateY(4px)}}
+@media (max-width:600px){
+  .chao{padding:18px 16px;min-height:150px;align-items:flex-end}
+  .chao-chu{max-width:100%;padding-top:54px}
+  .chao-chu h2{font-size:23px}
+  .troi .mt{right:18px;top:16px;width:46px;height:46px}
+}
+</style>
+<script>
+/* ---------- Màn chờ: lá bị gió thổi bay ---------- */
+var CAU_CHO = [
+  'Gió đang thổi dữ liệu về, bạn chờ xíu…',
+  'Đang tưới cây cho dữ liệu nảy mầm…',
+  'Đang phân loại rác… à nhầm, phân loại dữ liệu…',
+  'Ốc sên chở dữ liệu đang chạy hết tốc lực…',
+  'Đang gọi Google dậy làm việc…',
+  'Dữ liệu đang đạp xe về, không xả khói…',
+  'Lá bay hết rồi, đang đi nhặt lại…',
+  'Dữ liệu đang tắm nắng, sắp xong rồi…',
+  'Đang nhặt rác trên đường truyền…',
+  'Gió hơi to, lá bay lung tung…',
+  'Tranh thủ uống ngụm nước đi bạn ơi…'
+];
+function cauCho() { return CAU_CHO[Math.floor(Math.random() * CAU_CHO.length)]; }
+var MAU_LA = ['#5f9e35', '#8cc152', '#3f7d1f', '#a7d36b', '#6aa83a'];
+function cho(lon) {
+  var la = MAU_LA.map(function (m) { return '<span class="la"><svg viewBox="0 0 24 24"><path fill="' + m + '" d="M12 22C6 19 4 13 7 5c6 1 11 5 11 11 0 3-2 5-6 6z"/><path d="M12 22c-1-6-2-10-5-15" stroke="#1d3a0e" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".55"/></svg></span>'; }).join('');
+  return '<div class="nap' + (lon ? ' lon' : '') + '" role="status"><div class="gio" aria-hidden="true">' + la + '<i class="vet"></i><i class="vet"></i><i class="vet"></i></div><span class="nap-chu" data-doi>' + cauCho() + '</span></div>';
+}
+setInterval(function () {
+  Array.prototype.forEach.call(document.querySelectorAll('.nap-chu[data-doi]'), function (s) {
+    s.classList.add('mo');
+    setTimeout(function () { s.textContent = cauCho(); s.classList.remove('mo'); }, 250);
+  });
+}, 2600);
+
+/* ---------- Khung chào theo giờ ---------- */
+var CAU_HOI = [
+  'Hôm nay bạn đã uống đủ nước chưa?',
+  'Có việc gì vui muốn kể cho CLB nghe không?',
+  'Bạn đã mang bình nước riêng đi học, đi làm chưa?',
+  'Mẹo nhỏ: tắt bớt một bóng đèn không dùng là Trái Đất cảm ơn bạn rồi.',
+  'Một túi vải trong cặp cứu được cả chục cái túi ni lông đó.',
+  'Nếu được trồng một cái cây, bạn sẽ trồng cây gì?',
+  'Tuần này có ai trong CLB làm bạn thấy biết ơn không? Nhắn họ một câu đi.',
+  'Đứng dậy vươn vai 30 giây rồi làm tiếp nha.',
+  'Cây xanh không biết nói, nhưng chắc nó cũng thích bạn lắm.',
+  'Bạn đang nghe bài gì đó? Gợi ý cho cả CLB với.',
+  'Mẹo: in hai mặt giấy là tiết kiệm một nửa số cây rồi.',
+  'Một việc nhỏ làm xong vẫn hơn mười việc lớn chưa bắt đầu.',
+  'Nếu CLB đi dã ngoại, bạn muốn đi đâu?',
+  'Pin cũ đừng vứt thùng rác thường nha, gom lại nộp điểm thu hồi.',
+  'Bạn có biết: một cái chai nhựa cần vài trăm năm để phân huỷ.',
+  'Hít vào bốn nhịp, thở ra bốn nhịp. Ổn hơn chưa?',
+  'Hôm nay bạn đã khen ai chưa? Khen một câu đi, miễn phí mà.',
+  'Ốc sên còn về đích được, việc của bạn chắc chắn cũng xong.',
+  'Bạn thích mùa nào nhất trong năm?',
+  'Có món ăn chay nào bạn mê không? Chia sẻ công thức đi.',
+  'Đi bộ hay đạp xe đoạn ngắn vừa khoẻ vừa xanh.',
+  'Bạn đã cười to lần nào hôm nay chưa?',
+  'Một lá cây nói với lá cây kia: “Mai mình rụng chung nha.” Hơi buồn nhưng mà dễ thương.',
+  'Nếu bạn là một con vật, bạn sẽ là con gì?',
+  'Bạn có kỷ niệm nào đáng nhớ nhất với CLB?',
+  'Thử một ngày không dùng đồ nhựa một lần xem sao?',
+  'Cây trong nhà bạn hôm nay đã được tưới chưa?',
+  'Nhớ ngủ đủ giấc, deadline không chạy mất đâu.',
+  'Hôm nay bạn muốn làm xong việc gì nhất?',
+  'Mẹo: rút sạc khỏi ổ điện khi không dùng, đỡ hao điện ngầm.',
+  'Một câu hỏi khó: trà sữa hay nước mía?',
+  'CLB có bạn thật vui. Thật đó.'
+];
+var CAU_THEO_GIO = {
+  sang: ['Sáng nay bạn đã ăn sáng chưa?', 'Một ngày mới, một chiếc lá mới. Bắt đầu nhẹ nhàng nha.'],
+  trua: ['Trưa rồi, nghỉ tay ăn cơm chưa bạn?', 'Chợp mắt 15 phút buổi trưa là chiều tỉnh như sáo.'],
+  chieu: ['Chiều rồi, làm ly nước mát rồi chiến tiếp nha.', 'Chiều nay có gì vui không?'],
+  toi: ['Tối nay ăn gì ngon đó?', 'Cả ngày vất vả rồi, làm nốt chút rồi nghỉ nha.'],
+  khuya: ['Khuya rồi mà vẫn còn thức à? Làm nhanh rồi đi ngủ nha.', 'Cú đêm ơi, nhớ ngủ sớm để mai còn sức.']
+};
+function buoiTrongNgay() {
+  var h = new Date().getHours();
+  if (h >= 5 && h < 11) return { ten: 'buổi sáng', lop: 'sang' };
+  if (h >= 11 && h < 14) return { ten: 'buổi trưa', lop: 'trua' };
+  if (h >= 14 && h < 18) return { ten: 'buổi chiều', lop: 'chieu' };
+  if (h >= 18 && h < 22) return { ten: 'buổi tối', lop: 'toi' };
+  return { ten: 'đêm khuya', lop: 'khuya' };
+}
+function escChao(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+/** Khung chào: bầu trời đổi theo buổi (mặt trời mọc, nắng trưa, hoàng hôn, trăng sao), một câu hỏi thăm ngẫu nhiên. */
+function khungChao(ten) {
+  var b = buoiTrongNgay();
+  var ds = CAU_HOI.concat(CAU_THEO_GIO[b.lop] || []);
+  var cau = ds[Math.floor(Math.random() * ds.length)];
+  var chim = '<svg viewBox="0 0 26 12"><path d="M1 3c4 0 8 2 12 7 4-5 8-7 12-7"/></svg>';
+  var sao = ''; for (var i = 0; i < 8; i++) sao += '<span class="sao"></span>';
+  return '<div class="chao ' + b.lop + '"><div class="troi" aria-hidden="true"><span class="mt"></span><span class="may m1"></span><span class="may m2"></span><span class="saos">' + sao + '</span>' +
+    '<span class="sbang"></span><span class="chim c1">' + chim + '</span><span class="chim c2">' + chim + '</span></div>' +
+    '<div class="chao-chu"><span>Chào ' + b.ten + ',</span><h2>' + escChao(ten) + ' ơi!</h2><p>' + escChao(cau) + '</p></div></div>';
+}
+</script>
