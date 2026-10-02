@@ -131,13 +131,24 @@ window.addEventListener('message', function (e) {
 });
 if (window.top !== window) { try { window.top.postMessage({ eco: 'xin-chao' }, '*'); } catch (e) {} }
 
+/** Trang vỏ bản cũ thêm sai số dấu = khi đọc khoá. Thêm vài dấu cách (trình duyệt bỏ qua khi đọc)
+ *  để bản cũ cũng thêm đúng số dấu =; bản mới tự bỏ dấu cách nên không ảnh hưởng. */
+function khoaVoCu(k) {
+  k = String(k || '').replace(/[^A-Za-z0-9_-]/g, '');
+  for (var w = 0; w < 4; w++) {
+    var p = 4 - ((k.length + w + 3) % 4);
+    if ((k.length + p) % 4 === 0 && p < 3) return k + '   '.slice(0, w);
+  }
+  return k;
+}
+
 /** Nhờ trang vỏ xin quyền thông báo và đăng ký máy này. Trả về { diaChi, khoa, tenMay }. */
 function batThongBaoMay(khoaCong) {
   return new Promise(function (ok, loi) {
     // Trang vỏ cũ không trả lời: báo lỗi thay vì chờ mãi.
     var t = setTimeout(function () { if (choThongBao) { choThongBao = null; loi(new Error('Không bật được: trang vỏ trên điện thoại chưa trả lời. Đóng hẳn app, mở lại rồi bật lại.')); } }, 90000);
     choThongBao = { ok: function (v) { clearTimeout(t); ok(v); }, loi: function (e) { clearTimeout(t); loi(e); } };
-    guiVo({ eco: 'bat-thong-bao', khoaCong: khoaCong });
+    guiVo({ eco: 'bat-thong-bao', khoaCong: khoaVoCu(khoaCong) });
   });
 }
 
