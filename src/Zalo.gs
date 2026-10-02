@@ -94,23 +94,28 @@ function trangThaiZaloCuaToi(ten) {
 
 /**
  * Đọc các tin mới người dùng nhắn cho bot. Tin có mã kết nối thì ghi lại ID Zalo của người đó.
+ * Zalo có thể không giữ lại tin nhắn gửi lúc không ai đang chờ, nên khi người dùng bấm kiểm tra thì chờ
+ * thêm choGiay giây để họ nhắn mã ngay lúc đó. Lịch nhắc hằng ngày gọi với choGiay = 0 (chỉ đọc nhanh).
  * Trả về { soTin, soMoi, tinKhongMa: [{ tenZalo, noiDung }], loi } để trang Cài đặt báo rõ chuyện gì đã xảy ra.
  */
-function nhanTinMoiZalo() {
+function nhanTinMoiZalo(choGiay) {
   var token = layTokenZalo();
   var bao = { soTin: 0, soMoi: 0, tinKhongMa: [], loi: '' };
   if (!token) return bao;
   var nguoiNhan = dongBoNguoiNhanZalo();
   var dsMa = nguoiNhan.map(function (n) { return n.ma; });
-  for (var lan = 0; lan < 20; lan++) {
+  var hetLuc = Date.now() + (choGiay || 0) * 1000;
+  for (var lan = 0; lan < 30; lan++) {
+    var conLai = Math.floor((hetLuc - Date.now()) / 1000);
     var kq;
-    try { kq = goiZalo(token, 'getUpdates', { timeout: 1 }); } catch (e) {
-      // Không có tin mới thì Zalo trả lỗi hết giờ chờ; lỗi khác thì báo lại cho người bấm kiểm tra.
-      if (e.maLoi !== 408 && !/time ?out|hết giờ/i.test(e.message)) bao.loi = e.message;
-      break;
+    try { kq = goiZalo(token, 'getUpdates', { timeout: String(Math.max(1, Math.min(conLai, 20))) }); } catch (e) {
+      // Không có tin mới thì Zalo trả lỗi hết giờ chờ: còn thời gian thì chờ tiếp. Lỗi khác thì báo lại.
+      if (e.maLoi !== 408 && !/time ?out|hết giờ/i.test(e.message)) { bao.loi = e.message; break; }
+      if (hetLuc - Date.now() < 2000) break;
+      continue;
     }
     var ds = Array.isArray(kq) ? kq : (kq ? [kq] : []);
-    if (!ds.length) break;
+    if (!ds.length) { if (hetLuc - Date.now() < 2000) break; continue; }
     ds.forEach(function (u) {
       var m = u && u.message;
       if (!m || !m.chat || !m.chat.id) return;
@@ -128,14 +133,20 @@ function nhanTinMoiZalo() {
         }
       } catch (e) { /* gửi trả lời lỗi thì bỏ qua, lần sau vẫn chạy tiếp */ }
     });
+    if (bao.soMoi) hetLuc = Date.now(); // đã có người kết nối: đọc nốt tin còn lại rồi thôi chờ
   }
   return bao;
+}
+
+/** Bot có cài webhook thì Zalo không trả tin qua getUpdates (và không báo lỗi), nên gỡ webhook trước khi đọc. */
+function boWebhookZalo() {
+  try { goiZalo(layTokenZalo(), 'deleteWebhook', {}); } catch (e) { /* chưa có webhook thì thôi */ }
 }
 
 /** Câu báo kết quả đọc tin để hiện trên trang. */
 function moTaKiemTraZalo(bao) {
   if (bao.loi) return 'Không đọc được tin nhắn của bot. ' + bao.loi;
-  if (!bao.soTin) return 'Bot chưa nhận được tin nhắn mới nào. Hãy nhắn mã trong khung chat của chính bot (tìm tên bot trong Zalo), không phải trong Zalo Bot Manager.';
+  if (!bao.soTin) return 'Trong lúc chờ, bot không nhận được tin nhắn nào. Bấm kiểm tra lại, rồi trong vòng 25 giây nhắn mã cho bot (khung chat của chính bot, không phải Zalo Bot Manager).';
   var cau = 'Đã đọc ' + bao.soTin + ' tin mới, ' + bao.soMoi + ' người vừa kết nối.';
   if (bao.tinKhongMa.length) cau += ' Tin không có mã đúng: ' + bao.tinKhongMa.map(function (t) { return (t.tenZalo ? t.tenZalo + ': ' : '') + '"' + t.noiDung + '"'; }).join(', ') + '.';
   return cau;
@@ -242,6 +253,7 @@ function luuCaiDatZalo(phien, cd) {
     try { bot = goiZalo(token, 'getMe', {}); } catch (e) { throw new Error('Mã bot không dùng được. Bạn kiểm tra lại đã chép đủ mã chưa. (' + e.message + ')'); }
     datCaiDat('ZaloToken', token);
     datCaiDat('ZaloTenBot', tenHienThiBot(bot));
+    boWebhookZalo();
     // Bot mới thì mọi người phải nhắn mã kết nối lại.
     var ds = docBang('KetNoiZalo').map(function (k) { k.ChatId = ''; k.TenZalo = ''; k.ThoiGianKetNoi = ''; return k; });
     ghiDeBang('KetNoiZalo', ds);
@@ -276,7 +288,8 @@ function luuNhacViec(phien, cd) {
 function kiemTraKetNoiZalo(phien) {
   var tk = canDangNhap(phien, 'task');
   if (!layTokenZalo()) throw new Error('Chưa có bot Zalo. Nhờ BOD nhập mã bot trong Cài đặt.');
-  var bao = nhanTinMoiZalo();
+  boWebhookZalo();
+  var bao = nhanTinMoiZalo(25);
   var kq = trangThaiZaloCuaToi(String(tk.HoVaTen));
   kq.baoCao = moTaKiemTraZalo(bao);
   kq.loi = !!bao.loi;

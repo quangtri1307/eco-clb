@@ -440,7 +440,7 @@ var SUB = {
         (!z.coLich ? '<p class="err" style="margin:0">Lịch nhắc chưa được bật. Bấm Lưu để bật.</p>' : '') +
         '<p class="hint" style="margin:0">Giờ nhắc chỉnh ở Cài đặt, Thời điểm nhắc deadline.</p>' +
         '<p class="hint" style="margin:0">' + esc(lan) + '</p></form>' +
-        '<div class="card"><h3>Kết nối Zalo</h3><p class="hint" style="margin-top:0">Ai chọn nhận qua Zalo thì mở Zalo, nhắn mã của mình cho bot, rồi bấm “Kiểm tra tin nhắn mới”. Mỗi người cũng thấy mã của mình ở trang Thông báo.</p>' +
+        '<div class="card"><h3>Kết nối Zalo</h3><p class="hint" style="margin-top:0">Ai chọn nhận qua Zalo thì bấm “Kiểm tra tin nhắn mới”, rồi trong vòng 25 giây mở Zalo nhắn mã của mình cho bot. Mỗi người cũng thấy mã của mình ở trang Thông báo.</p>' +
         (z.nguoiNhan.some(function (n) { return n.vaiTro === 'HR'; }) && !hrKetNoi ? '<p class="err">Chưa có ai trong ban nhân sự kết nối, nên task của thành viên thường sẽ chưa được nhắc.</p>' : '') +
         '<div class="tscroll"><table><thead><tr><th>Người</th><th>Mã kết nối</th><th>Trạng thái</th><th></th></tr></thead><tbody>' +
         (z.nguoiNhan.length ? z.nguoiNhan.map(function (n, i) {
@@ -453,8 +453,8 @@ var SUB = {
         '<li>Bấm tạo bot mới, đặt tên dễ nhận ra, ví dụ “Bot nhắc việc ECO”.</li>' +
         '<li>Tạo xong, trang sẽ hiện <b>mã bot (token)</b> có dạng <code>số:chuỗi ký tự</code>. Bấm sao chép.</li>' +
         '<li>Dán mã vào ô “Mã bot” ở trên, bấm <b>Lưu</b>. Nếu mã sai, ECODesk sẽ báo ngay.</li>' +
-        '<li>Báo mọi người: mở Zalo, tìm bot theo tên vừa đặt, nhắn mã kết nối của mình (mỗi người thấy mã ở trang Thông báo, hoặc xem bảng ở trên).</li>' +
-        '<li>Bấm “Kiểm tra tin nhắn mới” để thấy ai đã kết nối. Bấm “Gửi thử” để chắc chắn bot nhắn được.</li>' +
+        '<li>Báo mọi người: mở Zalo, tìm bot theo tên vừa đặt, tìm được bot là đủ (mỗi người thấy mã của mình ở trang Nhắc deadline, hoặc xem bảng ở trên).</li>' +
+        '<li>Mỗi người bấm “Kiểm tra tin nhắn mới” (hoặc “Kiểm tra Zalo” ở trang Nhắc deadline) rồi nhắn mã cho bot trong vòng 25 giây; bot trả lời “Đã kết nối” là xong. Bấm “Gửi thử” để chắc chắn bot nhắn được.</li>' +
         '</ol><p class="hint">Đổi sang bot mới thì mọi người phải nhắn mã kết nối lại cho bot mới.</p></details>';
       $('#zf').onsubmit = function (e) {
         e.preventDefault();
@@ -462,7 +462,7 @@ var SUB = {
       };
       if (baoSau) thongBao($('#zm2'), baoSau.loai, baoSau.cau);
       $('#zk').onclick = function () {
-        $('#zk').disabled = true; thongBao($('#zm2'), 'cho', 'Đang đọc tin nhắn của bot…');
+        $('#zk').disabled = true; thongBao($('#zm2'), 'cho', 'Đang chờ 25 giây. Mở Zalo nhắn mã kết nối cho bot ngay nhé…');
         goiPhien('kiemTraKetNoiZalo').then(function (kq) {
           return napCaiDat().then(function () { SUB.zalo({ loai: kq.loi ? 'loi' : 'ok', cau: kq.baoCao }); });
         }).catch(function (err) { $('#zk').disabled = false; thongBao($('#zm2'), 'loi', err.message); });
