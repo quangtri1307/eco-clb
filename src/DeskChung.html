@@ -128,7 +128,7 @@ window.addEventListener('message', function (e) {
   if ((d.eco === 'dang-ky-thong-bao' || d.eco === 'thong-bao-loi') && choThongBao) {
     var cho = choThongBao; choThongBao = null;
     if (d.eco === 'thong-bao-loi') cho.loi(new Error(String(d.loi || 'Không bật được thông báo.')));
-    else cho.ok({ diaChi: String(d.diaChi || ''), khoa: String(d.khoa || ''), tenMay: String(d.tenMay || '') });
+    else cho.ok({ diaChi: String(d.diaChi || ''), khoa: String(d.khoa || ''), tenMay: String(d.tenMay || ''), p256dh: String(d.p256dh || ''), auth: String(d.auth || '') });
     return;
   }
   if (d.eco === 'google-token' && d.token && !NGUOI) {
