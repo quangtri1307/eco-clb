@@ -132,7 +132,7 @@ function veCuaToi(tb) {
     return '<label class="cach"><input type="checkbox" value="' + k + '"' + (tb.cach.indexOf(k) >= 0 ? ' checked' : '') + '><span><b>' + chu + '</b><small>' + phu + '</small></span></label>';
   };
   var zaloPhu = !z.coBot ? 'CLB chưa có bot Zalo. Nhờ BOD tạo trong Cài đặt.' : z.daKetNoi ? 'Đã kết nối' + (z.tenZalo ? ' (' + esc(z.tenZalo) + ')' : '') + '.' :
-    'Mở Zalo, tìm bot <b>' + esc(z.tenBot || 'của CLB') + '</b>, nhắn mã <b class="num">' + esc(z.ma) + '</b> rồi bấm Kiểm tra Zalo.';
+    'Mở Zalo, tìm bot <b>' + esc(z.tenBot || 'của CLB') + '</b>. Bấm Kiểm tra Zalo rồi trong vòng 25 giây nhắn mã <b class="num">' + esc(z.ma) + '</b> cho bot.';
   var appPhu = tb.may.length ? 'Đã bật trên ' + tb.may.length + ' máy.' : 'Chưa bật trên máy nào. Bấm “Bật trên máy này” ở dưới.';
   $('#tb-toi').innerHTML =
     (function () {
@@ -159,10 +159,10 @@ function veCuaToi(tb) {
     };
   });
   if ($('#tbzk')) $('#tbzk').onclick = function () {
-    var b = this; b.disabled = true; thongBao(m, 'cho', 'Đang kiểm tra…');
+    var b = this; b.disabled = true; thongBao(m, 'cho', 'Đang chờ 25 giây. Mở Zalo nhắn mã ' + z.ma + ' cho bot ngay nhé…');
     goiPhien('kiemTraKetNoiZalo').then(function (z2) {
       b.disabled = false;
-      if (z2.daKetNoi) { tb.zalo = z2; veCuaToi(tb); thongBao($('#tbm'), 'ok', 'Đã kết nối Zalo.'); } else thongBao(m, 'loi', 'Chưa thấy tin nhắn có mã của bạn. Bạn nhắn mã cho bot rồi thử lại nhé.');
+      if (z2.daKetNoi) { tb.zalo = z2; veCuaToi(tb); thongBao($('#tbm'), 'ok', 'Đã kết nối Zalo.'); } else thongBao(m, 'loi', 'Chưa thấy tin nhắn có mã của bạn. ' + (z2.baoCao || ''));
     }).catch(function (err) { b.disabled = false; thongBao(m, 'loi', err.message); });
   };
   $('#tbapp').onclick = function () {

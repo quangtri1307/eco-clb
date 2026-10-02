@@ -26,6 +26,21 @@ function goiZalo(token, phuongThuc, thamSo) {
   return kq.result;
 }
 
+/** Tên bot người dùng tìm được trong Zalo (tên hiển thị, không phải mã dạng bot.xxxx). */
+function tenHienThiBot(bot) {
+  return String((bot && (bot.display_name || bot.name || bot.account_name)) || '');
+}
+
+/** Tên bot đã lưu. Bản cũ lưu mã dạng bot.xxxx thì hỏi lại Zalo để lấy tên hiển thị. */
+function tenBotZalo() {
+  var ten = String(layCaiDat('ZaloTenBot') || '');
+  var token = layTokenZalo();
+  if (token && (!ten || /^bot\./.test(ten))) {
+    try { var moi = tenHienThiBot(goiZalo(token, 'getMe', {})); if (moi && moi !== ten) { ten = moi; datCaiDat('ZaloTenBot', ten); } } catch (e) { /* giữ tên cũ */ }
+  }
+  return ten;
+}
+
 function layTokenZalo() {
   return String(layCaiDat('ZaloToken') || '').trim();
 }
@@ -74,41 +89,67 @@ function dongBoNguoiNhanZalo() {
 function trangThaiZaloCuaToi(ten) {
   var coBot = !!layTokenZalo();
   var toi = dongBoNguoiNhanZalo().filter(function (n) { return n.ten === ten; })[0];
-  return { coBot: coBot, tenBot: String(layCaiDat('ZaloTenBot') || ''), ma: toi ? toi.ma : '', daKetNoi: !!(toi && toi.chatId), tenZalo: toi ? toi.tenZalo : '' };
+  return { coBot: coBot, tenBot: tenBotZalo(), ma: toi ? toi.ma : '', daKetNoi: !!(toi && toi.chatId), tenZalo: toi ? toi.tenZalo : '' };
 }
 
 /**
  * Đọc các tin mới người dùng nhắn cho bot. Tin có mã kết nối thì ghi lại ID Zalo của người đó.
- * Trả về số người vừa kết nối.
+ * Zalo có thể không giữ lại tin nhắn gửi lúc không ai đang chờ, nên khi người dùng bấm kiểm tra thì chờ
+ * thêm choGiay giây để họ nhắn mã ngay lúc đó. Lịch nhắc hằng ngày gọi với choGiay = 0 (chỉ đọc nhanh).
+ * Trả về { soTin, soMoi, tinKhongMa: [{ tenZalo, noiDung }], loi } để trang Cài đặt báo rõ chuyện gì đã xảy ra.
  */
-function nhanTinMoiZalo() {
+function nhanTinMoiZalo(choGiay) {
   var token = layTokenZalo();
-  if (!token) return 0;
+  var bao = { soTin: 0, soMoi: 0, tinKhongMa: [], loi: '' };
+  if (!token) return bao;
   var nguoiNhan = dongBoNguoiNhanZalo();
   var dsMa = nguoiNhan.map(function (n) { return n.ma; });
-  var soMoi = 0;
-  for (var lan = 0; lan < 20; lan++) {
+  var hetLuc = Date.now() + (choGiay || 0) * 1000;
+  for (var lan = 0; lan < 30; lan++) {
+    var conLai = Math.floor((hetLuc - Date.now()) / 1000);
     var kq;
-    try { kq = goiZalo(token, 'getUpdates', { timeout: 1 }); } catch (e) { break; } // hết tin mới
+    try { kq = goiZalo(token, 'getUpdates', { timeout: String(Math.max(1, Math.min(conLai, 20))) }); } catch (e) {
+      // Không có tin mới thì Zalo trả lỗi hết giờ chờ: còn thời gian thì chờ tiếp. Lỗi khác thì báo lại.
+      if (e.maLoi !== 408 && !/time ?out|hết giờ/i.test(e.message)) { bao.loi = e.message; break; }
+      if (hetLuc - Date.now() < 2000) break;
+      continue;
+    }
     var ds = Array.isArray(kq) ? kq : (kq ? [kq] : []);
-    if (!ds.length) break;
+    if (!ds.length) { if (hetLuc - Date.now() < 2000) break; continue; }
     ds.forEach(function (u) {
       var m = u && u.message;
       if (!m || !m.chat || !m.chat.id) return;
+      bao.soTin++;
       var ma = timMaTrongTin(m.text, dsMa);
       var ai = nguoiNhan.filter(function (n) { return n.ma === ma; })[0];
       try {
         if (ai) {
           ghiKetNoiZalo(ai.ten, String(m.chat.id), String((m.from && m.from.display_name) || ''));
-          soMoi++;
+          bao.soMoi++;
           guiZalo(token, m.chat.id, 'Đã kết nối với ECODesk. Từ nay ' + ai.ten + ' sẽ nhận thông báo ở đây.');
         } else {
+          if (bao.tinKhongMa.length < 5) bao.tinKhongMa.push({ tenZalo: String((m.from && m.from.display_name) || ''), noiDung: String(m.text || '(không phải chữ)').slice(0, 40) });
           guiZalo(token, m.chat.id, 'Bot này gửi thông báo của ECODesk. Muốn nhận, hãy gửi mã kết nối 6 ký tự của bạn (xem trong ECODesk, mục Thông báo).');
         }
       } catch (e) { /* gửi trả lời lỗi thì bỏ qua, lần sau vẫn chạy tiếp */ }
     });
+    if (bao.soMoi) hetLuc = Date.now(); // đã có người kết nối: đọc nốt tin còn lại rồi thôi chờ
   }
-  return soMoi;
+  return bao;
+}
+
+/** Bot có cài webhook thì Zalo không trả tin qua getUpdates (và không báo lỗi), nên gỡ webhook trước khi đọc. */
+function boWebhookZalo() {
+  try { goiZalo(layTokenZalo(), 'deleteWebhook', {}); } catch (e) { /* chưa có webhook thì thôi */ }
+}
+
+/** Câu báo kết quả đọc tin để hiện trên trang. */
+function moTaKiemTraZalo(bao) {
+  if (bao.loi) return 'Không đọc được tin nhắn của bot. ' + bao.loi;
+  if (!bao.soTin) return 'Trong lúc chờ, bot không nhận được tin nhắn nào. Bấm kiểm tra lại, rồi trong vòng 25 giây nhắn mã cho bot (khung chat của chính bot, không phải Zalo Bot Manager).';
+  var cau = 'Đã đọc ' + bao.soTin + ' tin mới, ' + bao.soMoi + ' người vừa kết nối.';
+  if (bao.tinKhongMa.length) cau += ' Tin không có mã đúng: ' + bao.tinKhongMa.map(function (t) { return (t.tenZalo ? t.tenZalo + ': ' : '') + '"' + t.noiDung + '"'; }).join(', ') + '.';
+  return cau;
 }
 
 function ghiKetNoiZalo(ten, chatId, tenZalo) {
@@ -195,7 +236,7 @@ function layCaiDatZalo(phien) {
   var lanCuoi = null;
   try { lanCuoi = JSON.parse(layCaiDat('ZaloLanNhacCuoi') || 'null'); } catch (e) { lanCuoi = null; }
   return {
-    coBot: !!layTokenZalo(), tenBot: String(layCaiDat('ZaloTenBot') || ''), coLich: coLichNhac(),
+    coBot: !!layTokenZalo(), tenBot: tenBotZalo(), coLich: coLichNhac(),
     dsGio: cd.dsGio, nhacSapDenHan: cd.nhacSapDenHan, nhacTre: cd.nhacTre, lanCuoi: lanCuoi,
     nguoiNhan: dongBoNguoiNhanZalo().map(function (n) { return { ten: n.ten, vaiTro: n.vaiTro, ma: n.ma, daKetNoi: !!n.chatId, tenZalo: n.tenZalo }; })
   };
@@ -211,7 +252,8 @@ function luuCaiDatZalo(phien, cd) {
     var bot;
     try { bot = goiZalo(token, 'getMe', {}); } catch (e) { throw new Error('Mã bot không dùng được. Bạn kiểm tra lại đã chép đủ mã chưa. (' + e.message + ')'); }
     datCaiDat('ZaloToken', token);
-    datCaiDat('ZaloTenBot', String((bot && (bot.account_name || bot.display_name || bot.name)) || ''));
+    datCaiDat('ZaloTenBot', tenHienThiBot(bot));
+    boWebhookZalo();
     // Bot mới thì mọi người phải nhắn mã kết nối lại.
     var ds = docBang('KetNoiZalo').map(function (k) { k.ChatId = ''; k.TenZalo = ''; k.ThoiGianKetNoi = ''; return k; });
     ghiDeBang('KetNoiZalo', ds);
@@ -246,8 +288,12 @@ function luuNhacViec(phien, cd) {
 function kiemTraKetNoiZalo(phien) {
   var tk = canDangNhap(phien, 'task');
   if (!layTokenZalo()) throw new Error('Chưa có bot Zalo. Nhờ BOD nhập mã bot trong Cài đặt.');
-  nhanTinMoiZalo();
-  return trangThaiZaloCuaToi(String(tk.HoVaTen));
+  boWebhookZalo();
+  var bao = nhanTinMoiZalo(25);
+  var kq = trangThaiZaloCuaToi(String(tk.HoVaTen));
+  kq.baoCao = moTaKiemTraZalo(bao);
+  kq.loi = !!bao.loi;
+  return kq;
 }
 
 function guiTinThuZalo(phien, ten) {
