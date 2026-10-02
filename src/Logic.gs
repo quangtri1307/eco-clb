@@ -24,6 +24,7 @@ var COT_BAT_BUOC = ['HoVaTen', 'Ban'];
 /** Các tab trong file dữ liệu và tên cột của từng tab. */
 var BANG = {
   ThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }),
+  ThanhVienCu: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['NgayRoi']),
   LichSuDiem: ['ThoiGian', 'HoVaTen', 'LoaiHoatDong', 'TenHoatDong', 'Diem', 'NguoiCong', 'NhiemKy', 'HocKy'],
   KyHoatDong: ['NhiemKy', 'HocKy', 'BatDau', 'KieuTaiLen'],
   LuuTruThanhVien: ['NhiemKy', 'HocKy', 'HoVaTen', 'Ban'],
@@ -41,6 +42,27 @@ var BANG = {
   ThietBi: ['Email', 'DiaChi', 'Khoa', 'TenMay', 'ThoiGian', 'LayCuoi', 'P256dh', 'Auth'],
   ThongBao: ['ThoiGian', 'Email', 'TieuDe', 'NoiDung']
 };
+
+/**
+ * Cập nhật tab Thành viên cũ khi tải danh sách mới: ai có trong danh sách cũ mà không còn trong danh sách mới
+ * thì giữ lại hồ sơ đầy đủ kèm ngày rời; ai quay lại CLB thì bỏ khỏi Thành viên cũ. So theo họ tên (không phân biệt hoa thường).
+ * Trả về { ds: các dòng Thành viên cũ mới, soMoiRoi }.
+ */
+function capNhatThanhVienCu(cu, moi, daRoi, bayGio) {
+  var k = function (t) { return String(t.HoVaTen || '').trim().toLowerCase(); };
+  var conLai = {};
+  moi.forEach(function (t) { conLai[k(t)] = true; });
+  var roi = cu.filter(function (t) { return k(t) && !conLai[k(t)]; });
+  var moiRoi = {};
+  roi.forEach(function (t) { moiRoi[k(t)] = true; });
+  var ds = daRoi.filter(function (t) { return k(t) && !conLai[k(t)] && !moiRoi[k(t)]; });
+  roi.forEach(function (t) {
+    var dong = { NgayRoi: bayGio };
+    COT_THANH_VIEN.forEach(function (c) { dong[c[0]] = t[c[0]] == null ? '' : t[c[0]]; });
+    ds.push(dong);
+  });
+  return { ds: ds, soMoiRoi: roi.length };
+}
 
 /** Ba kiểu tải danh sách thành viên ở phần hậu kỳ. */
 var KIEU_TAI = {
@@ -1055,7 +1077,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
     boDau: boDau, chuanHoaTenCot: chuanHoaTenCot, nhomBan: nhomBan, nhanDienCot: nhanDienCot,
-    docDanhSachThanhVien: docDanhSachThanhVien, tenNhiemKy: tenNhiemKy, tinhKyMoi: tinhKyMoi,
+    docDanhSachThanhVien: docDanhSachThanhVien, capNhatThanhVienCu: capNhatThanhVienCu, tenNhiemKy: tenNhiemKy, tinhKyMoi: tinhKyMoi,
     dongThanhDoiTuong: dongThanhDoiTuong, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
     linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo, khongPhaiBod: khongPhaiBod,
     htmlSangChu: htmlSangChu, lamSachHtml: lamSachHtml, chuanBiGuiTuNhap: chuanBiGuiTuNhap,

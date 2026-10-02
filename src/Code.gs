@@ -77,6 +77,9 @@ function taiDanhSachThanhVien(yeuCau) {
     var kyHienTai = layKyHienTai();
     var kyMoi = tinhKyMoi(kyHienTai, yeuCau.kieu, bayGio);
 
+    // Người không còn trong danh sách mới: giữ hồ sơ đầy đủ ở tab Thành viên cũ để sau này còn tra cứu.
+    var cu = capNhatThanhVienCu(docBang('ThanhVien'), kq.thanhVien, docBang('ThanhVienCu'), bayGio);
+    ghiDeBang('ThanhVienCu', cu.ds);
     ghiDeBang('ThanhVien', kq.thanhVien);
 
     if (kyMoi) {
@@ -93,7 +96,8 @@ function taiDanhSachThanhVien(yeuCau) {
     var ky = kyMoi || kyHienTai;
     return 'Đã tải ' + kq.thanhVien.length + ' thành viên (' + yeuCau.kieu + ').' +
       (ky ? ' Kỳ hiện tại: nhiệm kỳ ' + ky.NhiemKy + ', học kỳ ' + ky.HocKy + '.' : ' Chưa có kỳ hoạt động; lần đầu hãy chọn "Sau tuyển đợt 1".') +
-      (soTaoMoi ? ' Đã tạo ' + soTaoMoi + ' tài khoản BOD mới.' : '');
+      (soTaoMoi ? ' Đã tạo ' + soTaoMoi + ' tài khoản BOD mới.' : '') +
+      (cu.soMoiRoi ? ' ' + cu.soMoiRoi + ' người không còn trong danh sách, hồ sơ đã được giữ ở tab ThanhVienCu.' : '');
   } finally {
     khoa.releaseLock();
   }
