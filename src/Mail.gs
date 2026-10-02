@@ -471,7 +471,8 @@ function layNguonGui(phien) {
   });
   return {
     thanhVien: tv, cotThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }),
-    danhBa: docBang('DanhBa').map(function (d) { return { Nhom: String(d.Nhom || ''), Ten: String(d.Ten || ''), Email: String(d.Email || ''), GhiChu: String(d.GhiChu || '') }; }),
+    danhBa: danhBaThanhVien().map(function (d) { return { Nhom: d.nhom, Ten: d.ten, Email: d.email, GhiChu: d.ghiChu }; })
+      .concat(docBang('DanhBa').map(function (d) { return { Nhom: String(d.Nhom || ''), Ten: String(d.Ten || ''), Email: String(d.Email || ''), GhiChu: String(d.GhiChu || '') }; })),
     conLai: MailApp.getRemainingDailyQuota()
   };
 }
@@ -638,9 +639,17 @@ function layCaiDatMail(phien) {
   canDangNhap(phien, 'caidat');
   return {
     danhBa: docBang('DanhBa').map(function (d) { return { nhom: String(d.Nhom || ''), ten: String(d.Ten || ''), email: String(d.Email || ''), ghiChu: String(d.GhiChu || '') }; }),
+    thanhVien: danhBaThanhVien(),
     cheDoUcv: cheDoXemUcv(), emailClb: emailClb(),
     chuKy: layChuKy(), linkSuaChuKy: linkGmail('#settings/general')
   };
+}
+
+/** Thành viên CLB có email luôn nằm sẵn trong danh bạ (lấy từ danh sách thành viên, không cần nhập). */
+function danhBaThanhVien() {
+  return docBang('ThanhVien').filter(function (t) { return emailHopLe(t.Email); }).map(function (t) {
+    return { nhom: 'Thành viên CLB', ten: String(t.HoVaTen), email: String(t.Email).trim(), ghiChu: String(t.Ban || '') };
+  });
 }
 
 function luuDanhBa(phien, ds) {

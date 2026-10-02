@@ -1,45 +1,7 @@
 <script>
 /* =================== Màn chờ, trang chào, trang Thông báo, ảnh nền đăng nhập =================== */
 
-/* ---------- Màn chờ: chiếc lá quay giữa vòng tái chế ---------- */
-var CAU_CHO = [
-  'Đang tưới cây cho dữ liệu nảy mầm…',
-  'Lá đang quay, bạn hít một hơi thật sâu nha…',
-  'Đang phân loại rác… à nhầm, phân loại dữ liệu…',
-  'Ốc sên chở dữ liệu đang chạy hết tốc lực…',
-  'Đang gọi Google dậy làm việc…',
-  'Dữ liệu đang đạp xe về, không xả khói…',
-  'Đang tái chế từng con số…',
-  'Chờ xíu, chiếc lá hơi chóng mặt…',
-  'Dữ liệu đang tắm nắng, sắp xong rồi…',
-  'Đang nhặt rác trên đường truyền…',
-  'Đang đếm lá trên cây, đếm hơi lâu…',
-  'Tranh thủ uống ngụm nước đi bạn ơi…'
-];
-function cauCho() { return CAU_CHO[Math.floor(Math.random() * CAU_CHO.length)]; }
-/** Ba mũi tên tái chế quay quanh chiếc lá. */
-var SVG_CHO = (function () {
-  var mui = '';
-  for (var k = 0; k < 3; k++) {
-    var a0 = (k * 120 + 12) * Math.PI / 180, a1 = (k * 120 + 96) * Math.PI / 180, r = 24;
-    var x0 = 32 + r * Math.cos(a0), y0 = 32 + r * Math.sin(a0), x1 = 32 + r * Math.cos(a1), y1 = 32 + r * Math.sin(a1);
-    // đầu mũi tên: tam giác hướng theo chiều quay
-    var tx = -Math.sin(a1), ty = Math.cos(a1), nx = Math.cos(a1), ny = Math.sin(a1);
-    var p = function (a, b) { return (x1 + a * tx + b * nx).toFixed(1) + ',' + (y1 + a * ty + b * ny).toFixed(1); };
-    mui += '<path d="M' + x0.toFixed(1) + ' ' + y0.toFixed(1) + 'A' + r + ' ' + r + ' 0 0 1 ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + '"/><polygon points="' + p(5, 0) + ' ' + p(-1, 5) + ' ' + p(-1, -5) + '"/>';
-  }
-  return '<svg viewBox="0 0 64 64" aria-hidden="true"><g class="nap-vong">' + mui + '</g>' +
-    '<g class="nap-la"><path d="M32 44c-9-3-12-11-9-20 7 1 14 4 15 12 1 4-2 7-6 8z"/><path class="gan" d="M32 44c-1-6-3-11-7-16"/></g></svg>';
-})();
-function cho(lon) {
-  return '<div class="nap' + (lon ? ' lon' : '') + '" role="status">' + SVG_CHO + '<span class="nap-chu" data-doi>' + cauCho() + '</span><span class="nap-cham"><i></i><i></i><i></i></span></div>';
-}
-setInterval(function () {
-  $$('.nap-chu[data-doi]').forEach(function (s) {
-    s.classList.add('mo');
-    setTimeout(function () { s.textContent = cauCho(); s.classList.remove('mo'); }, 250);
-  });
-}, 2600);
+/* ---------- Màn chờ (cho() nằm ở DungChung) ---------- */
 function manHinhCho() { return '<div class="login-wrap dn-cho">' + cho(true) + '</div>'; }
 
 /* ---------- Ảnh nền trang đăng nhập (lưu sẵn trên máy, chỉ tải lại khi BOD đổi ảnh) ---------- */
@@ -87,81 +49,15 @@ function thuNhoAnh(tep, canhMax) {
 }
 
 /* ---------- Trang chào ---------- */
-var CAU_HOI = [
-  'Hôm nay bạn đã uống đủ nước chưa?',
-  'Có việc gì vui muốn kể cho CLB nghe không?',
-  'Bạn đã mang bình nước riêng đi học, đi làm chưa?',
-  'Mẹo nhỏ: tắt bớt một bóng đèn không dùng là Trái Đất cảm ơn bạn rồi.',
-  'Một túi vải trong cặp cứu được cả chục cái túi ni lông đó.',
-  'Nếu được trồng một cái cây, bạn sẽ trồng cây gì?',
-  'Tuần này có ai trong CLB làm bạn thấy biết ơn không? Nhắn họ một câu đi.',
-  'Bạn đã ăn sáng chưa? Làm việc bụng đói là dễ quạu lắm.',
-  'Đứng dậy vươn vai 30 giây rồi làm tiếp nha.',
-  'Cây xanh không biết nói, nhưng chắc nó cũng thích bạn lắm.',
-  'Bạn đang nghe bài gì đó? Gợi ý cho cả CLB với.',
-  'Mẹo: in hai mặt giấy là tiết kiệm một nửa số cây rồi.',
-  'Hôm nay trời thế nào? Nhớ mang áo mưa phòng hờ nha.',
-  'Một việc nhỏ làm xong vẫn hơn mười việc lớn chưa bắt đầu.',
-  'Nếu CLB đi dã ngoại, bạn muốn đi đâu?',
-  'Pin cũ đừng vứt thùng rác thường nha, gom lại nộp điểm thu hồi.',
-  'Bạn có biết: một cái chai nhựa cần vài trăm năm để phân huỷ.',
-  'Hít vào bốn nhịp, thở ra bốn nhịp. Ổn hơn chưa?',
-  'Hôm nay bạn đã khen ai chưa? Khen một câu đi, miễn phí mà.',
-  'Ốc sên còn về đích được, task của bạn chắc chắn cũng xong.',
-  'Nhắc nhẹ: rửa ống hút inox xong nhớ phơi khô.',
-  'Bạn thích mùa nào nhất trong năm?',
-  'Có món ăn chay nào bạn mê không? Chia sẻ công thức đi.',
-  'Đi bộ hay đạp xe đoạn ngắn vừa khoẻ vừa xanh.',
-  'Bạn đã cười to lần nào hôm nay chưa?',
-  'Mẹo: rã đông đồ ăn trong ngăn mát thay vì dùng lò vi sóng, vừa ngon vừa tiết kiệm điện.',
-  'Một lá cây nói với lá cây kia: “Mai mình rụng chung nha.” Hơi buồn nhưng mà dễ thương.',
-  'Nếu bạn là một con vật, bạn sẽ là con gì?',
-  'Làm xong việc nhớ thưởng cho mình một ly trà nha.',
-  'Bạn có kỷ niệm nào đáng nhớ nhất với CLB?',
-  'Thử một ngày không dùng đồ nhựa một lần xem sao?',
-  'Cây trong nhà bạn hôm nay đã được tưới chưa?',
-  'Nhớ ngủ đủ giấc, deadline không chạy mất đâu.',
-  'Sắp xếp lại bàn học một chút, đầu óc cũng gọn theo đó.',
-  'Hôm nay bạn muốn làm xong việc gì nhất?',
-  'Mẹo: rút sạc khỏi ổ điện khi không dùng, đỡ hao điện ngầm.',
-  'Một câu hỏi khó: trà sữa hay nước mía?',
-  'CLB có bạn thật vui. Thật đó.'
-];
-function buoiTrongNgay() {
-  var h = new Date().getHours();
-  if (h >= 5 && h < 11) return { ten: 'buổi sáng', lop: 'sang', ic: 'sun' };
-  if (h >= 11 && h < 14) return { ten: 'buổi trưa', lop: 'trua', ic: 'sun' };
-  if (h >= 14 && h < 18) return { ten: 'buổi chiều', lop: 'chieu', ic: 'sun' };
-  if (h >= 18 && h < 22) return { ten: 'buổi tối', lop: 'toi', ic: 'moon' };
-  return { ten: 'đêm khuya', lop: 'khuya', ic: 'moon' };
-}
-var CAU_THEO_GIO = {
-  sang: ['Sáng nay bạn đã ăn sáng chưa?', 'Một ngày mới, một chiếc lá mới. Bắt đầu nhẹ nhàng nha.'],
-  trua: ['Trưa rồi, nghỉ tay ăn cơm chưa bạn?', 'Chợp mắt 15 phút buổi trưa là chiều tỉnh như sáo.'],
-  chieu: ['Chiều rồi, làm ly nước mát rồi chiến tiếp nha.', 'Chiều nay có gì vui không?'],
-  toi: ['Tối nay ăn gì ngon đó?', 'Cả ngày vất vả rồi, làm nốt chút rồi nghỉ nha.'],
-  khuya: ['Khuya rồi mà vẫn còn thức à? Làm nhanh rồi đi ngủ nha.', 'Cú đêm ơi, nhớ ngủ sớm để mai còn sức.']
-};
 function tenGoi(ten) { return String(ten || '').trim().split(/\s+/).pop(); }
-function cauNgauNhien(buoi, truoc) {
-  var ds = CAU_HOI.concat(CAU_THEO_GIO[buoi] || []);
-  var c;
-  do { c = ds[Math.floor(Math.random() * ds.length)]; } while (ds.length > 1 && c === truoc);
-  return c;
-}
 function oTom(so, chu, phu, trang, lop) {
   return '<button class="tom ' + (lop || '') + '" data-p="' + trang + '"><b>' + so + '</b><span>' + chu + '</span>' + (phu ? '<small>' + phu + '</small>' : '') + '</button>';
 }
 VIEWS.home = function () {
-  var b = buoiTrongNgay();
-  var cau = cauNgauNhien(b.lop);
   var chucNang = flat().filter(function (x) { return x[0] !== 'home'; });
-  $('#main').innerHTML = '<div class="chao ' + b.lop + '"><div class="chao-troi" aria-hidden="true">' + ic(b.ic, 54) + '<i></i><i></i><i></i></div>' +
-    '<div class="chao-chu"><span>Chào ' + b.ten + ',</span><h2>' + esc(tenGoi(NGUOI.ten)) + ' ơi!</h2>' +
-    '<div class="chao-hoi"><p id="hoi">' + esc(cau) + '</p><button class="btn ghost sm" id="hoi-doi">' + ic('refresh', 14) + 'Câu khác</button></div></div></div>' +
+  $('#main').innerHTML = khungChao(tenGoi(NGUOI.ten)) +
     '<div id="tomtat">' + cho() + '</div>' +
     '<div class="card"><h3>Đi tới</h3><div class="tiles">' + chucNang.map(function (x) { return '<button class="tile" data-p="' + x[0] + '">' + ic(x[2], 22) + x[1] + huyHieu(x[0]) + '</button>'; }).join('') + '</div></div>';
-  $('#hoi-doi').onclick = function () { cau = cauNgauNhien(b.lop, cau); var p = $('#hoi'); p.classList.add('mo'); setTimeout(function () { p.textContent = cau; p.classList.remove('mo'); }, 200); };
   goiPhien('layTrangChu').then(function (d) {
     if (page !== 'home') return;
     var o = [];
@@ -189,13 +85,14 @@ var TEN_CACH = { zalo: 'Zalo', app: 'App trên điện thoại', mail: 'Mail' };
 function dongThongBao(tb) {
   return '<div class="nhanTB"><span>' + ic('bell', 15) + ' Nhận thông báo qua <b>' + tb.cach.map(function (c) { return esc(TEN_CACH[c]); }).join(', ') + '</b></span><button class="btn ghost sm" data-p="thongbao">Đổi</button></div>';
 }
+function chuGio(ds) { return ds.map(function (g) { return p2(g) + ':00'; }).join(', '); }
 function suKienCuaToi(tb) {
-  var g = p2(tb.suKien.gioNhac) + ':00';
-  if (tb.vaiTro === 'UCV') return ['Thư bạn gửi được BOD duyệt, cần sửa lại hoặc không được duyệt.'];
-  if (tb.vaiTro === 'HR') return ['Mỗi ngày lúc ' + g + ': task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại.'];
-  return ['Mỗi ngày lúc ' + g + ': task của bạn sắp đến hạn hoặc trễ hạn.', 'Khi có người giao task mới cho bạn.']
-    .concat(tb.suKien.thuChoDuyet ? ['Khi UCV gửi thư chờ duyệt.'] : [])
-    .concat(tb.suKien.gopY ? ['Khi có góp ý mới từ ECOBoard.'] : []);
+  var g = chuGio(tb.suKien.dsGio);
+  if (tb.vaiTro === 'HR') return { cach: ['Mỗi ngày lúc ' + g + ': task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại qua Messenger.'], mail: [] };
+  return {
+    cach: ['Mỗi ngày lúc ' + g + ': task của bạn sắp đến hạn hoặc trễ hạn.', 'Khi có người giao task mới cho bạn.'],
+    mail: [].concat(tb.suKien.thuChoDuyet ? ['UCV gửi thư chờ duyệt.'] : []).concat(tb.suKien.gopY ? ['Có góp ý mới từ ECOBoard.'] : [])
+  };
 }
 function ketQuaGuiThu(kq) {
   return '<div class="note' + (kq.duoc ? ' info' : '') + '" style="display:block"><b>' + (kq.duoc ? 'Đã gửi thử' + (kq.tong > 1 ? ' tới ' + kq.duoc + ' / ' + kq.tong + ' người.' : '.') : 'Chưa gửi được.') + '</b>' +
@@ -213,17 +110,22 @@ function ganGoMay(goc, xong) {
     };
   });
 }
+/** Trang Thông báo: với BOD nằm trong Cài đặt, với ban nhân sự mở từ Menu. */
 VIEWS.thongbao = function () {
-  dangTai();
+  if (NGUOI.vaiTro === 'BOD') { diToi('caidat', 'thongbao'); return; }
+  $('#main').innerHTML = '<div class="head"><div><h2>Nhận nhắc deadline</h2><p class="lead">Chọn cách bạn muốn được nhắc deadline.</p></div></div><div id="tbgoc"></div>';
+  veTrangThongBao($('#tbgoc'));
+};
+function veTrangThongBao(goc) {
   var laBod = NGUOI.vaiTro === 'BOD';
+  goc.innerHTML = cho();
   goiPhien('layThongBaoCuaToi').then(function (tb) {
-    if (page !== 'thongbao') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Thông báo</h2><p class="lead">Chọn cách bạn muốn nhận tin từ ECODesk.' + (laBod ? ' BOD chỉnh được cho mọi người ở phần dưới.' : '') + '</p></div></div>' +
-      '<div class="tb-grid"><div style="display:grid;gap:14px;min-width:0" id="tb-toi"></div>' + (laBod ? '<div style="display:grid;gap:14px;min-width:0" id="tb-moi"></div>' : '') + '</div>';
+    if (!goc.isConnected) return;
+    goc.innerHTML = '<div class="tb-grid"><div style="display:grid;gap:14px;min-width:0" id="tb-toi"></div>' + (laBod ? '<div style="display:grid;gap:14px;min-width:0" id="tb-moi"></div>' : '') + '</div>';
     veCuaToi(tb);
     if (laBod) veMoiNguoi();
-  }).catch(loiTai);
-};
+  }).catch(function (err) { goc.innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+}
 function veCuaToi(tb) {
   var z = tb.zalo || {};
   var dong = function (k, chu, phu) {
@@ -233,8 +135,12 @@ function veCuaToi(tb) {
     'Mở Zalo, tìm bot <b>' + esc(z.tenBot || 'của CLB') + '</b>, nhắn mã <b class="num">' + esc(z.ma) + '</b> rồi bấm Kiểm tra Zalo.';
   var appPhu = tb.may.length ? 'Đã bật trên ' + tb.may.length + ' máy.' : 'Chưa bật trên máy nào. Bấm “Bật trên máy này” ở dưới.';
   $('#tb-toi').innerHTML =
-    '<div class="card"><h3>' + ic('bell', 18) + ' Bạn sẽ được báo khi</h3><ul class="sk">' + suKienCuaToi(tb).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' +
-    '<div class="card form"><h3 style="margin:0">Nhận qua</h3><p class="hint" style="margin:0">Chọn ít nhất một cách. Đổi xong là lưu luôn.</p>' +
+    (function () {
+      var sk = suKienCuaToi(tb);
+      return '<div class="card"><h3>' + ic('bell', 18) + ' Nhắc deadline, gửi theo cách bạn chọn</h3><ul class="sk">' + sk.cach.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+        (sk.mail.length ? '<h3 style="margin-top:14px">' + ic('mail', 18) + ' Luôn gửi qua mail</h3><ul class="sk">' + sk.mail.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
+    })() +
+    '<div class="card form"><h3 style="margin:0">Nhắc deadline qua</h3><p class="hint" style="margin:0">Chọn ít nhất một cách. Đổi xong là lưu luôn.</p>' +
     '<div class="cachs" id="tb-cach">' + dong('zalo', 'Zalo', zaloPhu) + dong('app', 'App trên điện thoại', appPhu) + dong('mail', 'Mail', 'Gửi về ' + esc(tb.email) + '.') + '</div>' +
     '<div class="row">' + (z.coBot && !z.daKetNoi ? '<button class="btn ghost sm" id="tbzk">Kiểm tra Zalo</button>' : '') +
     '<button class="btn ghost sm" id="tbthu">' + ic('send', 14) + 'Gửi thử cho tôi</button></div><div id="tbm"></div></div>' +
@@ -283,12 +189,12 @@ function veMoiNguoi() {
   goiPhien('layNguoiNhanThongBao').then(function (ds) {
     if (!$('#tb-moi')) return;
     var chon = ['app'];
-    goc.innerHTML = '<div class="sheet-sec">Quản lý cho mọi người (chỉ BOD)</div>' +
-      '<div class="card form"><h3 style="margin:0">' + ic('send', 18) + ' Gửi thử</h3>' +
+    goc.innerHTML = '<div class="sheet-sec">BOD và ban nhân sự</div>' +
+      '<div class="card form"><h3 style="margin:0">' + ic('send', 18) + ' Gửi thử nhắc deadline</h3>' +
       '<label class="f">Gửi cho<select id="gt-ai"><option value="*">Tất cả mọi người (' + ds.length + ')</option>' + ds.map(function (n) { return '<option value="' + esc(n.email) + '">' + esc(n.ten) + ' · ' + (VAI_TRO[n.vaiTro] || esc(n.vaiTro)) + '</option>'; }).join('') + '</select></label>' +
       '<div><div class="hint" style="margin-bottom:6px">Gửi bằng</div><div class="row" id="gt-cach">' + ['zalo', 'app', 'mail'].map(function (k) { return '<button type="button" class="chip" data-c="' + k + '" aria-pressed="' + (chon.indexOf(k) >= 0) + '">' + TEN_CACH[k] + '</button>'; }).join('') + '</div></div>' +
       '<div class="row"><button class="btn sm" id="gt-b">Gửi thử</button></div><div id="gt-m"></div></div>' +
-      '<div class="card flush"><div style="padding:16px 18px 4px"><h3 style="margin:0 0 4px">Mọi người</h3><p class="hint" style="margin:0 0 8px">Bấm để bật/tắt từng cách nhận, đổi là lưu luôn. Gỡ máy ai không dùng nữa.</p></div>' +
+      '<div class="card flush"><div style="padding:16px 18px 4px"><h3 style="margin:0 0 4px">Mọi người</h3><p class="hint" style="margin:0 0 8px">Cách nhận nhắc deadline của từng người. Bấm để bật/tắt, đổi là lưu luôn. Gỡ máy ai không dùng nữa.</p></div>' +
       '<div class="ngs">' + ds.map(function (n, i) {
         var canhBao = [n.cach.indexOf('zalo') >= 0 && !n.daKetNoiZalo ? 'chưa kết nối Zalo' : '', n.cach.indexOf('app') >= 0 && !n.soMay ? 'chưa bật app trên máy nào' : ''].filter(String);
         return '<div class="ng"><div class="ng-dau"><span class="av" aria-hidden="true">' + esc(chuCai(n.ten)) + '</span><div style="min-width:0;flex:1"><b>' + esc(n.ten) + '</b><span class="hint">' + (VAI_TRO[n.vaiTro] || esc(n.vaiTro)) + (n.daKetNoiZalo ? ' · Zalo đã kết nối' : '') + '</span></div></div>' +

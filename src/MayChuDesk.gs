@@ -144,7 +144,7 @@ function layDuLieuCongDiem(phien) {
   return {
     ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
     thanhVien: docBang('ThanhVien').filter(khongPhaiBod).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan(tv.Ban) }; }),
-    loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
+    loai: docBang('LoaiHoatDong').filter(loaiCongTay).map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     ganDay: lichSuGanDay(ky, 30)
   };
 }
@@ -167,7 +167,7 @@ function congDiem(phien, yeuCau) {
   var khoa = LockService.getScriptLock();
   khoa.waitLock(30000);
   try {
-    var kq = taoDongCongDiem(yeuCau, docBang('ThanhVien').filter(khongPhaiBod), docBang('LoaiHoatDong'), String(tk.HoVaTen), layKyHienTai(), new Date());
+    var kq = taoDongCongDiem(yeuCau, docBang('ThanhVien').filter(khongPhaiBod), docBang('LoaiHoatDong').filter(loaiCongTay), String(tk.HoVaTen), layKyHienTai(), new Date());
     if (kq.loi) throw new Error(kq.loi);
     themDong('LichSuDiem', kq.dong);
     xoaBoNhoTam();
@@ -219,7 +219,7 @@ function layCaiDatDesk(phien) {
   canDangNhap(phien, 'caidat');
   var tv = docBang('ThanhVien');
   return {
-    loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
+    loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, congTay: loaiCongTay(l) }; }),
     quyChe: String(layCaiDat('QuyChe') || ''),
     baoGopY: baoGopYQuaMail(),
     baoThuChoDuyet: batSuKien('BaoThuChoDuyet'),
@@ -227,7 +227,7 @@ function layCaiDatDesk(phien) {
     anhNen: String(layCaiDat('AnhNenPhienBan') || ''),
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan(),
-    mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length },
+    mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length, soThanhVien: tv.filter(function (t) { return emailHopLe(t.Email); }).length },
     googleClientId: String(layCaiDat('GoogleClientId') || ''),
     log: { linkMau: String(layCaiDat('LinkMauLog') || ''), linkThuMuc: String(layCaiDat('LinkThuMucLog') || '') },
     zalo: (function () {

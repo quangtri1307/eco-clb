@@ -141,8 +141,8 @@ function layDuLieuBoard() {
   var luuTru = ky && Number(ky.HocKy) === 2 ? docBang('LuuTruThanhVien') : [];
   var duLieu = {
     ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
-    thanhVien: tongHopBangDiem(thanhVien, lichSu, ky, luuTru),
-    loaiHoatDong: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
+    thanhVien: tongHopBangDiem(thanhVien.filter(khongPhaiBod), lichSu, ky, luuTru), // BOD không tham gia cộng điểm
+    loaiHoatDong: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, tuDong: !loaiCongTay(l) }; }),
     ghim: docBang('BangGhim').filter(function (g) { return linkHopLe(g.DuongDan); })
       .map(function (g) { return { tieuDe: String(g.TieuDe || g.DuongDan), link: String(g.DuongDan).trim() }; }),
     quyChe: String(layCaiDat('QuyChe') || '')
