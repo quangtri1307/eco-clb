@@ -87,7 +87,8 @@
   /* ---------- Thông báo của app (Web Push) ---------- */
   function baoApp(d) { if (appCon) { try { appCon.postMessage(d, appOrigin); } catch (e) {} } }
   function khoaSangByte(b64) {
-    var s = (b64 + '===='.slice((b64.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    var s = String(b64).replace(/[^A-Za-z0-9_\-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    s += '==='.slice(0, (4 - s.length % 4) % 4);
     var raw = atob(s), out = new Uint8Array(raw.length);
     for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
     return out;
