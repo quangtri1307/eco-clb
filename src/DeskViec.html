@@ -427,7 +427,7 @@ var SUB = {
     };
   },
   thongbao: function () { veTrangThongBao($('#subbody')); },
-  zalo: function () {
+  zalo: function (baoSau) {
     $('#subbody').innerHTML = cho();
     goiPhien('layCaiDatZalo').then(function (z) {
       if (sub !== 'zalo') return;
@@ -460,7 +460,13 @@ var SUB = {
         e.preventDefault();
         luuVa($('#zb'), $('#zm'), 'luuCaiDatZalo', [{ token: $('#zt').value }], function () { SUB.zalo(); setTimeout(function () { thongBao($('#zm'), 'ok', 'Đã lưu'); }, 1500); });
       };
-      $('#zk').onclick = function () { luuVa($('#zk'), $('#zm2'), 'kiemTraKetNoiZalo', [], function () { SUB.zalo(); }); };
+      if (baoSau) thongBao($('#zm2'), baoSau.loai, baoSau.cau);
+      $('#zk').onclick = function () {
+        $('#zk').disabled = true; thongBao($('#zm2'), 'cho', 'Đang đọc tin nhắn của bot…');
+        goiPhien('kiemTraKetNoiZalo').then(function (kq) {
+          return napCaiDat().then(function () { SUB.zalo({ loai: kq.loi ? 'loi' : 'ok', cau: kq.baoCao }); });
+        }).catch(function (err) { $('#zk').disabled = false; thongBao($('#zm2'), 'loi', err.message); });
+      };
       $('#zn').onclick = function () {
         $('#zn').disabled = true; thongBao($('#zm2'), 'cho', 'Đang gửi…');
         goiPhien('guiNhacNgay').then(function (kq) { $('#zn').disabled = false; thongBao($('#zm2'), kq.loi.length ? 'loi' : 'ok', 'Đã gửi ' + kq.daGui + ' tin' + (kq.loi.length ? '. Lỗi: ' + kq.loi.join('; ') : (kq.daGui ? '' : ' (hôm nay không có task nào cần nhắc)'))); })

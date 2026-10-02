@@ -79,36 +79,51 @@ function trangThaiZaloCuaToi(ten) {
 
 /**
  * Đọc các tin mới người dùng nhắn cho bot. Tin có mã kết nối thì ghi lại ID Zalo của người đó.
- * Trả về số người vừa kết nối.
+ * Trả về { soTin, soMoi, tinKhongMa: [{ tenZalo, noiDung }], loi } để trang Cài đặt báo rõ chuyện gì đã xảy ra.
  */
 function nhanTinMoiZalo() {
   var token = layTokenZalo();
-  if (!token) return 0;
+  var bao = { soTin: 0, soMoi: 0, tinKhongMa: [], loi: '' };
+  if (!token) return bao;
   var nguoiNhan = dongBoNguoiNhanZalo();
   var dsMa = nguoiNhan.map(function (n) { return n.ma; });
-  var soMoi = 0;
   for (var lan = 0; lan < 20; lan++) {
     var kq;
-    try { kq = goiZalo(token, 'getUpdates', { timeout: 1 }); } catch (e) { break; } // hết tin mới
+    try { kq = goiZalo(token, 'getUpdates', { timeout: 1 }); } catch (e) {
+      // Không có tin mới thì Zalo trả lỗi hết giờ chờ; lỗi khác thì báo lại cho người bấm kiểm tra.
+      if (e.maLoi !== 408 && !/time ?out|hết giờ/i.test(e.message)) bao.loi = e.message;
+      break;
+    }
     var ds = Array.isArray(kq) ? kq : (kq ? [kq] : []);
     if (!ds.length) break;
     ds.forEach(function (u) {
       var m = u && u.message;
       if (!m || !m.chat || !m.chat.id) return;
+      bao.soTin++;
       var ma = timMaTrongTin(m.text, dsMa);
       var ai = nguoiNhan.filter(function (n) { return n.ma === ma; })[0];
       try {
         if (ai) {
           ghiKetNoiZalo(ai.ten, String(m.chat.id), String((m.from && m.from.display_name) || ''));
-          soMoi++;
+          bao.soMoi++;
           guiZalo(token, m.chat.id, 'Đã kết nối với ECODesk. Từ nay ' + ai.ten + ' sẽ nhận thông báo ở đây.');
         } else {
+          if (bao.tinKhongMa.length < 5) bao.tinKhongMa.push({ tenZalo: String((m.from && m.from.display_name) || ''), noiDung: String(m.text || '(không phải chữ)').slice(0, 40) });
           guiZalo(token, m.chat.id, 'Bot này gửi thông báo của ECODesk. Muốn nhận, hãy gửi mã kết nối 6 ký tự của bạn (xem trong ECODesk, mục Thông báo).');
         }
       } catch (e) { /* gửi trả lời lỗi thì bỏ qua, lần sau vẫn chạy tiếp */ }
     });
   }
-  return soMoi;
+  return bao;
+}
+
+/** Câu báo kết quả đọc tin để hiện trên trang. */
+function moTaKiemTraZalo(bao) {
+  if (bao.loi) return 'Không đọc được tin nhắn của bot. ' + bao.loi;
+  if (!bao.soTin) return 'Bot chưa nhận được tin nhắn mới nào. Hãy nhắn mã trong khung chat của chính bot (tìm tên bot trong Zalo), không phải trong Zalo Bot Manager.';
+  var cau = 'Đã đọc ' + bao.soTin + ' tin mới, ' + bao.soMoi + ' người vừa kết nối.';
+  if (bao.tinKhongMa.length) cau += ' Tin không có mã đúng: ' + bao.tinKhongMa.map(function (t) { return (t.tenZalo ? t.tenZalo + ': ' : '') + '"' + t.noiDung + '"'; }).join(', ') + '.';
+  return cau;
 }
 
 function ghiKetNoiZalo(ten, chatId, tenZalo) {
@@ -246,8 +261,11 @@ function luuNhacViec(phien, cd) {
 function kiemTraKetNoiZalo(phien) {
   var tk = canDangNhap(phien, 'task');
   if (!layTokenZalo()) throw new Error('Chưa có bot Zalo. Nhờ BOD nhập mã bot trong Cài đặt.');
-  nhanTinMoiZalo();
-  return trangThaiZaloCuaToi(String(tk.HoVaTen));
+  var bao = nhanTinMoiZalo();
+  var kq = trangThaiZaloCuaToi(String(tk.HoVaTen));
+  kq.baoCao = moTaKiemTraZalo(bao);
+  kq.loi = !!bao.loi;
+  return kq;
 }
 
 function guiTinThuZalo(phien, ten) {

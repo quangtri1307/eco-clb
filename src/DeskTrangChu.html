@@ -162,7 +162,7 @@ function veCuaToi(tb) {
     var b = this; b.disabled = true; thongBao(m, 'cho', 'Đang kiểm tra…');
     goiPhien('kiemTraKetNoiZalo').then(function (z2) {
       b.disabled = false;
-      if (z2.daKetNoi) { tb.zalo = z2; veCuaToi(tb); thongBao($('#tbm'), 'ok', 'Đã kết nối Zalo.'); } else thongBao(m, 'loi', 'Chưa thấy tin nhắn có mã của bạn. Bạn nhắn mã cho bot rồi thử lại nhé.');
+      if (z2.daKetNoi) { tb.zalo = z2; veCuaToi(tb); thongBao($('#tbm'), 'ok', 'Đã kết nối Zalo.'); } else thongBao(m, 'loi', 'Chưa thấy tin nhắn có mã của bạn. ' + (z2.baoCao || ''));
     }).catch(function (err) { b.disabled = false; thongBao(m, 'loi', err.message); });
   };
   $('#tbapp').onclick = function () {
