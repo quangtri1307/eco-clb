@@ -1,7 +1,7 @@
 {
   "name": "ECODesk",
   "short_name": "ECODesk",
-  "description": "Bàn làm việc của ban điều hành, ban nhân sự và ứng cử viên",
+  "description": "Bàn làm việc của BOD, ban nhân sự và UCV",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",

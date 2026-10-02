@@ -1,5 +1,5 @@
 <script>
-/* =================== Mail: khung soạn thư, mail của ứng cử viên, mail của BOD =================== */
+/* =================== Mail: khung soạn thư, mail của UCV, mail của BOD =================== */
 
 /* ---------- Lọc HTML an toàn (thư dán vào, chữ ký) ---------- */
 function locHtml(raw) {
@@ -125,7 +125,7 @@ function ganTaiDinhKem(maThu, msg) {
   });
 }
 
-/* =================== Mail của ứng cử viên: hộp thư CLB kiểu Gmail, mọi thao tác chờ BOD duyệt =================== */
+/* =================== Mail của UCV: hộp thư CLB kiểu Gmail, mọi thao tác chờ BOD duyệt =================== */
 var CAU_HINH_SOAN = null;
 function mailUCV() {
   var M = { thuMuc: 'Hộp thư đến', tim: '', batDau: 0, ds: [], coThem: false, nhan: [], cheDo: 'tatca', sel: null, viec: [] };
@@ -433,7 +433,7 @@ function mailUCV() {
 function mailBOD(tabDau, them) {
   var tab = tabDau || 'duyet';
   $('#main').className = 'main rong';
-  $('#main').innerHTML = '<div class="head"><div><h2>Mail</h2><p class="lead">Soạn và sửa thư trong Gmail của CLB. Ở đây BOD duyệt thư ứng cử viên, gửi hàng loạt và hẹn giờ gửi từ thư nháp Gmail.</p></div>' +
+  $('#main').innerHTML = '<div class="head"><div><h2>Mail</h2><p class="lead">Soạn và sửa thư trong Gmail của CLB. Ở đây BOD duyệt thư UCV, gửi hàng loạt và hẹn giờ gửi từ thư nháp Gmail.</p></div>' +
     (NGUOI.gmail ? '<a class="btn ghost" href="' + esc(NGUOI.gmail) + '" target="_blank" rel="noopener">' + ic('ext', 16) + 'Mở Gmail CLB</a>' : '') + '</div>' +
     '<div class="seg" id="mtab" style="justify-self:start">' + [['duyet', 'Duyệt thư', 'check'], ['nhap', 'Thư nháp', 'file'], ['hangloat', 'Gửi hàng loạt', 'send'], ['lich', 'Đã lên lịch', 'clock']].map(function (x) {
       return '<button data-t="' + x[0] + '" aria-pressed="' + (x[0] === tab) + '">' + ic(x[2], 16) + x[1] + (x[0] === 'duyet' ? '<span class="badge" id="dbadge"' + (soViecCho ? '' : ' hidden') + '>' + soViecCho + '</span>' : '') + '</button>';
@@ -465,7 +465,7 @@ BOD_MAIL.duyet = function () {
     $('#dmail').classList.add('doc');
     var guiThu = ['Soạn thư mới', 'Trả lời', 'Trả lời tất cả', 'Chuyển tiếp'].indexOf(v.thaoTac) >= 0;
     $('#dr').innerHTML = '<button class="back chimobile" id="dve">' + ic('left', 16) + 'Danh sách</button><h3>' + esc(v.tieuDe || (v.thaoTac + (v.tieuDeThu ? ': ' + v.tieuDeThu : ''))) + '</h3>' +
-      '<div class="row"><span class="pill p-info">' + esc(v.thaoTac) + '</span><span class="hint">' + esc(v.nguoiTao) + ' (ứng cử viên) · ' + ngayDayDu(v.thoiGian) + '</span></div>' +
+      '<div class="row"><span class="pill p-info">' + esc(v.thaoTac) + '</span><span class="hint">' + esc(v.nguoiTao) + ' (UCV) · ' + ngayDayDu(v.thoiGian) + '</span></div>' +
       (v.den ? '<div><b style="font-size:13px">Tới:</b> ' + esc(v.den) + (v.cc ? ' · <b style="font-size:13px">Cc:</b> ' + esc(v.cc) : '') + (v.bcc ? ' · <b style="font-size:13px">Bcc:</b> ' + esc(v.bcc) : '') + '</div>' : (v.cc || v.bcc ? '<div><b style="font-size:13px">Cc:</b> ' + esc(v.cc) + (v.bcc ? ' · <b style="font-size:13px">Bcc:</b> ' + esc(v.bcc) : '') + '</div>' : '')) +
       (v.tieuDeThu ? '<div class="row"><span class="hint">Thư gốc: ' + esc(v.tieuDeThu) + '</span>' + (v.linkThu ? '<a class="btn ghost sm" href="' + esc(v.linkThu) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Xem trong Gmail</a>' : '') + '</div>' : '') +
       (v.nhan ? '<div><b style="font-size:13px">Nhãn:</b> ' + esc(v.nhan) + '</div>' : '') +
@@ -473,7 +473,7 @@ BOD_MAIL.duyet = function () {
       (guiThu ? '<p class="hint" style="margin:0">' + (v.thaoTac.indexOf('Trả lời') === 0 && v.trichDan ? 'Khi gửi sẽ kèm trích dẫn thư gốc. ' : '') + 'Chữ ký CLB (nếu đang bật) tự thêm vào cuối thư.</p>' : '') +
       (v.dinhKem.length ? '<div class="row">' + v.dinhKem.map(function (f) { return '<span class="pill p-mute">' + ic('attach', 12) + ' ' + esc(f.ten) + '</span>'; }).join('') + '</div>' : '') +
       (v.maThu ? '<details id="dgoc"><summary style="cursor:pointer;font-weight:600">Xem thư gốc ngay tại đây</summary><div id="dgocb" style="display:grid;gap:10px;margin-top:8px"><p class="muted">Đang tải…</p></div></details>' : '') +
-      (v.trangThai === 'Chờ duyệt' ? '<div class="box"><b>Duyệt thư này</b><textarea id="dn" rows="2" placeholder="Ghi chú cho ứng cử viên (không bắt buộc, nên ghi khi yêu cầu sửa)"></textarea><div class="row"><button class="btn sm" data-qd="Đã duyệt">' + ic('send', 14) + (guiThu ? 'Duyệt và gửi' : 'Duyệt và thực hiện') + '</button><button class="btn ghost sm" data-qd="Cần sửa lại">Cần sửa lại</button><button class="btn ghost bad sm" data-qd="Từ chối">Từ chối</button><span id="dm"></span></div></div>'
+      (v.trangThai === 'Chờ duyệt' ? '<div class="box"><b>Duyệt thư này</b><textarea id="dn" rows="2" placeholder="Ghi chú cho UCV (không bắt buộc, nên ghi khi yêu cầu sửa)"></textarea><div class="row"><button class="btn sm" data-qd="Đã duyệt">' + ic('send', 14) + (guiThu ? 'Duyệt và gửi' : 'Duyệt và thực hiện') + '</button><button class="btn ghost sm" data-qd="Cần sửa lại">Cần sửa lại</button><button class="btn ghost bad sm" data-qd="Từ chối">Từ chối</button><span id="dm"></span></div></div>'
         : '<div class="box"><b>' + esc(v.trangThai) + (v.nguoiDuyet ? ' · ' + esc(v.nguoiDuyet) + ' · ' + ngayDayDu(v.thoiGianDuyet) : '') + '</b>' + (v.ghiChu ? '<span style="white-space:pre-wrap">' + esc(v.ghiChu) + '</span>' : '') + '</div>');
     $('#dve').onclick = function () { $('#dmail').classList.remove('doc'); };
     if ($('#dgoc')) $('#dgoc').ontoggle = function () {

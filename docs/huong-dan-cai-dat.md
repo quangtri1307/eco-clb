@@ -57,7 +57,7 @@ Bấm biểu tượng **Lưu** (đĩa mềm).
 2. Bấm bánh răng cạnh "Chọn loại", chọn **Ứng dụng web**.
 3. **Thực thi với tư cách**: Tôi (tài khoản CLB). **Người có quyền truy cập**: Bất kỳ ai.
 4. Bấm **Triển khai**, sao chép **URL ứng dụng web**. Đó là link ECOBoard để gửi cho thành viên.
-5. Link ECODesk là link đó thêm `?app=desk` ở cuối, ví dụ `https://script.google.com/macros/s/…/exec?app=desk`. Ban điều hành đăng nhập bằng email trong danh sách thành viên và mật khẩu mặc định đã nhập ở bước 3.
+5. Link ECODesk là link đó thêm `?app=desk` ở cuối, ví dụ `https://script.google.com/macros/s/…/exec?app=desk`. BOD đăng nhập bằng email trong danh sách thành viên và mật khẩu mặc định đã nhập ở bước 3.
 
 ## Khi có mã mới
 

@@ -39,7 +39,23 @@
   function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); } catch (e) {} }
 
   var nguon = null, nguonOrigin = '', appCon = null, appOrigin = '';
-  function guiVo() { if (appCon) { try { appCon.postMessage({ eco: 'vo', vien: vien(), phien: app === 'desk' ? docPhien() : '' }, appOrigin); } catch (e) {} } }
+  /* iPhone (app trên màn hình chính) đôi khi báo chiều cao màn hình thiếu một đoạn ở dưới: kéo khung xuống tận đáy. */
+  var iPhone = /iPhone|iPod/.test(navigator.userAgent);
+  var dangLaApp = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  function chinhCao() {
+    if (!iPhone || !dangLaApp) return;
+    var doc = window.innerWidth < window.innerHeight, cao = doc ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    khung.style.height = cao > window.innerHeight && cao - window.innerHeight < 120 ? cao + 'px' : '';
+  }
+  /* Máy này bật được thông báo của app không: co, khong, can-cai (iPhone phải thêm vào màn hình chính trước). */
+  function trangThaiThongBao() {
+    if ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window) return 'co';
+    return /iPhone|iPad|iPod/.test(navigator.userAgent) && !dangLaApp ? 'can-cai' : 'khong';
+  }
+  function guiVo() {
+    chinhCao();
+    if (appCon) { try { appCon.postMessage({ eco: 'vo', vien: vien(), phien: app === 'desk' ? docPhien() : '', thongBao: app === 'desk' ? trangThaiThongBao() : '' }, appOrigin); } catch (e) {} }
+  }
   window.addEventListener('resize', guiVo);
   window.addEventListener('orientationchange', function () { setTimeout(guiVo, 300); });
 
@@ -51,16 +67,69 @@
     if (d.eco === 'ho-tro-vien') { document.body.classList.add('tran'); return; }
     if (d.eco === 'phien' && app === 'desk') { luuPhien(String(d.phien || '')); return; }
     if (d.eco === 'mau') {
-      var mau = /^#[0-9a-f]{6}$/i.test(d.mau) ? d.mau : '#274e13', nen = /^#[0-9a-f]{6}$/i.test(d.nen) ? d.nen : '#274e13';
+      var mau3 = function (x, mac) { return /^#[0-9a-f]{6}$/i.test(x) ? x : mac; };
+      var mau = mau3(d.mau, '#274e13'), nen = mau3(d.nen, '#f4f6f1'), chan = mau3(d.chan, mau);
       var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', mau);
-      document.documentElement.style.background = mau; khung.style.background = nen;
+      // Trên cùng (tai thỏ) cùng màu thanh tiêu đề, dưới cùng (thanh vuốt) cùng màu thanh tab của app.
+      document.documentElement.style.background = 'linear-gradient(' + mau + ' 50%, ' + chan + ' 50%)';
+      document.body.style.background = 'transparent';
+      khung.style.background = nen;
       return;
+    }
+    if (d.eco === 'bat-thong-bao' && app === 'desk' && d.khoaCong) { moHopThongBao(String(d.khoaCong)); return;
     }
     if (d.eco === 'dang-nhap-google' && app === 'desk' && d.clientId) {
       nguon = e.source; nguonOrigin = e.origin;
       moGoogle(String(d.clientId));
     }
   });
+
+  /* ---------- Thông báo của app (Web Push) ---------- */
+  function baoApp(d) { if (appCon) { try { appCon.postMessage(d, appOrigin); } catch (e) {} } }
+  function khoaSangByte(b64) {
+    var s = (b64 + '===='.slice((b64.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(s), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function maNgauNhien() {
+    var b = new Uint8Array(24); crypto.getRandomValues(b);
+    return Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+  }
+  function tenMay() {
+    var u = navigator.userAgent;
+    return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'Máy khác';
+  }
+  function dangKyThongBao(khoaCong) {
+    var tt = trangThaiThongBao();
+    if (tt === 'can-cai') return Promise.reject(new Error('Trên iPhone, thêm ECODesk vào màn hình chính rồi mở từ đó mới bật được thông báo.'));
+    if (tt !== 'co') return Promise.reject(new Error('Trình duyệt này không hỗ trợ thông báo của app.'));
+    return Notification.requestPermission().then(function (q) {
+      if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với ECODesk rồi thử lại.');
+      return navigator.serviceWorker.ready;
+    }).then(function (reg) {
+      var khoa = khoaSangByte(khoaCong);
+      return reg.pushManager.getSubscription().then(function (cu) { return cu ? cu.unsubscribe() : true; })
+        .then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: khoa }); });
+    }).then(function (sub) {
+      var ma = maNgauNhien();
+      // Service worker cần mã này và link ứng dụng web để hỏi nội dung thông báo khi có tin.
+      return caches.open('eco-tb').then(function (c) {
+        return c.put('./tb-may', new Response(JSON.stringify({ khoa: ma, url: url })));
+      }).then(function () { return { diaChi: sub.endpoint, khoa: ma, tenMay: tenMay() }; });
+    });
+  }
+  function moHopThongBao(khoaCong) {
+    var hop = document.getElementById('thongbao');
+    if (!hop) return;
+    hop.hidden = false;
+    document.getElementById('tb-bat').onclick = function () {
+      hop.hidden = true;
+      dangKyThongBao(khoaCong).then(function (kq) { baoApp({ eco: 'dang-ky-thong-bao', diaChi: kq.diaChi, khoa: kq.khoa, tenMay: kq.tenMay }); })
+        .catch(function (e) { baoApp({ eco: 'thong-bao-loi', loi: e.message }); });
+    };
+    document.getElementById('tb-dong').onclick = function () { hop.hidden = true; baoApp({ eco: 'thong-bao-loi', loi: 'Bạn đã bỏ qua. Bấm lại khi muốn bật.' }); };
+  }
 
   var daNapGoogle = false;
   function moGoogle(clientId) {
