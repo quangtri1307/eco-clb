@@ -8,6 +8,10 @@ var GIOI_HAN_GOP_Y_MOI_PHUT = 20;
 /* ===================== Trang web ===================== */
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.tb) {
+    // App trên điện thoại hỏi nội dung thông báo mới.
+    return ContentService.createTextOutput(JSON.stringify(layThongBaoChoMay(e.parameter.tb))).setMimeType(ContentService.MimeType.JSON);
+  }
   var app = (e && e.parameter && e.parameter.app) || 'board';
   var laDesk = app === 'desk';
   var trang = HtmlService.createTemplateFromFile(laDesk ? 'Desk' : 'Board');
@@ -15,6 +19,7 @@ function doGet(e) {
   return trang.evaluate()
     .setTitle(laDesk ? 'ECODesk' : 'ECOBoard')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
+    .setFaviconUrl('https://ecotdn.github.io/icons/tab-' + (laDesk ? 'desk' : 'board') + '.png')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

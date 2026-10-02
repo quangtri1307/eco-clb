@@ -30,14 +30,16 @@ var BANG = {
   LoaiHoatDong: ['TenLoai', 'Diem'],
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc'],
-  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao'],
+  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien'],
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
   ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet', 'TuyChon'],
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
   LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua', 'MaNhap'],
-  FileLog: ['ThoiGian', 'TenFile', 'DuongDan', 'SoNguoi', 'SoBuoi', 'NguoiTao']
+  FileLog: ['ThoiGian', 'TenFile', 'DuongDan', 'SoNguoi', 'SoBuoi', 'NguoiTao'],
+  ThietBi: ['Email', 'DiaChi', 'Khoa', 'TenMay', 'ThoiGian', 'LayCuoi'],
+  ThongBao: ['ThoiGian', 'Email', 'TieuDe', 'NoiDung']
 };
 
 /** Ba kiểu tải danh sách thành viên ở phần hậu kỳ. */
@@ -229,7 +231,7 @@ function kiemTraGopY(noiDung) {
   return '';
 }
 
-/** Người thuộc ban điều hành không tham gia cộng điểm và không có trong báo cáo. */
+/** Người thuộc BOD không tham gia cộng điểm và không có trong báo cáo. */
 function khongPhaiBod(tv) {
   return nhomBan(tv.Ban !== undefined ? tv.Ban : tv.ban) !== 'BOD';
 }
@@ -464,7 +466,7 @@ function timMaTrongTin(tin, dsMa) {
 
 /* ===================== Mail ===================== */
 
-/** Các thao tác ứng cử viên được đề nghị. Mọi thao tác làm thay đổi hộp thư đều chờ BOD duyệt. */
+/** Các thao tác UCV được đề nghị. Mọi thao tác làm thay đổi hộp thư đều chờ BOD duyệt. */
 var THAO_TAC_MAIL = {
   SOAN: 'Soạn thư mới', TRA_LOI: 'Trả lời', TRA_LOI_TAT_CA: 'Trả lời tất cả', CHUYEN_TIEP: 'Chuyển tiếp',
   LUU_TRU: 'Lưu trữ', VE_HOP_THU: 'Chuyển về hộp thư đến', XOA: 'Chuyển vào thùng rác',
@@ -490,7 +492,7 @@ function tachEmail(chuoi) {
   return { ds: ds, sai: sai };
 }
 
-/** Kiểm tra một việc mail của ứng cử viên. Trả về '' nếu hợp lệ. */
+/** Kiểm tra một việc mail của UCV. Trả về '' nếu hợp lệ. */
 function kiemTraViecMail(v) {
   v = v || {};
   var tt = v.thaoTac;
@@ -826,6 +828,118 @@ function kiemTraTokenGoogle(info, clientId, bayGioGiay) {
   return '';
 }
 
+/* ===================== Thông báo đẩy lên điện thoại (Web Push, khoá VAPID) ===================== */
+/*
+ * Gửi thông báo lên app cài trên điện thoại theo chuẩn Web Push. Máy chủ ký một mã (JWT) bằng chữ ký số
+ * ECDSA P-256; Apps Script không có sẵn thuật toán này nên tự tính ở đây bằng BigInt. Không cần dịch vụ ngoài.
+ */
+var P256_ = null;
+function p256_() {
+  if (P256_) return P256_;
+  var B = function (h) { return BigInt('0x' + h); };
+  P256_ = {
+    p: B('ffffffff00000001000000000000000000000000ffffffffffffffffffffffff'),
+    n: B('ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
+    G: [B('6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'), B('4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5')],
+    O: BigInt(0), I: BigInt(1), H2: BigInt(2), H3: BigInt(3)
+  };
+  return P256_;
+}
+function modP256_(a, m) { var r = a % m; return r < P256_.O ? r + m : r; }
+function nghichDaoP256_(a, m) {
+  var c = p256_(), t = c.O, t2 = c.I, r = m, r2 = modP256_(a, m);
+  while (r2 !== c.O) { var q = r / r2, x = t - q * t2; t = t2; t2 = x; x = r - q * r2; r = r2; r2 = x; }
+  return modP256_(t, m);
+}
+function congDiemP256_(A, Bp) {
+  var c = p256_();
+  if (!A) return Bp; if (!Bp) return A;
+  var l;
+  if (A[0] === Bp[0]) {
+    if (modP256_(A[1] + Bp[1], c.p) === c.O) return null;
+    l = modP256_(c.H3 * A[0] * A[0] - c.H3, c.p) * nghichDaoP256_(c.H2 * A[1], c.p);
+  } else {
+    l = modP256_(Bp[1] - A[1], c.p) * nghichDaoP256_(Bp[0] - A[0], c.p);
+  }
+  l = modP256_(l, c.p);
+  var x = modP256_(l * l - A[0] - Bp[0], c.p);
+  return [x, modP256_(l * (A[0] - x) - A[1], c.p)];
+}
+function nhanDiemP256_(k, P) {
+  var c = p256_(), R = null, Q = P;
+  while (k > c.O) { if (k & c.I) R = congDiemP256_(R, Q); Q = congDiemP256_(Q, Q); k = k >> c.I; }
+  return R;
+}
+function soSangByte_(x, dai) {
+  var h = x.toString(16); while (h.length < dai * 2) h = '0' + h;
+  var b = []; for (var i = 0; i < dai * 2; i += 2) b.push(parseInt(h.substr(i, 2), 16)); return b;
+}
+function byteSangSo_(b) {
+  var h = ''; for (var i = 0; i < b.length; i++) h += ((b[i] & 255) + 256).toString(16).slice(1);
+  return BigInt('0x' + (h || '0'));
+}
+/** Chuỗi base64url (không có dấu =) từ mảng byte. */
+function base64Url(b) {
+  var A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', s = '';
+  for (var i = 0; i < b.length; i += 3) {
+    var n = ((b[i] & 255) << 16) | (((b[i + 1] || 0) & 255) << 8) | ((b[i + 2] || 0) & 255);
+    s += A.charAt((n >> 18) & 63) + A.charAt((n >> 12) & 63) + (i + 1 < b.length ? A.charAt((n >> 6) & 63) : '') + (i + 2 < b.length ? A.charAt(n & 63) : '');
+  }
+  return s;
+}
+/** Từ khoá riêng (32 byte) ra khoá công khai dạng 65 byte (04 || X || Y). */
+function khoaCongP256(khoaRieng) {
+  var c = p256_(), d = byteSangSo_(khoaRieng);
+  if (d <= c.O || d >= c.n) throw new Error('Khoá riêng không hợp lệ.');
+  var Q = nhanDiemP256_(d, c.G);
+  return [4].concat(soSangByte_(Q[0], 32), soSangByte_(Q[1], 32));
+}
+/**
+ * Ký ECDSA P-256 theo RFC 6979 (số k sinh từ khoá và nội dung, không cần số ngẫu nhiên).
+ * bam: 32 byte SHA-256 của nội dung; hmac(khoa, duLieu) trả về 32 byte HMAC-SHA256. Trả về 64 byte r || s.
+ */
+function kyP256(bam, khoaRieng, hmac) {
+  var c = p256_(), d = byteSangSo_(khoaRieng), z = byteSangSo_(bam);
+  var x = soSangByte_(d, 32), h1 = soSangByte_(modP256_(z, c.n), 32);
+  var V = [], K = [], i;
+  for (i = 0; i < 32; i++) { V.push(1); K.push(0); }
+  K = hmac(K, V.concat([0], x, h1)); V = hmac(K, V);
+  K = hmac(K, V.concat([1], x, h1)); V = hmac(K, V);
+  for (var lan = 0; lan < 100; lan++) {
+    V = hmac(K, V);
+    var k = byteSangSo_(V);
+    if (k > c.O && k < c.n) {
+      var R = nhanDiemP256_(k, c.G), r = modP256_(R[0], c.n);
+      if (r !== c.O) {
+        var s2 = modP256_(nghichDaoP256_(k, c.n) * modP256_(z + r * d, c.n), c.n);
+        if (s2 !== c.O) return soSangByte_(r, 32).concat(soSangByte_(s2, 32));
+      }
+    }
+    K = hmac(K, V.concat([0])); V = hmac(K, V);
+  }
+  throw new Error('Không ký được.');
+}
+/** Phần gốc (https://máy-chủ) của địa chỉ nhận thông báo đẩy; '' nếu không phải https. */
+function gocDiaChi(url) {
+  var m = /^https:\/\/[^\/?#]+/i.exec(String(url || ''));
+  return m ? m[0] : '';
+}
+
+/** Chỉ gửi tới máy chủ nhận thông báo đẩy của Google, Apple, Mozilla, Microsoft. */
+function diaChiDayHopLe(url) {
+  var g = gocDiaChi(url).toLowerCase();
+  return !!g && String(url).length < 1000 && /^https:\/\/([a-z0-9-]+\.)*(fcm\.googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/.test(g);
+}
+
+/** Các cách nhận thông báo. */
+var CACH_THONG_BAO = ['zalo', 'app', 'mail'];
+/** Chuẩn hoá lựa chọn cách nhận thông báo (chuỗi "zalo,mail" hoặc mảng). Trống thì mặc định Zalo. */
+function chuanHoaCachNhan(giaTri) {
+  var ds = Array.isArray(giaTri) ? giaTri : String(giaTri || '').split(/[,\s]+/);
+  var kq = CACH_THONG_BAO.filter(function (c) { return ds.indexOf(c) >= 0; });
+  return kq.length ? kq : ['zalo'];
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
@@ -843,6 +957,8 @@ if (typeof module !== 'undefined') {
     kiemTraViecMail: kiemTraViecMail, timChoTrong: timChoTrong, thayTheMau: thayTheMau, chuSangHtml: chuSangHtml,
     docBangNgoai: docBangNgoai, chuanBiGuiHangLoat: chuanBiGuiHangLoat,
     chiSoBaoCao: chiSoBaoCao, taskBiTre: taskBiTre, tongHopBaoCao: tongHopBaoCao, chiaMoc: chiaMoc, bieuDoBaoCao: bieuDoBaoCao,
-    timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog, kiemTraTokenGoogle: kiemTraTokenGoogle
+    timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog, kiemTraTokenGoogle: kiemTraTokenGoogle,
+    base64Url: base64Url, khoaCongP256: khoaCongP256, kyP256: kyP256, gocDiaChi: gocDiaChi, diaChiDayHopLe: diaChiDayHopLe,
+    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan
   };
 }

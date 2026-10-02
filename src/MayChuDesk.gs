@@ -1,5 +1,5 @@
 /**
- * Máy chủ ECODesk: đăng nhập, phân quyền và các chức năng cho BOD, ban nhân sự, ứng cử viên.
+ * Máy chủ ECODesk: đăng nhập, phân quyền và các chức năng cho BOD, ban nhân sự, UCV.
  * Mọi hàm gọi từ giao diện đều nhận "phien" (mã phiên đăng nhập) làm tham số đầu tiên.
  */
 
@@ -81,7 +81,8 @@ function doiMatKhau(phien, matKhauCu, matKhauMoi) {
 
 function thongTinNguoiDung(tk) {
   var vaiTro = String(tk.VaiTro);
-  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, gmail: vaiTro === 'BOD' ? linkGmail('#inbox') : '' };
+  var gd = String(tk.GiaoDien || '');
+  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, gmail: vaiTro === 'BOD' ? linkGmail('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
 }
 
 function timTaiKhoan(email) {
@@ -293,7 +294,7 @@ function luuSapDenHan(phien, soNgay) {
   return true;
 }
 
-/** Cho một thành viên vào ECODesk với vai trò ban nhân sự (HR) hoặc ứng cử viên (UCV). */
+/** Cho một thành viên vào ECODesk với vai trò ban nhân sự (HR) hoặc UCV (UCV). */
 function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
   canDangNhap(phien, 'caidat');
@@ -309,7 +310,7 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   return true;
 }
 
-/** Gỡ tài khoản ban nhân sự hoặc ứng cử viên. Tài khoản BOD đi theo danh sách thành viên nên không gỡ ở đây. */
+/** Gỡ tài khoản ban nhân sự hoặc UCV. Tài khoản BOD đi theo danh sách thành viên nên không gỡ ở đây. */
 function goTaiKhoan(phien, email) {
   canDangNhap(phien, 'caidat');
   var tk = timTaiKhoan(email);
@@ -374,7 +375,10 @@ function layDuLieuTask(phien) {
     sapDenHanNgay: soNgaySapDenHan(),
     task: ds,
     thanhVien: docBang('ThanhVien').map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan(tv.Ban) }; }),
-    zalo: trangThaiZaloCuaToi(String(tk.HoVaTen))
+    thongBao: (function () {
+      var toi = nguoiNhanThongBao().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
+      return toi ? { cach: toi.cach } : null;
+    })()
   };
 }
 

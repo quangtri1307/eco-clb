@@ -6,7 +6,7 @@ Cập nhật: 30/09/2026. Đây là các chức năng lớn; chức năng nhỏ 
 - Hai app chạy trên Google Apps Script, mã nguồn lưu trên GitHub.
 - Dữ liệu lưu trên Google Sheets thuộc tài khoản Google chung của CLB.
 - **ECOBoard**: cho thành viên CLB, không cần đăng nhập.
-- **ECODesk**: cho BOD, ban nhân sự (HR) và ứng cử viên (UCV), có đăng nhập.
+- **ECODesk**: cho BOD, ban nhân sự (HR) và UCV, có đăng nhập.
 - Cả hai app dùng được trên **web máy tính** và cài như **app trên điện thoại (PWA)**.
 
 ## 2. Nguyên tắc thiết kế
@@ -24,7 +24,7 @@ Cập nhật: 30/09/2026. Đây là các chức năng lớn; chức năng nhỏ 
 | Thành viên CLB | 60–80 | ECOBoard | Xem điểm, bảng ghim, quy chế, góp ý ẩn danh |
 | BOD (cột Ban = "BOD") | 7 | ECODesk | Cộng điểm, task, duyệt và gửi mail, báo cáo, mọi cài đặt |
 | Ban nhân sự (HR) | 6–10 | ECODesk | Chỉ task (không cộng điểm) |
-| Ứng cử viên (UCV) | chưa biết | ECODesk | Chỉ mail |
+| UCV | chưa biết | ECODesk | Chỉ mail |
 
 - UCV là thành viên CLB đăng ký ứng tuyển qua Google Form.
 - Thành viên thường không biết ECODesk tồn tại.
@@ -126,5 +126,5 @@ Cập nhật: 30/09/2026. Đây là các chức năng lớn; chức năng nhỏ 
 - Menu và cài đặt làm chuyên nghiệp, chia nhóm rõ ràng. Cài đặt dạng bấm vào từng mục để đi sang trang con (như điện thoại), không dồn hết một trang; có ô tìm kiếm trong cài đặt.
 
 ## 11. Còn để sau
-- Cấu trúc sheet danh sách ứng cử viên và cách tải lên.
+- Cấu trúc sheet danh sách UCV và cách tải lên.
 - Các chức năng nhỏ của từng phần.

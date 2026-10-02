@@ -134,7 +134,7 @@ td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
   <section id="p-gopy" hidden>
     <form class="card" id="fb">
       <h3>Góp ý ẩn danh</h3>
-      <p class="hint">Không ghi tên, không cần đăng nhập. Chỉ ban điều hành đọc được.</p>
+      <p class="hint">Không ghi tên, không cần đăng nhập. Chỉ BOD đọc được.</p>
       <textarea id="fbText" rows="6" maxlength="2000" placeholder="Bạn muốn góp ý điều gì cho CLB?" aria-label="Nội dung góp ý"></textarea>
       <div class="row" style="margin-top:10px"><button class="btn" type="submit" id="fbBtn">Gửi góp ý</button><span id="fbMsg"></span></div>
     </form>
@@ -176,7 +176,7 @@ function napDuLieu(d) {
     var a = $('rules').querySelector('a'); a.href = qc; a.textContent = 'Xem quy chế';
   } else {
     $('rules').innerHTML = '<p class="rules"></p>';
-    $('rules').firstChild.textContent = qc || 'Ban điều hành chưa đăng quy chế.';
+    $('rules').firstChild.textContent = qc || 'BOD chưa đăng quy chế.';
   }
   $('pins').innerHTML = d.ghim.length ? d.ghim.map(function (g) {
     return '<a class="pin" href="' + esc(g.link) + '" target="_blank" rel="noopener"><span class="ico">↗</span><div><div class="t">' + esc(g.tieuDe) + '</div><div class="u">' + esc(g.link) + '</div></div></a>';

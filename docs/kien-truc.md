@@ -22,11 +22,13 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | LoaiHoatDong | TenLoai, Diem | Mặc định Staff, Log, Tham gia hoạt động; BOD thêm hoặc sửa trong Cài đặt. |
 | BangGhim | TieuDe, DuongDan | Link ghim trên ECOBoard. |
 | GopY | ThoiGian, NoiDung, DaDoc | Góp ý ẩn danh. |
-| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. |
+| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`). `GiaoDien`: sáng/tối/theo máy của từng người. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
 | Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
 | KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai trong BOD và ban nhân sự đã kết nối bot Zalo. |
-| ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet, TuyChon | Mỗi thao tác mail của ứng cử viên (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. TuyChon (JSON) ghi thư viết dạng HTML và có trích dẫn thư cũ hay không. |
+| ThietBi | Email, DiaChi, Khoa, TenMay, ThoiGian, LayCuoi | Điện thoại/máy đã bật thông báo của app (địa chỉ đẩy tin của trình duyệt và mã riêng của máy). |
+| ThongBao | ThoiGian, Email, TieuDe, NoiDung | Thông báo app đã gửi, để máy lấy nội dung. Tự xoá sau 30 ngày. |
+| ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet, TuyChon | Mỗi thao tác mail của UCV (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. TuyChon (JSON) ghi thư viết dạng HTML và có trích dẫn thư cũ hay không. |
 | DanhBa | Nhom, Ten, Email, GhiChu | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
 | FileLog | ThoiGian, TenFile, DuongDan, SoNguoi, SoBuoi, NguoiTao | Các file đăng ký log đã tạo. |
 | LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua, MaNhap | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. MaNhap là mã thư nháp Gmail; đến giờ gửi mới đọc lại thư nháp nên sửa trong Gmail trước giờ gửi vẫn được. |
@@ -56,7 +58,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Sai mật khẩu 8 lần liên tiếp thì khoá email đó 15 phút.
 - Đăng nhập thành công tạo một mã phiên ngẫu nhiên, lưu trong Script Properties của dự án Apps Script, hết hạn sau 30 ngày. Trình duyệt giữ mã phiên để lần sau không phải đăng nhập lại.
 - Mỗi lần gọi máy chủ đều kiểm tra lại tài khoản trong tab TaiKhoan, nên gỡ tài khoản là mất quyền ngay.
-- Quyền theo vai trò (xem `QUYEN` trong `Logic.gs`): BOD dùng mọi chức năng; ban nhân sự (HR) chỉ dùng Task; ứng cử viên (UCV) chỉ dùng Mail.
+- Quyền theo vai trò (xem `QUYEN` trong `Logic.gs`): BOD dùng mọi chức năng; ban nhân sự (HR) chỉ dùng Task; UCV chỉ dùng Mail.
 - Tài khoản BOD đi theo danh sách thành viên (cột Ban = BOD). Tài khoản ban nhân sự do BOD thêm trong Cài đặt.
 
 ### Cộng điểm
@@ -71,23 +73,30 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Sheet chỉ lưu trạng thái Đã giao, Đã xong, Đã huỷ. "Sắp đến hạn" và "Trễ hạn" được tính mỗi lần xem, từ hạn chót và cài đặt số ngày.
 - Task đã xong hoặc đã huỷ chỉ hiện trên ECODesk trong 120 ngày, nhưng vẫn nằm trong sheet để làm báo cáo.
 
+### Thông báo (`src/ThongBao.gs`)
+
+- BOD và ban nhân sự nhận nhắc việc hằng ngày và tin task mới theo các cách mình chọn (ít nhất một): Zalo, app trên điện thoại, mail. Tự đổi ở trang Task; BOD xem và sửa cho mọi người ở Cài đặt > Ai nhận thông báo bằng cách nào. `guiThongBao` gửi theo từng cách.
+- Mail: gửi bằng `MailApp` từ tài khoản CLB, tiêu đề `ECODesk: …`.
+- App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
+- Bật app trên máy: ECODesk nhờ trang vỏ (`bat-thong-bao`) xin quyền và đăng ký, trang vỏ trả `dang-ky-thong-bao` để lưu vào ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
+
 ### Nhắc việc qua Zalo (`src/Zalo.gs`)
 
 - Gọi Zalo Bot API `https://bot-api.zapps.me/bot<mã bot>/<phương thức>` (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
 - Kết nối: mỗi BOD và thành viên ban nhân sự có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
-- Lưu cài đặt bot sẽ cài một lịch chạy hằng ngày (`nhacViecHangNgay`) vào giờ đã chọn. BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger.
+- Lưu giờ nhắc sẽ cài một lịch chạy hằng ngày (`nhacViecHangNgay`) vào giờ đã chọn; lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger.
 - Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
-- Khi BOD được giao task mới, bot báo ngay cho người đó (nếu đã kết nối).
+- Khi BOD được giao task mới, người đó được báo ngay theo các cách đã chọn.
 
 ### Mail (`src/Mail.gs`)
 
 - Mọi thư gửi bằng Gmail của tài khoản chủ file dữ liệu (tài khoản CLB). Tên người gửi hiển thị đặt trong Cài đặt.
-- Ứng cử viên đọc hộp thư tự do (theo thư mục, nhãn, tìm kiếm). BOD chọn cho UCV xem toàn bộ hộp thư hay chỉ các luồng thư do chính UCV đó gửi (CaiDat `UcvXemHopThu`).
+- UCV đọc hộp thư tự do (theo thư mục, nhãn, tìm kiếm). BOD chọn cho UCV xem toàn bộ hộp thư hay chỉ các luồng thư do chính UCV đó gửi (CaiDat `UcvXemHopThu`).
 - Mọi thao tác thay đổi hộp thư của UCV (soạn, trả lời, trả lời tất cả, chuyển tiếp, lưu trữ, về hộp thư đến, xoá, báo thư rác, gắn và bỏ nhãn) thành một dòng ViecMail. BOD chọn Đã duyệt (thực hiện ngay trên Gmail), Cần sửa lại, hoặc Từ chối, kèm ghi chú.
 - Tệp UCV đính kèm được lưu ở thư mục Drive "ECO - Đính kèm mail" (tự tạo; mã thư mục ở CaiDat `ThuMucDinhKemId`).
 - Nội dung thư đến hiển thị trong khung riêng không chạy được mã (sandbox), nên thư lạ không ảnh hưởng ECODesk.
 - BOD không viết thư trong app. Thư mẫu là thư nháp trong Gmail của CLB; app liệt kê, xem trước và mở thẳng thư nháp trong Gmail. Có nút mở Gmail CLB.
-- UCV viết thư trong app (khung soạn có định dạng, đính kèm, trích dẫn thư cũ, chữ ký CLB) rồi gửi BOD duyệt. Chữ ký sửa ở Cài đặt (CaiDat `ChuKyThu`, `DungChuKy`).
+- UCV viết thư trong app (khung soạn có định dạng, đính kèm, trích dẫn thư cũ, chữ ký CLB) rồi gửi BOD duyệt. Chữ ký lấy từ chữ ký mặc định trong Gmail của CLB (Gmail API `settings/sendAs` gọi bằng quyền Gmail sẵn có, nên không cần xin thêm quyền; nhớ 6 giờ); Cài đặt chỉ bật hay tắt (CaiDat `DungChuKy`). Tên người gửi là tên tài khoản Google CLB.
 - Gửi hàng loạt: chọn một thư nháp Gmail (giữ nguyên định dạng, ảnh trong thư và tệp đính kèm), người nhận (thành viên, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{TenCot}` được thay bằng thông tin người nhận, so khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi.
 - Thư hẹn giờ: lịch chạy `guiThuDaLenLich` mỗi 10 phút (tự cài lần đầu hẹn giờ) gửi các thư đã đến giờ.
 
@@ -111,13 +120,14 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Loại hoạt động và điểm | tab LoaiHoatDong |
 | Quy chế cộng điểm (link file Docs) | CaiDat, khoá `QuyChe` |
 | Mail báo góp ý mới về tài khoản CLB | CaiDat, khoá `BaoGopYQuaMail` (`tat` là tắt) |
-| Chữ ký thư | CaiDat, khoá `ChuKyThu`, `DungChuKy` |
+| Có thêm chữ ký Gmail vào thư UCV | CaiDat, khoá `DungChuKy` |
 | Client ID đăng nhập Google | CaiDat, khoá `GoogleClientId` |
 | Bảng ghim | tab BangGhim |
 | Số ngày coi là sắp đến hạn | CaiDat, khoá `SapDenHanNgay` (mặc định 2) |
 | Bot Zalo | CaiDat, khoá `ZaloToken`, `ZaloTenBot`, `ZaloGioNhac`, `ZaloNhacSapDenHan`, `ZaloNhacTre`, `ZaloLanNhacCuoi`; người nhận ở tab KetNoiZalo |
-| Ban nhân sự, ứng cử viên, mật khẩu | tab TaiKhoan |
-| Tên người gửi, quyền xem hộp thư của UCV | CaiDat, khoá `TenNguoiGui`, `UcvXemHopThu` |
+| Ban nhân sự, UCV, mật khẩu | tab TaiKhoan |
+| Quyền xem hộp thư của UCV | CaiDat, khoá `UcvXemHopThu` |
+| Ai nhận thông báo bằng cách nào | tab TaiKhoan, cột `NhanThongBao` |
 | Danh bạ gửi hàng loạt | tab DanhBa |
 | Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |
 
@@ -128,5 +138,6 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Trang vỏ được đưa lên GitHub Pages từ nhánh `gh-pages` (bản sao của thư mục `pwa/`).
 - Đăng nhập Google: ECODesk (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Bấm nút thì trang vỏ hiện nút đăng nhập chính thức của Google, nhận mã xác nhận (ID token) rồi gửi vào ECODesk. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email và tạo phiên như đăng nhập mật khẩu.
 - Ghi nhớ đăng nhập: phiên ECODesk có hạn 60 ngày và tự gia hạn mỗi lần mở. Phiên lưu cả trong khung lẫn ở trang vỏ (`eco_desk_phien`), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.
-- Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app (`vien`). App trả lời `ho-tro-vien` thì trang vỏ cho khung tràn toàn màn hình; app cũ không trả lời thì khung vẫn chừa phần trên như trước. App gửi `mau` để trang vỏ đổi màu thanh trạng thái theo giao diện sáng/tối.
+- Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app (`vien`). App trả lời `ho-tro-vien` thì trang vỏ cho khung tràn toàn màn hình; app cũ không trả lời thì khung vẫn chừa phần trên như trước. App gửi `mau` (màu thanh tiêu đề và thanh tab) để trang vỏ tô phần tai thỏ và thanh vuốt cùng màu. Trên iPhone (app ở màn hình chính) khung được kéo cao bằng màn hình nếu trình duyệt báo thiếu.
+- Icon: `tab-*.png` tách nền cho tab trình duyệt (cả trang Apps Script qua `setFaviconUrl`); `apple-*.png` vuông nền trắng cho iPhone (máy tự bo góc); `*-192/512.png` vuông nền trắng cho Android (máy tự cắt theo hình của máy); `badge-96.png` hình trắng cho thanh trạng thái Android. Trong app, logo hiện trong khung tròn.
 - Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.

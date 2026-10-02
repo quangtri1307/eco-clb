@@ -1,5 +1,5 @@
 /**
- * Nhắc việc qua bot Zalo.
+ * Bot Zalo và lịch nhắc việc hằng ngày (nhắc gửi theo cách mỗi người chọn, xem ThongBao.gs).
  * Head HR tạo bot mỗi năm và dán mã bot vào Cài đặt. Mỗi BOD và thành viên ban nhân sự nhắn mã kết nối
  * của mình cho bot một lần, sau đó mỗi ngày bot tự gửi tin nhắc vào giờ đã chọn:
  *  - BOD nhận các task của chính mình;
@@ -136,42 +136,38 @@ function caiDatNhacZalo() {
   };
 }
 
-/** Chạy tự động mỗi ngày theo lịch (cài khi BOD lưu cài đặt bot Zalo). Cũng chạy được bằng nút "Gửi nhắc ngay". */
+/** Chạy tự động mỗi ngày theo lịch. Gửi theo cách mỗi người chọn (Zalo, app, mail). Cũng chạy được bằng nút "Gửi nhắc ngay". */
 function nhacViecHangNgay() {
-  var token = layTokenZalo();
-  if (!token) return { daGui: 0, loi: [] };
-  try { nhanTinMoiZalo(); } catch (e) { /* vẫn nhắc những người đã kết nối */ }
+  if (layTokenZalo()) { try { nhanTinMoiZalo(); } catch (e) { /* vẫn nhắc những người đã kết nối */ } }
+  try { donThongBaoCu(); } catch (e) { /* bỏ qua */ }
   var cd = caiDatNhacZalo();
   var hom = homNay();
   var canNhac = chonTaskCanNhac(docTask(), hom, cd);
-  var nguoiNhan = dongBoNguoiNhanZalo();
+  var nguoiNhan = nguoiNhanThongBao();
   var laBod = {};
   nguoiNhan.forEach(function (n) { if (n.vaiTro === 'BOD') laBod[n.ten] = true; });
   var choNhanSu = canNhac.filter(function (t) { return !laBod[t.nguoi]; });
 
   var daGui = 0, loi = [];
   nguoiNhan.forEach(function (n) {
-    if (!n.chatId) return;
     var tin = n.vaiTro === 'BOD'
       ? soanTinNhac(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false)
       : soanTinNhac(n.ten, choNhanSu, hom, true);
     if (!tin) return;
-    try { guiZalo(token, n.chatId, tin); daGui++; } catch (e) { loi.push(n.ten + ': ' + e.message); }
+    try { if (guiThongBao(n, 'Nhắc việc', tin)) daGui++; else loi.push(n.ten + ': chưa có cách nhận nào dùng được'); } catch (e) { loi.push(n.ten + ': ' + e.message); }
   });
   datCaiDat('ZaloLanNhacCuoi', JSON.stringify({ luc: Date.now(), daGui: daGui, loi: loi.slice(0, 5) }));
   return { daGui: daGui, loi: loi };
 }
 
-/** Báo ngay cho BOD khi được giao task mới (nếu BOD đó đã kết nối Zalo). Lỗi thì bỏ qua, không ảnh hưởng việc tạo task. */
+/** Báo ngay cho BOD khi được giao task mới. Lỗi thì bỏ qua, không ảnh hưởng việc tạo task. */
 function baoTaskMoiChoBod(dong, nguoiTao) {
   try {
-    var token = layTokenZalo();
-    if (!token) return;
-    var nguoiNhan = dongBoNguoiNhanZalo();
+    var nguoiNhan = nguoiNhanThongBao();
     dong.forEach(function (d) {
-      var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach && x.vaiTro === 'BOD' && x.chatId; })[0];
+      var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach && x.vaiTro === 'BOD'; })[0];
       if (!n || n.ten === nguoiTao) return;
-      guiZalo(token, n.chatId, 'ECODesk: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay(d.HanChot) + '.');
+      guiThongBao(n, 'Task mới', 'ECODesk: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay(d.HanChot) + '.');
     });
   } catch (e) { /* bỏ qua */ }
 }
@@ -219,7 +215,6 @@ function luuCaiDatZalo(phien, cd) {
     var ds = docBang('KetNoiZalo').map(function (k) { k.ChatId = ''; k.TenZalo = ''; k.ThoiGianKetNoi = ''; return k; });
     ghiDeBang('KetNoiZalo', ds);
   }
-  if (!layTokenZalo()) throw new Error('Bạn chưa nhập mã bot.');
   datCaiDat('ZaloGioNhac', gio);
   datCaiDat('ZaloNhacSapDenHan', !!cd.nhacSapDenHan);
   datCaiDat('ZaloNhacTre', nhacTre);
@@ -252,6 +247,5 @@ function goKetNoiZalo(phien, ten) {
 
 function guiNhacNgay(phien) {
   canDangNhap(phien, 'caidat');
-  if (!layTokenZalo()) throw new Error('Bạn chưa nhập mã bot.');
   return nhacViecHangNgay();
 }

@@ -1,6 +1,6 @@
 /**
  * Mail của ECODesk. Mọi thư gửi đi dưới tên tài khoản Gmail của CLB (tài khoản chủ của file dữ liệu).
- *  - Ứng cử viên (UCV): đọc hộp thư tự do; mọi thao tác làm thay đổi hộp thư tạo một "việc" chờ BOD duyệt.
+ *  - UCV (UCV): đọc hộp thư tự do; mọi thao tác làm thay đổi hộp thư tạo một "việc" chờ BOD duyệt.
  *  - BOD: duyệt thư của UCV; soạn thư nháp ngay trong Gmail của CLB rồi dùng ECODesk để gửi hàng loạt
  *    (gửi ngay hoặc hẹn giờ), xem thư đã lên lịch.
  */
@@ -22,11 +22,9 @@ function cheDoXemUcv() {
   return layCaiDat('UcvXemHopThu') === 'rieng' ? 'rieng' : 'tatca';
 }
 
+/** Tên người gửi luôn là tên của tài khoản Google CLB (đổi trong cài đặt tài khoản Google). */
 function tuyChonGui(them) {
-  var o = them || {};
-  var ten = String(layCaiDat('TenNguoiGui') || '').trim();
-  if (ten) o.name = ten;
-  return o;
+  return them || {};
 }
 
 var EMAIL_CLB_ = null;
@@ -40,28 +38,39 @@ function linkGmail(phanSau) {
   return 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent(emailClb()) + (phanSau || '');
 }
 
-/* Chữ ký CLB tự thêm vào cuối thư UCV gửi (BOD sửa hoặc tắt trong Cài đặt). */
-var CHU_KY_MAC_DINH = '<table border="0" cellspacing="0" cellpadding="0" style="font-size:13px;font-family:Arial,sans-serif;color:#333333;line-height:1.6;border-collapse:collapse"><tbody><tr>' +
-  '<td style="vertical-align:middle;padding-right:18px;width:96px"><img width="96" height="96" src="https://lh3.googleusercontent.com/d/1o2D6zBM2oLqxgyQbrZ1NDg72P3F4sBHj" alt="ECO" style="display:block"></td>' +
-  '<td style="vertical-align:top;border-left:2px solid #274e13;padding-left:18px"><div style="font-size:14px;font-weight:800;color:#274e13;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">CLB MÔI TRƯỜNG - ECO TRẦN ĐẠI NGHĨA</div>' +
-  '<div style="font-size:12px;color:#444444"><b>Fanpage:</b> <a href="https://www.facebook.com/ecotdn/" style="color:#274e13;font-weight:bold;text-decoration:none">Facebook</a> | <a href="https://www.instagram.com/eco_tdn/" style="color:#274e13;font-weight:bold;text-decoration:none">Instagram</a></div>' +
-  '<div style="font-size:12px;color:#444444"><b>Email:</b> clbmoitruongecotdn@gmail.com</div>' +
-  '<div style="font-size:12px;color:#444444"><b>Điện thoại:</b> 0984 916 216 (Hà Phương)</div>' +
-  '<div style="font-size:12px;color:#444444"><b>Địa chỉ:</b> Lô P2 Khu tái định cư 38, An Khánh</div></td></tr></tbody></table>';
+/* Chữ ký: lấy đúng chữ ký mặc định trong cài đặt Gmail của tài khoản CLB; BOD chỉ chọn có thêm vào thư UCV hay không. */
+function chuKyGmail(lamMoi) {
+  var bo = CacheService.getScriptCache(), khoa = 'chuKyGmail';
+  if (!lamMoi) { var co = bo.get(khoa); if (co !== null) return co; }
+  var html = '';
+  try {
+    // Gọi thẳng Gmail API bằng quyền Gmail sẵn có của GmailApp, không cần bật thêm dịch vụ hay xin thêm quyền.
+    var r = UrlFetchApp.fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs', {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true
+    });
+    var ds = r.getResponseCode() === 200 ? (JSON.parse(r.getContentText()).sendAs || []) : [];
+    var chinh = ds.filter(function (s) { return s.isDefault; })[0] || ds.filter(function (s) { return s.isPrimary; })[0];
+    html = chinh && chinh.signature ? String(chinh.signature) : '';
+  } catch (e) { html = ''; }
+  try { bo.put(khoa, html, 21600); } catch (e) { /* chữ ký quá dài để nhớ tạm thì thôi */ }
+  return html;
+}
 
 /** Chữ ký đang dùng: { bat, html }. */
-function layChuKy() {
-  var html = layCaiDat('ChuKyThu');
-  return { bat: String(layCaiDat('DungChuKy') || '') !== 'tat', html: html === null || html === '' ? CHU_KY_MAC_DINH : String(html) };
+function layChuKy(lamMoi) {
+  return { bat: String(layCaiDat('DungChuKy') || '') !== 'tat', html: chuKyGmail(lamMoi) };
 }
 
 function luuChuKy(phien, ck) {
   canDangNhap(phien, 'caidat');
-  ck = ck || {};
-  var html = lamSachHtml(String(ck.html || '')).slice(0, 20000);
-  datCaiDat('DungChuKy', ck.bat ? 'bat' : 'tat');
-  datCaiDat('ChuKyThu', htmlSangChu(html) || /<img/i.test(html) ? html : CHU_KY_MAC_DINH);
+  datCaiDat('DungChuKy', ck && ck.bat ? 'bat' : 'tat');
   return true;
+}
+
+/** Đọc lại chữ ký từ Gmail (sau khi sửa chữ ký trong Gmail). */
+function taiLaiChuKy(phien) {
+  canDangNhap(phien, 'caidat');
+  return { chuKy: layChuKy(true), linkSua: linkGmail('#settings/general') };
 }
 
 /** Thư mục Drive giữ tệp đính kèm UCV tải lên (tự tạo lần đầu). */
@@ -125,7 +134,7 @@ function canXemLuong(tk, maThu) {
   if (luongCuaUcv(String(tk.HoVaTen)).indexOf(String(maThu)) < 0) throw new Error('Bạn chỉ được xem thư do mình gửi.');
 }
 
-/* ===================== Ứng cử viên ===================== */
+/* ===================== UCV ===================== */
 
 function layHopThu(phien, thuMuc, timKiem, batDau) {
   var tk = canDangNhap(phien, 'hopthu');
@@ -348,7 +357,7 @@ function trichDanThu(m) {
 function thanThuHtml(v) {
   var than = v.laHtml ? '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">' + v.noiDung + '</div>' : chuSangHtml(v.noiDung);
   var ck = layChuKy();
-  return than + (ck.bat ? '<br><div>--</div>' + ck.html : '');
+  return than + (ck.bat && ck.html ? '<br><div>--</div>' + ck.html : '');
 }
 
 /** Thực hiện một việc đã được duyệt trên Gmail của CLB. Trả về mã luồng thư liên quan. */
@@ -626,8 +635,8 @@ function layCaiDatMail(phien) {
   canDangNhap(phien, 'caidat');
   return {
     danhBa: docBang('DanhBa').map(function (d) { return { nhom: String(d.Nhom || ''), ten: String(d.Ten || ''), email: String(d.Email || ''), ghiChu: String(d.GhiChu || '') }; }),
-    cheDoUcv: cheDoXemUcv(), tenNguoiGui: String(layCaiDat('TenNguoiGui') || ''), emailClb: emailClb(),
-    chuKy: layChuKy()
+    cheDoUcv: cheDoXemUcv(), emailClb: emailClb(),
+    chuKy: layChuKy(), linkSuaChuKy: linkGmail('#settings/general')
   };
 }
 
@@ -647,7 +656,6 @@ function luuDanhBa(phien, ds) {
 function luuCaiDatMail(phien, cd) {
   canDangNhap(phien, 'caidat');
   datCaiDat('UcvXemHopThu', cd && cd.cheDoUcv === 'rieng' ? 'rieng' : 'tatca');
-  datCaiDat('TenNguoiGui', String((cd && cd.tenNguoiGui) || '').trim().slice(0, 100));
   return true;
 }
 
