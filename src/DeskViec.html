@@ -47,66 +47,6 @@ var ST_TASK = { 'Đã giao': ['p-info', ''], 'Sắp đến hạn': ['p-warn', 's
 function hienNgay(s) { var p = String(s).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : esc(s); }
 function congNgay(s, n) { var p = s.split('-'); var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)); return d.toISOString().slice(0, 10); }
 /* ---------- Nhận thông báo (Zalo, app trên điện thoại, mail) ---------- */
-var TEN_CACH = { zalo: 'Zalo', app: 'App trên điện thoại', mail: 'Mail' };
-function dongThongBao(tb) {
-  return '<div class="nhanTB"><span>' + ic('bell', 15) + ' Nhận thông báo qua <b>' + tb.cach.map(function (c) { return esc(TEN_CACH[c]); }).join(', ') + '</b></span><button class="btn ghost sm" id="tbdoi">Đổi</button></div>';
-}
-function moThongBao(sauKhiLuu) {
-  var h = moHop({ tieuDe: 'Nhận thông báo', than: '<p class="muted">Đang tải…</p>', chan: '<span></span>' });
-  var than = h.querySelector('.dlg-b'), chan = h.querySelector('.dlg-f');
-  var tb = null;
-  var ve = function () {
-    var z = tb.zalo || {};
-    var dong = function (k, chu, phu) {
-      return '<label class="cach"><input type="checkbox" value="' + k + '"' + (tb.cach.indexOf(k) >= 0 ? ' checked' : '') + '><span><b>' + chu + '</b><small>' + phu + '</small></span></label>';
-    };
-    var zaloPhu = !z.coBot ? 'CLB chưa có bot Zalo. Nhờ BOD tạo trong Cài đặt.' : z.daKetNoi ? 'Đã kết nối' + (z.tenZalo ? ' (' + esc(z.tenZalo) + ')' : '') + '.' :
-      'Mở Zalo, tìm bot <b>' + esc(z.tenBot || 'của CLB') + '</b>, nhắn mã <b class="num">' + esc(z.ma) + '</b> rồi bấm Kiểm tra.';
-    var appPhu = tb.soMay ? 'Đã bật trên ' + tb.soMay + ' máy.' : 'Chưa bật trên máy nào.';
-    than.innerHTML = '<p class="hint" style="margin-top:0">Chọn ít nhất một cách. Nhắc việc hằng ngày và task mới sẽ gửi theo các cách bạn chọn.</p>' +
-      '<div class="cachs">' + dong('zalo', 'Zalo', zaloPhu) + dong('app', 'App trên điện thoại', appPhu) + dong('mail', 'Mail', 'Gửi về ' + esc(tb.email) + '.') + '</div>' +
-      '<div class="row">' + (z.coBot && !z.daKetNoi ? '<button class="btn ghost sm" id="tbzk">Kiểm tra Zalo</button>' : '') +
-      '<button class="btn ghost sm" id="tbapp">' + ic('bell', 14) + 'Bật thông báo trên máy này</button><button class="btn ghost sm" id="tbthu">Gửi thử</button></div>' +
-      '<div id="tbm"></div>';
-    chan.innerHTML = '<button class="btn" id="tbluu">Lưu</button>';
-    var m = $('#tbm');
-    $('#tbluu').onclick = function () {
-      var cach = $$('.cach input', h).filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
-      if (!cach.length) { thongBao(m, 'loi', 'Chọn ít nhất một cách nhận thông báo.'); return; }
-      this.disabled = true;
-      goiPhien('luuCachNhanCuaToi', cach).then(function (kq) { tb = kq; dongHop(); if (sauKhiLuu) sauKhiLuu(kq); })
-        .catch(function (err) { $('#tbluu').disabled = false; thongBao(m, 'loi', err.message); });
-    };
-    if ($('#tbzk')) $('#tbzk').onclick = function () {
-      var b = this; b.disabled = true; thongBao(m, 'cho', 'Đang kiểm tra…');
-      goiPhien('kiemTraKetNoiZalo').then(function (z2) {
-        tb.zalo = z2; b.disabled = false;
-        if (z2.daKetNoi) { ve(); thongBao($('#tbm'), 'ok', 'Đã kết nối Zalo.'); } else thongBao(m, 'loi', 'Chưa thấy tin nhắn có mã của bạn. Bạn nhắn mã cho bot rồi thử lại nhé.');
-      }).catch(function (err) { b.disabled = false; thongBao(m, 'loi', err.message); });
-    };
-    $('#tbapp').onclick = function () {
-      if (!coVo) { thongBao(m, 'loi', 'Mở ECODesk từ app đã cài trên điện thoại (ecotdn.github.io/desk) rồi bật ở đó.'); return; }
-      if (VO_TB === 'can-cai') { thongBao(m, 'loi', 'Trên iPhone, cần thêm ECODesk vào màn hình chính (Chia sẻ → Thêm vào MH chính) rồi mở từ đó mới bật được thông báo.'); return; }
-      if (VO_TB === 'cu') { thongBao(m, 'loi', 'Trang vỏ trên ecotdn.github.io chưa phải bản mới nên chưa bật được. Cần tải bản trang vỏ mới lên, rồi đóng hẳn app và mở lại.'); return; }
-      if (VO_TB === 'khong') { thongBao(m, 'loi', 'Trình duyệt này không hỗ trợ thông báo của app.'); return; }
-      thongBao(m, 'cho', 'Bấm "Bật" ở hộp hiện ra rồi cho phép thông báo.');
-      batThongBaoMay(tb.khoaCong).then(function (may) { return goiPhien('luuThietBi', may); })
-        .then(function (kq) { tb = kq; ve(); thongBao($('#tbm'), 'ok', 'Đã bật thông báo trên máy này.'); })
-        .catch(function (err) { thongBao($('#tbm'), 'loi', err.message); });
-    };
-    $('#tbthu').onclick = function () {
-      var b = this; b.disabled = true; thongBao(m, 'cho', 'Đang gửi…');
-      goiPhien('guiThuThongBaoCuaToi').then(function (kq) {
-        b.disabled = false;
-        m.innerHTML = '<div class="note' + (kq.duoc ? ' info' : '') + '" style="display:block"><b>' + (kq.duoc ? 'Đã gửi thử.' : 'Chưa gửi được.') + '</b>' +
-          kq.chiTiet.map(function (x) { return '<div style="font-size:13px;margin-top:4px;overflow-wrap:anywhere">' + esc(x) + '</div>'; }).join('') +
-          '<div class="hint" style="margin-top:6px">Gửi thử theo lựa chọn đã lưu. Nếu vừa đổi, bấm Lưu trước.</div></div>';
-      })
-        .catch(function (err) { b.disabled = false; thongBao(m, 'loi', err.message); });
-    };
-  };
-  goiPhien('layThongBaoCuaToi').then(function (kq) { tb = kq; if (h.isConnected) ve(); }).catch(function (err) { than.innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
-}
 VIEWS.task = function () {
   dangTai();
   goiPhien('layDuLieuTask').then(function (d) {
@@ -173,8 +113,6 @@ VIEWS.task = function () {
     $('#newt').onclick = function () { moForm(null); };
     $('#tfil').onclick = function (e) { var b = e.target.closest('[data-f]'); if (!b) return; loc = b.getAttribute('data-f'); $$('#tfil button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     $('#tq').oninput = function (e) { tim = e.target.value; ve(); };
-    var ganTB = function () { if ($('#tbdoi')) $('#tbdoi').onclick = function () { moThongBao(function (kq) { $('#zbox').innerHTML = dongThongBao(kq); ganTB(); }); }; };
-    ganTB();
     ve();
   }).catch(loiTai);
 };
@@ -349,16 +287,18 @@ VIEWS.gopy = function () {
 var CD = null;
 var SET = [
   ['Cộng điểm', [['types', 'star', 'Loại hoạt động và điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', '); }, 'điểm loại hoạt động staff log']]],
-  ['ECOBoard', [['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' link ghim · ' + (CD.quyChe ? 'đã có link quy chế' : 'chưa có link quy chế'); }, 'link ghim quy chế luật'],
-    ['notify', 'bell', 'Thông báo góp ý', function () { return CD.baoGopY ? 'Đang gửi mail báo về hộp thư CLB' : 'Đang tắt'; }, 'góp ý thông báo mail']]],
-  ['Task và nhắc việc', [['due', 'clock', 'Quy định sắp đến hạn', function () { return 'Còn ' + CD.sapDenHanNgay + ' ngày trở xuống'; }, 'sắp đến hạn task hạn chót'], ['nhantb', 'bell', 'Ai nhận thông báo bằng cách nào', function () { return 'Zalo, app trên điện thoại, mail'; }, 'thông báo nhận zalo app điện thoại mail cách nhận'],
-    ['zalo', 'clock', 'Giờ nhắc việc và bot Zalo', function () { return (CD.zalo.coBot ? 'Bot Zalo: đã kết nối ' + CD.zalo.daKetNoi + ' / ' + CD.zalo.tong + ' người' : 'Chưa có bot Zalo'); }, 'zalo bot nhắc token mã kết nối giờ nhắc trễ hạn']]],
+  ['ECOBoard', [['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' link ghim · ' + (CD.quyChe ? 'đã có link quy chế' : 'chưa có link quy chế'); }, 'link ghim quy chế luật']]],
+  ['Thông báo và nhắc việc', [['due', 'clock', 'Sắp đến hạn và giờ nhắc', function () { return (CD.sapDenHanNgay === 0 ? 'Đúng ngày hạn' : 'Còn ' + CD.sapDenHanNgay + ' ngày') + ' · nhắc lúc ' + p2(CD.nhac.gioNhac) + ':00'; }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm'],
+    ['notify', 'bell', 'Báo cho BOD', function () { return ['góp ý mới ' + (CD.baoGopY ? 'bật' : 'tắt'), 'thư chờ duyệt ' + (CD.baoThuChoDuyet ? 'bật' : 'tắt')].join(' · '); }, 'góp ý thông báo mail thư chờ duyệt ucv'],
+    ['nhantb', 'users', 'Ai nhận thông báo bằng cách nào', function () { return 'Mở trang Thông báo'; }, 'thông báo nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử'],
+    ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + ' / ' + CD.zalo.tong + ' người' : 'Chưa có bot Zalo'); }, 'zalo bot token mã kết nối']]],
   ['Mail', [['mailcfg', 'mail', 'Gửi mail và quyền xem của UCV', function () { return CD.mail.cheDoUcv === 'rieng' ? 'UCV chỉ xem thư của mình' : 'UCV xem toàn bộ hộp thư'; }, 'mail tên người gửi UCV ucv xem hộp thư'],
     ['sign', 'edit', 'Chữ ký thư', function () { return 'Tự thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature'],
     ['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soDanhBa + ' địa chỉ'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['File đăng ký log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
   ['Người dùng', [['hr', 'users', 'Ban nhân sự được vào ECODesk', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' người'; }, 'ban nhân sự hr quyền'], ['ucv', 'users', 'UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' người'; }, 'UCV ucv tài khoản mail'], ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'], ['accounts', 'lock', 'Tài khoản và mật khẩu', function () { return 'Đặt lại mật khẩu cho mọi người'; }, 'mật khẩu tài khoản đặt lại']]],
-  ['Giao diện', [['theme', 'sun', 'Sáng hoặc tối', function () { return { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']]]
+  ['Giao diện', [['theme', 'sun', 'Sáng hoặc tối', function () { return { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark'],
+    ['loginbg', 'eye', 'Ảnh nền trang đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Màu xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background']]]
 ];
 function napCaiDat() { return goiPhien('layCaiDatDesk').then(function (d) { CD = d; return d; }); }
 VIEWS.caidat = function () {
@@ -425,9 +365,38 @@ var SUB = {
     ve();
   },
   notify: function () {
-    $('#subbody').innerHTML = '<div class="card form"><label class="switch"><input type="checkbox" id="bg"' + (CD.baoGopY ? ' checked' : '') + '>Gửi mail về hộp thư CLB khi có góp ý mới</label>' +
-      '<p class="hint" style="margin:0">Mail có kèm nội dung góp ý. Để không tốn lượt gửi mail trong ngày, nhiều góp ý gửi liền nhau chỉ báo một lần mỗi 10 phút.</p><span id="m"></span></div>';
-    $('#bg').onchange = function () { luuVa($('#bg'), $('#m'), 'luuBaoGopY', [$('#bg').checked]); };
+    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Mỗi BOD nhận theo cách mình chọn ở trang Thông báo (Zalo, app, mail).</p>' +
+      '<label class="switch"><input type="checkbox" id="bg"' + (CD.baoGopY ? ' checked' : '') + '>Báo khi có góp ý mới từ ECOBoard</label>' +
+      '<p class="hint" style="margin:0">Có kèm nội dung góp ý. Nhiều góp ý gửi liền nhau chỉ báo một lần mỗi 10 phút.</p>' +
+      '<label class="switch"><input type="checkbox" id="bt"' + (CD.baoThuChoDuyet ? ' checked' : '') + '>Báo khi UCV gửi thư chờ duyệt</label>' +
+      '<p class="hint" style="margin:0">UCV luôn được báo khi thư của mình được duyệt hoặc bị trả lại.</p><span id="m"></span></div>';
+    $('#bg').onchange = function () { luuVa($('#bg'), $('#m'), 'luuSuKienThongBao', [{ gopY: $('#bg').checked }]); };
+    $('#bt').onchange = function () { luuVa($('#bt'), $('#m'), 'luuSuKienThongBao', [{ thuChoDuyet: $('#bt').checked }]); };
+  },
+  loginbg: function () {
+    var ve = function () {
+      var co = ANH_NEN && ANH_NEN.data && CD.anhNen;
+      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Ảnh hiện phía sau khung đăng nhập ECODesk. Ảnh được tự thu nhỏ trước khi tải lên và tự cắt cho vừa màn hình, nên chọn ảnh có cảnh đẹp ở giữa.</p>' +
+        '<div class="anh-xem' + (co ? '' : ' trong') + '"' + (co ? ' style="background-image:url(&quot;' + ANH_NEN.data + '&quot;)"' : '') + '>' + (co ? '' : '<span>' + (CD.anhNen ? 'Đang dùng ảnh riêng' : 'Chưa có ảnh, đang dùng màu xanh của CLB') + '</span>') + '<div class="anh-khung"></div></div>' +
+        '<div class="row"><label class="btn sm" style="cursor:pointer">' + ic('plus', 14) + 'Chọn ảnh<input type="file" id="an-f" accept="image/*" hidden></label>' +
+        (CD.anhNen ? '<button class="btn ghost sm" id="an-x">Bỏ ảnh nền</button>' : '') + '<span id="m"></span></div></div>';
+      $('#an-f').onchange = function () {
+        var f = this.files[0]; if (!f) return;
+        thongBao($('#m'), 'cho', 'Đang thu nhỏ và tải ảnh lên…');
+        thuNhoAnh(f, 1600).then(function (data) {
+          return goiPhien('luuAnhNen', data).then(function (pb) { luuAnhNenMay({ phienBan: pb, data: data }); return napCaiDat(); });
+        }).then(function () { ve(); thongBao($('#m'), 'ok', 'Đã lưu ảnh nền'); })
+          .catch(function (err) { thongBao($('#m'), 'loi', err.message); });
+      };
+      if ($('#an-x')) $('#an-x').onclick = function () {
+        if (!xacNhan(this, 'Bỏ thật?')) return;
+        luuVa(this, $('#m'), 'luuAnhNen', [''], function () { luuAnhNenMay(null); ve(); });
+      };
+    };
+    if (CD.anhNen && !(ANH_NEN && ANH_NEN.phienBan === CD.anhNen)) {
+      $('#subbody').innerHTML = cho();
+      goi('layAnhNen', '').then(function (kq) { if (kq && kq.data) luuAnhNenMay(kq); if (sub === 'loginbg') ve(); }).catch(function () { ve(); });
+    } else ve();
   },
   theme: function () {
     $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng trên máy này. “Theo máy” sẽ tự đổi theo chế độ sáng hoặc tối của điện thoại, máy tính.</p>' + chonGiaoDien() + '</div>';
@@ -436,68 +405,52 @@ var SUB = {
   due: function () {
     var opts = [0, 1, 2, 3, 5, 7];
     if (opts.indexOf(CD.sapDenHanNgay) < 0) opts.push(CD.sapDenHanNgay);
-    $('#subbody').innerHTML = '<div class="card form"><label class="f">Task được coi là “sắp đến hạn” khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label><div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></div>';
-    $('#save').onclick = function () { luuVa($('#save'), $('#m'), 'luuSapDenHan', [Number($('#dd').value)]); };
+    var gio = ''; for (var h = 0; h < 24; h++) gio += '<option value="' + h + '"' + (h === CD.nhac.gioNhac ? ' selected' : '') + '>' + p2(h) + ':00</option>';
+    var tre = ['Mỗi ngày', 'Chỉ một lần', 'Không nhắc'];
+    $('#subbody').innerHTML = '<form class="card form" id="duef"><p class="hint" style="margin:0">BOD được nhắc task của mình, ban nhân sự được nhắc task của thành viên để nhắc lại. Mỗi người nhận theo cách đã chọn ở trang Thông báo.</p><div class="grid2">' +
+      '<label class="f">Task được coi là “sắp đến hạn” khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f">Giờ gửi nhắc mỗi ngày<select id="zh">' + gio + '</select></label>' +
+      '<label class="f">Nhắc khi task sắp đến hạn<select id="zs"><option value="1"' + (CD.nhac.nhacSapDenHan ? ' selected' : '') + '>Có, mỗi ngày đến khi tới hạn</option><option value="0"' + (CD.nhac.nhacSapDenHan ? '' : ' selected') + '>Không</option></select></label>' +
+      '<label class="f">Nhắc khi task trễ hạn<select id="zl">' + tre.map(function (x) { return '<option' + (x === CD.nhac.nhacTre ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label></div>' +
+      '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
+    $('#duef').onsubmit = function (e) {
+      e.preventDefault();
+      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ sapDenHanNgay: Number($('#dd').value), gioNhac: Number($('#zh').value), nhacSapDenHan: $('#zs').value === '1', nhacTre: $('#zl').value }]);
+    };
   },
-  nhantb: function () {
-    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
-    goiPhien('layNguoiNhanThongBao').then(function (ds) {
-      if (sub !== 'nhantb') return;
-      var o = function (n, i, k) { return '<td class="c"><input type="checkbox" data-i="' + i + '" value="' + k + '"' + (n.cach.indexOf(k) >= 0 ? ' checked' : '') + ' aria-label="' + esc(TEN_CACH[k]) + ' cho ' + esc(n.ten) + '"></td>'; };
-      $('#subbody').innerHTML = '<div class="card"><p class="hint" style="margin-top:0">Mỗi người nhận nhắc việc và task mới theo các cách được chọn, ít nhất một cách. Mỗi người tự đổi được ở trang Task; BOD sửa được cho mọi người ở đây. Đổi xong là lưu luôn.</p>' +
-        '<div class="tscroll"><table class="tb-nhan"><thead><tr><th>Người</th><th class="c">Zalo</th><th class="c">App</th><th class="c">Mail</th></tr></thead><tbody>' +
-        (ds.length ? ds.map(function (n, i) {
-          var ghiChu = [n.cach.indexOf('zalo') >= 0 && !n.daKetNoiZalo ? 'chưa kết nối Zalo' : '', n.cach.indexOf('app') >= 0 && !n.soMay ? 'chưa bật app trên máy nào' : ''].filter(String);
-          return '<tr><td>' + esc(n.ten) + '<div class="hint">' + (VAI_TRO[n.vaiTro] || esc(n.vaiTro)) + (n.soMay ? ' · app trên ' + n.soMay + ' máy' : '') + '</div>' + (ghiChu.length ? '<div class="err" style="font-size:12px">' + ghiChu.join(', ') + '</div>' : '') + '</td>' + o(n, i, 'zalo') + o(n, i, 'app') + o(n, i, 'mail') + '</tr>';
-        }).join('') : '<tr><td colspan="4" class="muted">Chưa có tài khoản BOD hay ban nhân sự.</td></tr>') +
-        '</tbody></table></div><span id="ntm"></span></div>';
-      $$('.tb-nhan input').forEach(function (c) {
-        c.onchange = function () {
-          var i = Number(c.getAttribute('data-i')), n = ds[i];
-          var cach = $$('.tb-nhan input[data-i="' + i + '"]').filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
-          if (!cach.length) { c.checked = true; thongBao($('#ntm'), 'loi', 'Mỗi người cần ít nhất một cách nhận.'); return; }
-          goiPhien('luuCachNhan', n.email, cach).then(function () { n.cach = cach; thongBao($('#ntm'), 'ok', 'Đã lưu cho ' + n.ten + '.'); })
-            .catch(function (err) { c.checked = !c.checked; thongBao($('#ntm'), 'loi', err.message); });
-        };
-      });
-    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
-  },
+  nhantb: function () { sub = null; diToi('thongbao'); },
   zalo: function () {
-    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
+    $('#subbody').innerHTML = cho();
     goiPhien('layCaiDatZalo').then(function (z) {
       if (sub !== 'zalo') return;
-      var gio = ''; for (var h = 0; h < 24; h++) gio += '<option value="' + h + '"' + (h === z.gioNhac ? ' selected' : '') + '>' + p2(h) + ':00</option>';
-      var tre = ['Mỗi ngày', 'Chỉ một lần', 'Không nhắc'];
       var lan = z.lanCuoi ? 'Lần nhắc gần nhất: ' + ngayDayDu(z.lanCuoi.luc) + ', gửi ' + z.lanCuoi.daGui + ' tin' + (z.lanCuoi.loi && z.lanCuoi.loi.length ? '. Lỗi: ' + z.lanCuoi.loi.join('; ') : '') + '.' : 'Chưa nhắc lần nào.';
       var hrKetNoi = z.nguoiNhan.some(function (n) { return n.vaiTro === 'HR' && n.daKetNoi; });
       $('#subbody').innerHTML =
-        '<form class="card form" id="zf"><div class="grid2">' +
+        '<form class="card form" id="zf">' +
         '<label class="f">Mã bot (token) <small>' + (z.coBot ? 'Đã có mã bot' + (z.tenBot ? ' “' + esc(z.tenBot) + '”' : '') + '. Để trống nếu không đổi.' : 'Head HR tạo bot rồi dán mã vào đây. Xem hướng dẫn bên dưới.') + '</small><input type="password" id="zt" autocomplete="off" placeholder="' + (z.coBot ? '••••••••' : 'Ví dụ: 1234567890:AbCd…') + '"></label>' +
-        '<label class="f">Giờ nhắc mỗi ngày <small>Gửi nhắc trong khoảng giờ này, theo cách mỗi người chọn</small><select id="zh">' + gio + '</select></label>' +
-        '<label class="f">Nhắc khi task sắp đến hạn<select id="zs"><option value="1"' + (z.nhacSapDenHan ? ' selected' : '') + '>Có, mỗi ngày đến khi tới hạn</option><option value="0"' + (z.nhacSapDenHan ? '' : ' selected') + '>Không</option></select></label>' +
-        '<label class="f">Nhắc khi task trễ hạn<select id="zl">' + tre.map(function (x) { return '<option' + (x === z.nhacTre ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label></div>' +
         '<div class="row"><button class="btn sm" id="zb">Lưu</button><span id="zm"></span></div>' +
         (!z.coLich ? '<p class="err" style="margin:0">Lịch nhắc chưa được bật. Bấm Lưu để bật.</p>' : '') +
+        '<p class="hint" style="margin:0">Giờ nhắc chỉnh ở Cài đặt, Sắp đến hạn và giờ nhắc.</p>' +
         '<p class="hint" style="margin:0">' + esc(lan) + '</p></form>' +
-        '<div class="card"><h3>Kết nối Zalo</h3><p class="hint" style="margin-top:0">BOD nhận task của chính mình. Ban nhân sự nhận task của các thành viên khác để nhắc lại qua Messenger. Mỗi người mở Zalo, nhắn mã của mình cho bot, rồi bấm “Kiểm tra tin nhắn mới”.</p>' +
+        '<div class="card"><h3>Kết nối Zalo</h3><p class="hint" style="margin-top:0">Ai chọn nhận qua Zalo thì mở Zalo, nhắn mã của mình cho bot, rồi bấm “Kiểm tra tin nhắn mới”. Mỗi người cũng thấy mã của mình ở trang Thông báo.</p>' +
         (z.nguoiNhan.some(function (n) { return n.vaiTro === 'HR'; }) && !hrKetNoi ? '<p class="err">Chưa có ai trong ban nhân sự kết nối, nên task của thành viên thường sẽ chưa được nhắc.</p>' : '') +
         '<div class="tscroll"><table><thead><tr><th>Người</th><th>Mã kết nối</th><th>Trạng thái</th><th></th></tr></thead><tbody>' +
         (z.nguoiNhan.length ? z.nguoiNhan.map(function (n, i) {
           return '<tr><td>' + esc(n.ten) + '<div class="hint">' + (VAI_TRO[n.vaiTro] || esc(n.vaiTro)) + '</div></td><td class="num" style="letter-spacing:.08em">' + esc(n.ma) + '</td><td>' + (n.daKetNoi ? '<span class="pill p-ok">Đã kết nối</span>' + (n.tenZalo ? '<div class="hint">' + esc(n.tenZalo) + '</div>' : '') : '<span class="pill p-warn">Chưa nhắn bot</span>') + '</td>' +
             '<td style="white-space:nowrap;text-align:right">' + (n.daKetNoi ? '<button class="btn ghost sm" data-thu="' + i + '">Gửi thử</button> <button class="btn ghost sm" data-go="' + i + '">Gỡ</button>' : '') + '</td></tr>';
-        }).join('') : '<tr><td colspan="4" class="muted">Chưa có tài khoản BOD hay ban nhân sự.</td></tr>') +
+        }).join('') : '<tr><td colspan="4" class="muted">Chưa có tài khoản nào.</td></tr>') +
         '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="zk"' + (z.coBot ? '' : ' disabled') + '>Kiểm tra tin nhắn mới</button><button class="btn ghost sm" id="zn">Gửi nhắc ngay</button><span id="zm2"></span></div></div>' +
         '<details class="card"><summary style="cursor:pointer;font-weight:600">Hướng dẫn tạo bot Zalo (Head HR làm mỗi năm)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
         '<li>Trên máy tính, mở <b>bot.zaloplatforms.com</b> và đăng nhập bằng Zalo của Head HR.</li>' +
         '<li>Bấm tạo bot mới, đặt tên dễ nhận ra, ví dụ “Bot nhắc việc ECO”.</li>' +
         '<li>Tạo xong, trang sẽ hiện <b>mã bot (token)</b> có dạng <code>số:chuỗi ký tự</code>. Bấm sao chép.</li>' +
-        '<li>Dán mã vào ô “Mã bot” ở trên, chọn giờ nhắc, bấm <b>Lưu</b>. Nếu mã sai, ECODesk sẽ báo ngay.</li>' +
-        '<li>Báo BOD và ban nhân sự: mở Zalo, tìm bot theo tên vừa đặt, nhắn mã kết nối của mình (mỗi người thấy mã ở trang Task, hoặc xem bảng ở trên).</li>' +
+        '<li>Dán mã vào ô “Mã bot” ở trên, bấm <b>Lưu</b>. Nếu mã sai, ECODesk sẽ báo ngay.</li>' +
+        '<li>Báo mọi người: mở Zalo, tìm bot theo tên vừa đặt, nhắn mã kết nối của mình (mỗi người thấy mã ở trang Thông báo, hoặc xem bảng ở trên).</li>' +
         '<li>Bấm “Kiểm tra tin nhắn mới” để thấy ai đã kết nối. Bấm “Gửi thử” để chắc chắn bot nhắn được.</li>' +
         '</ol><p class="hint">Đổi sang bot mới thì mọi người phải nhắn mã kết nối lại cho bot mới.</p></details>';
       $('#zf').onsubmit = function (e) {
         e.preventDefault();
-        luuVa($('#zb'), $('#zm'), 'luuCaiDatZalo', [{ token: $('#zt').value, gioNhac: Number($('#zh').value), nhacSapDenHan: $('#zs').value === '1', nhacTre: $('#zl').value }], function () { SUB.zalo(); setTimeout(function () { thongBao($('#zm'), 'ok', 'Đã lưu và bật lịch nhắc'); }, 1500); });
+        luuVa($('#zb'), $('#zm'), 'luuCaiDatZalo', [{ token: $('#zt').value }], function () { SUB.zalo(); setTimeout(function () { thongBao($('#zm'), 'ok', 'Đã lưu'); }, 1500); });
       };
       $('#zk').onclick = function () { luuVa($('#zk'), $('#zm2'), 'kiemTraKetNoiZalo', [], function () { SUB.zalo(); }); };
       $('#zn').onclick = function () {
@@ -514,7 +467,7 @@ var SUB = {
     }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   },
   mailcfg: function () {
-    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
+    $('#subbody').innerHTML = cho();
     goiPhien('layCaiDatMail').then(function (m) {
       $('#subbody').innerHTML = '<form class="card form" id="mc"><p class="hint" style="margin:0">Thư gửi đi từ: <b>' + esc(m.emailClb) + '</b></p>' +
         '<p class="hint" style="margin:0">Tên người gửi là tên của tài khoản Google CLB.</p>' +
@@ -524,7 +477,7 @@ var SUB = {
     }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   },
   sign: function () {
-    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
+    $('#subbody').innerHTML = cho();
     goiPhien('layCaiDatMail').then(function (m) {
       var veChuKy = function (ck) {
         if (ck.html) $('#sk-xem').innerHTML = khungThu(ck.html);
@@ -544,7 +497,7 @@ var SUB = {
     }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   },
   contacts: function () {
-    $('#subbody').innerHTML = '<p class="muted">Đang tải…</p>';
+    $('#subbody').innerHTML = cho();
     goiPhien('layCaiDatMail').then(function (m) {
       var ds = m.danhBa.slice();
       var ve = function () {

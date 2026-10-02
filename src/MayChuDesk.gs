@@ -222,6 +222,9 @@ function layCaiDatDesk(phien) {
     loai: docBang('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     quyChe: String(layCaiDat('QuyChe') || ''),
     baoGopY: baoGopYQuaMail(),
+    baoThuChoDuyet: batSuKien('BaoThuChoDuyet'),
+    nhac: caiDatNhacZalo(),
+    anhNen: String(layCaiDat('AnhNenPhienBan') || ''),
     ghim: docBang('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan(),
     mail: { cheDoUcv: cheDoXemUcv(), soDanhBa: docBang('DanhBa').length },
@@ -255,7 +258,7 @@ function luuQuyChe(phien, link) {
   return true;
 }
 
-/** Có gửi mail báo về tài khoản CLB khi có góp ý mới không. Mặc định là có. */
+/** Có báo cho BOD khi có góp ý mới không. Mặc định là có. */
 function baoGopYQuaMail() {
   return String(layCaiDat('BaoGopYQuaMail') || '') !== 'tat';
 }
@@ -266,15 +269,14 @@ function luuBaoGopY(phien, bat) {
   return true;
 }
 
-/** Gửi mail báo góp ý mới về hộp thư CLB. Tối đa một mail mỗi 10 phút để không tốn lượt gửi mail trong ngày. */
+/** Báo góp ý mới cho BOD (theo cách mỗi người chọn). Tối đa một lần mỗi 10 phút để không tốn lượt gửi trong ngày. */
 function thongBaoGopYMoi(noiDung) {
   if (!baoGopYQuaMail()) return;
   var cache = CacheService.getScriptCache();
   if (cache.get('daBaoGopY')) return;
   cache.put('daBaoGopY', '1', 600);
-  var chu = 'Có góp ý ẩn danh mới gửi từ ECOBoard:\n\n' + String(noiDung).slice(0, 3000) +
-    '\n\nMở ECODesk, mục Góp ý để xem tất cả. Trong 10 phút tới nếu có thêm góp ý thì sẽ không gửi mail nữa.\nTắt thông báo này trong ECODesk: Cài đặt, Thông báo góp ý.';
-  MailApp.sendEmail(emailClb(), 'ECOBoard: có góp ý mới', chu, { name: 'ECOBoard' });
+  baoChoBod('Góp ý mới', 'ECOBoard có góp ý ẩn danh mới:\n\n' + String(noiDung).slice(0, 1500) +
+    '\n\nMở ECODesk, mục Góp ý để xem tất cả. Trong 10 phút tới nếu có thêm góp ý thì sẽ không báo nữa.');
 }
 
 function luuGhim(phien, ds) {
@@ -450,4 +452,73 @@ function luuGoogleClientId(phien, clientId) {
   if (id && !/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(id)) throw new Error('Mã Client ID chưa đúng dạng. Mã đúng kết thúc bằng .apps.googleusercontent.com');
   datCaiDat('GoogleClientId', id);
   return true;
+}
+
+/* ===================== Ảnh nền trang đăng nhập ===================== */
+
+/** BOD tải ảnh nền (JPEG đã thu nhỏ trên máy, dạng base64). Chuỗi rỗng nghĩa là bỏ ảnh nền. */
+function luuAnhNen(phien, base64) {
+  canDangNhap(phien, 'caidat');
+  var b = String(base64 || '').replace(/^data:image\/\w+;base64,/, '');
+  if (b.length > 4 * 1048576) throw new Error('Ảnh lớn quá. Bạn chọn ảnh khác nhé.');
+  var cu = String(layCaiDat('AnhNenId') || '');
+  var moi = '';
+  if (b) {
+    var thuMuc = thuMucAnhNen();
+    moi = thuMuc.createFile(Utilities.newBlob(Utilities.base64Decode(b), 'image/jpeg', 'Ảnh nền đăng nhập.jpg')).getId();
+  }
+  datCaiDat('AnhNenId', moi);
+  datCaiDat('AnhNenPhienBan', moi ? String(Date.now()) : '');
+  if (cu) { try { DriveApp.getFileById(cu).setTrashed(true); } catch (e) { /* đã xoá */ } }
+  return String(layCaiDat('AnhNenPhienBan') || '');
+}
+
+function thuMucAnhNen() {
+  var id = layCaiDat('ThuMucAnhNenId');
+  if (id) { try { return DriveApp.getFolderById(String(id)); } catch (e) { /* bị xoá thì tạo lại */ } }
+  var f = DriveApp.createFolder('ECO - Ảnh nền ECODesk');
+  datCaiDat('ThuMucAnhNenId', f.getId());
+  return f;
+}
+
+/** Trang đăng nhập hỏi ảnh nền (không cần đăng nhập). Máy đã có đúng bản thì không gửi lại ảnh. */
+function layAnhNen(phienBanCo) {
+  var pb = String(layCaiDat('AnhNenPhienBan') || '');
+  if (!pb || pb === String(phienBanCo || '')) return { phienBan: pb };
+  var id = String(layCaiDat('AnhNenId') || '');
+  try { return { phienBan: pb, data: 'data:image/jpeg;base64,' + Utilities.base64Encode(DriveApp.getFileById(id).getBlob().getBytes()) }; }
+  catch (e) { return { phienBan: '' }; }
+}
+
+/* ===================== Trang chào ===================== */
+
+/** Tóm tắt cho trang chào, tuỳ vai trò. */
+function layTrangChu(phien) {
+  var tk = canDangNhap(phien);
+  var vaiTro = String(tk.VaiTro), ten = String(tk.HoVaTen);
+  var kq = { vaiTro: vaiTro };
+  if (vaiTro === 'BOD' || vaiTro === 'HR') {
+    var dsTask = docTask().filter(function (t) { return t.trangThai !== TRANG_THAI_TASK.XONG && t.trangThai !== TRANG_THAI_TASK.HUY; });
+    var dem = function (ds) {
+      return { dangLam: ds.length, sap: ds.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.SAP; }).length, tre: ds.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.TRE; }).length };
+    };
+    kq.taskCuaToi = dem(dsTask.filter(function (t) { return t.nguoi === ten; }));
+    if (vaiTro === 'HR') {
+      var bod = {};
+      docBang('TaiKhoan').forEach(function (t) { if (t.VaiTro === 'BOD') bod[String(t.HoVaTen)] = true; });
+      kq.taskThanhVien = dem(dsTask.filter(function (t) { return !bod[t.nguoi]; }));
+    }
+  }
+  if (vaiTro === 'BOD') {
+    kq.choDuyet = docBang('ViecMail').filter(function (v) { return String(v.TrangThai) === TRANG_THAI_VIEC.CHO; }).length;
+    kq.gopYMoi = docBang('GopY').filter(function (g) { return !(g.DaDoc === true || g.DaDoc === 'TRUE'); }).length;
+  }
+  if (vaiTro === 'UCV') {
+    var thu = docBang('ViecMail').filter(function (v) { return String(v.NguoiTao) === ten; });
+    var demThu = function (st) { return thu.filter(function (v) { return String(v.TrangThai) === st; }).length; };
+    kq.thu = { nhap: demThu(TRANG_THAI_VIEC.NHAP), cho: demThu(TRANG_THAI_VIEC.CHO), sua: demThu(TRANG_THAI_VIEC.SUA), duyet: demThu(TRANG_THAI_VIEC.DUYET) };
+  }
+  var toi = nguoiNhanThongBao().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
+  kq.thongBao = toi ? { cach: toi.cach, soMay: toi.soMay, daKetNoiZalo: !!toi.chatId } : null;
+  return kq;
 }

@@ -153,7 +153,7 @@ function mailUCV() {
 
   var taiDs = function (them) {
     if (M.thuMuc === 'Việc của tôi') { veViec(); return; }
-    if (!them) $('#ml').innerHTML = '<p class="muted" style="padding:14px">Đang tải…</p>';
+    if (!them) $('#ml').innerHTML = cho();
     goiPhien('layHopThu', M.thuMuc, M.tim, M.batDau).then(function (d) {
       M.cheDo = d.cheDo; M.nhan = d.nhan; M.coThem = d.coThem;
       if (d.cheDo === 'rieng' && M.thuMuc !== 'Thư của tôi') { M.thuMuc = 'Thư của tôi'; }
@@ -177,7 +177,7 @@ function mailUCV() {
   };
   var docLuong = function (ma) {
     moDoc(true);
-    $('#mr').innerHTML = nutVe + '<p class="muted">Đang mở thư…</p>'; ganVe();
+    $('#mr').innerHTML = nutVe + cho(); ganVe();
     goiPhien('docLuongThu', ma).then(function (l) {
       if (M.sel !== ma) return;
       var T = function (k, nhan, icon, chinh) { return '<button class="btn ' + (chinh ? '' : 'ghost ') + 'sm" data-tt="' + k + '">' + ic(icon, 15) + nhan + '</button>'; };
@@ -448,7 +448,7 @@ function capNhatSoDuyet() { capNhatHuyHieu(); var b = $('#dbadge'); if (b) { b.t
 
 BOD_MAIL.duyet = function () {
   var loc = 'cho', ds = [], sel = -1;
-  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  $('#mbody').innerHTML = cho();
   var ve = function () {
     var hien = ds.map(function (v, i) { return [v, i]; }).filter(function (x) { return loc === 'tatca' || x[0].trangThai === 'Chờ duyệt'; });
     $('#mbody').innerHTML = '<div class="mail hai" id="dmail"><div class="mlist"><div class="msearch"><div class="seg" id="dloc"><button data-l="cho" aria-pressed="' + (loc === 'cho') + '" style="flex:1;justify-content:center">Chờ duyệt</button><button data-l="tatca" aria-pressed="' + (loc === 'tatca') + '" style="flex:1;justify-content:center">Tất cả</button></div></div>' +
@@ -505,7 +505,7 @@ BOD_MAIL.duyet = function () {
 var NHAP = null;
 function napNhap(epBuoc) { if (NHAP && !epBuoc) return Promise.resolve(NHAP); return goiPhien('layThuNhapGmail').then(function (d) { NHAP = d; return d; }); }
 function xemNhap(ma, nutDung) {
-  var h = moHop({ tieuDe: 'Thư nháp', lop: 'rong', than: '<p class="muted">Đang tải…</p>' });
+  var h = moHop({ tieuDe: 'Thư nháp', lop: 'rong', than: cho() });
   goiPhien('xemThuNhapGmail', ma).then(function (t) {
     if (!h.isConnected) return;
     h.querySelector('.dlg-h h3').textContent = t.tieuDe || '(không có tiêu đề)';
@@ -525,7 +525,7 @@ function theNhap(t, chon) {
     (chon === undefined ? '<button class="btn sm" data-dung="' + esc(t.ma) + '">' + ic('send', 14) + 'Gửi hàng loạt</button>' : '') + '</div></div>';
 }
 BOD_MAIL.nhap = function () {
-  $('#mbody').innerHTML = '<p class="muted">Đang tải thư nháp từ Gmail…</p>';
+  $('#mbody').innerHTML = cho();
   var tim = '';
   napNhap(true).then(function (d) {
     var ve = function () {
@@ -554,7 +554,7 @@ function thayMau(chu, d, laHtml) {
 }
 BOD_MAIL.hangloat = function (maNhap) {
   var W = { buoc: maNhap ? 2 : 1, ma: maNhap || '', nguon: 'tv', nguoiNhan: [], moTa: '', sheet: null, nguonDl: null, mau: null };
-  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  $('#mbody').innerHTML = cho();
   Promise.all([goiPhien('layNguonGui'), napNhap()]).then(function (kq) { W.nguonDl = kq[0]; ve(); })
     .catch(function (err) { $('#mbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   var nhapChon = function () { return (NHAP.ds.filter(function (t) { return t.ma === W.ma; })[0]) || null; };
@@ -682,7 +682,7 @@ BOD_MAIL.hangloat = function (maNhap) {
 };
 
 BOD_MAIL.lich = function () {
-  $('#mbody').innerHTML = '<p class="muted">Đang tải…</p>';
+  $('#mbody').innerHTML = cho();
   var TT = { 'Đã lên lịch': 'p-info', 'Đang gửi': 'p-warn', 'Đã gửi': 'p-ok', 'Đã huỷ': 'p-mute', 'Lỗi': 'p-bad' };
   goiPhien('layLichGui').then(function (ds) {
     $('#mbody').innerHTML = '<div class="card flush"><div class="lst">' +
