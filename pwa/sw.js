@@ -1,11 +1,12 @@
 /* Service worker tối giản: giữ sẵn các file của trang vỏ để app mở nhanh và cài được lên màn hình chính. */
-var BO_NHO = 'eco-vo-5';
+var BO_NHO = 'eco-vo-6';
 var TEP = ['./config.js', './vo.js', './vo.css', './board/', './board/index.html', './board/manifest.webmanifest', './desk/', './desk/index.html', './desk/manifest.webmanifest',
   './icons/board-192.png', './icons/board-512.png', './icons/desk-192.png', './icons/desk-512.png',
   './icons/tab-board.png', './icons/tab-desk.png', './icons/apple-board.png', './icons/apple-desk.png', './icons/badge-96.png'];
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(BO_NHO).then(function (c) { return c.addAll(TEP); }).then(function () { return self.skipWaiting(); }));
+  // Lưu từng file riêng: thiếu một file cũng không làm hỏng việc cài (cần để nhận thông báo).
+  e.waitUntil(caches.open(BO_NHO).then(function (c) { return Promise.all(TEP.map(function (f) { return c.add(f).catch(function () {}); })); }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== BO_NHO && k !== 'eco-tb'; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); }));
@@ -31,7 +32,7 @@ self.addEventListener('push', function (e) {
       });
     }));
   };
-  e.waitUntil(caches.open('eco-tb').then(function (c) { return c.match('./tb-may'); })
+  e.waitUntil(caches.open('eco-tb').then(function (c) { return c.match(self.registration.scope + 'tb-may'); })
     .then(function (r) { return r ? r.json() : null; })
     .then(function (may) {
       if (!may || !may.khoa || !may.url) return [];
