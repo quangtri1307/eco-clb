@@ -26,6 +26,21 @@ function goiZalo(token, phuongThuc, thamSo) {
   return kq.result;
 }
 
+/** Tên bot người dùng tìm được trong Zalo (tên hiển thị, không phải mã dạng bot.xxxx). */
+function tenHienThiBot(bot) {
+  return String((bot && (bot.display_name || bot.name || bot.account_name)) || '');
+}
+
+/** Tên bot đã lưu. Bản cũ lưu mã dạng bot.xxxx thì hỏi lại Zalo để lấy tên hiển thị. */
+function tenBotZalo() {
+  var ten = String(layCaiDat('ZaloTenBot') || '');
+  var token = layTokenZalo();
+  if (token && (!ten || /^bot\./.test(ten))) {
+    try { var moi = tenHienThiBot(goiZalo(token, 'getMe', {})); if (moi && moi !== ten) { ten = moi; datCaiDat('ZaloTenBot', ten); } } catch (e) { /* giữ tên cũ */ }
+  }
+  return ten;
+}
+
 function layTokenZalo() {
   return String(layCaiDat('ZaloToken') || '').trim();
 }
@@ -74,7 +89,7 @@ function dongBoNguoiNhanZalo() {
 function trangThaiZaloCuaToi(ten) {
   var coBot = !!layTokenZalo();
   var toi = dongBoNguoiNhanZalo().filter(function (n) { return n.ten === ten; })[0];
-  return { coBot: coBot, tenBot: String(layCaiDat('ZaloTenBot') || ''), ma: toi ? toi.ma : '', daKetNoi: !!(toi && toi.chatId), tenZalo: toi ? toi.tenZalo : '' };
+  return { coBot: coBot, tenBot: tenBotZalo(), ma: toi ? toi.ma : '', daKetNoi: !!(toi && toi.chatId), tenZalo: toi ? toi.tenZalo : '' };
 }
 
 /**
@@ -210,7 +225,7 @@ function layCaiDatZalo(phien) {
   var lanCuoi = null;
   try { lanCuoi = JSON.parse(layCaiDat('ZaloLanNhacCuoi') || 'null'); } catch (e) { lanCuoi = null; }
   return {
-    coBot: !!layTokenZalo(), tenBot: String(layCaiDat('ZaloTenBot') || ''), coLich: coLichNhac(),
+    coBot: !!layTokenZalo(), tenBot: tenBotZalo(), coLich: coLichNhac(),
     dsGio: cd.dsGio, nhacSapDenHan: cd.nhacSapDenHan, nhacTre: cd.nhacTre, lanCuoi: lanCuoi,
     nguoiNhan: dongBoNguoiNhanZalo().map(function (n) { return { ten: n.ten, vaiTro: n.vaiTro, ma: n.ma, daKetNoi: !!n.chatId, tenZalo: n.tenZalo }; })
   };
@@ -226,7 +241,7 @@ function luuCaiDatZalo(phien, cd) {
     var bot;
     try { bot = goiZalo(token, 'getMe', {}); } catch (e) { throw new Error('Mã bot không dùng được. Bạn kiểm tra lại đã chép đủ mã chưa. (' + e.message + ')'); }
     datCaiDat('ZaloToken', token);
-    datCaiDat('ZaloTenBot', String((bot && (bot.account_name || bot.display_name || bot.name)) || ''));
+    datCaiDat('ZaloTenBot', tenHienThiBot(bot));
     // Bot mới thì mọi người phải nhắn mã kết nối lại.
     var ds = docBang('KetNoiZalo').map(function (k) { k.ChatId = ''; k.TenZalo = ''; k.ThoiGianKetNoi = ''; return k; });
     ghiDeBang('KetNoiZalo', ds);
