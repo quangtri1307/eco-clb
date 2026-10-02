@@ -262,6 +262,7 @@ function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
   } finally {
     khoa.releaseLock();
   }
+  if (guiDuyet) baoThuChoDuyet(String(tk.HoVaTen), o.TieuDe || o.TieuDeThu);
   // Trả về để khung soạn biết việc đã lưu (lần lưu sau sẽ sửa đúng việc này, không tải tệp lên lại).
   return { thoiGian: new Date(o.ThoiGian).getTime(), dinhKem: dinhKem };
 }
@@ -311,6 +312,7 @@ function duyetViecMail(phien, thoiGian, nguoiTao, quyetDinh, ghiChu) {
   if ([TRANG_THAI_VIEC.DUYET, TRANG_THAI_VIEC.SUA, TRANG_THAI_VIEC.TU_CHOI].indexOf(quyetDinh) < 0) throw new Error('Quyết định không hợp lệ.');
   var khoa = LockService.getScriptLock();
   khoa.waitLock(30000);
+  var trangThai, ghi, o = {};
   try {
     var sh = bangDuLieu('ViecMail');
     var v = sh.getDataRange().getValues();
@@ -319,10 +321,10 @@ function duyetViecMail(phien, thoiGian, nguoiTao, quyetDinh, ghiChu) {
       if (new Date(v[r][td.indexOf('ThoiGian')]).getTime() === Number(thoiGian) && String(v[r][td.indexOf('NguoiTao')]) === String(nguoiTao)) { dong = r + 1; break; }
     }
     if (!dong) throw new Error('Không tìm thấy việc này.');
-    var o = {};
     td.forEach(function (c, i) { o[c] = v[dong - 1][i]; });
     if (String(o.TrangThai) !== TRANG_THAI_VIEC.CHO) throw new Error('Việc này đã được xử lý rồi.');
-    var trangThai = quyetDinh, ghi = String(ghiChu || '').trim().slice(0, 2000), maThu = String(o.MaThu || '');
+    trangThai = quyetDinh; ghi = String(ghiChu || '').trim().slice(0, 2000);
+    var maThu = String(o.MaThu || '');
     if (quyetDinh === TRANG_THAI_VIEC.DUYET) {
       try { maThu = thucHienViec(viecRaDoiTuong(o)) || maThu; }
       catch (e) { trangThai = TRANG_THAI_VIEC.LOI; ghi = (ghi ? ghi + '\n' : '') + 'Lỗi: ' + e.message; }
@@ -330,10 +332,11 @@ function duyetViecMail(phien, thoiGian, nguoiTao, quyetDinh, ghiChu) {
     var set = function (c, val) { sh.getRange(dong, td.indexOf(c) + 1).setValue(val); };
     set('TrangThai', trangThai); set('GhiChu', ghi); set('NguoiDuyet', String(tk.HoVaTen)); set('ThoiGianDuyet', new Date()); set('MaThu', maThu);
     if (trangThai === TRANG_THAI_VIEC.LOI) throw new Error('Không thực hiện được: ' + ghi.split('Lỗi: ').pop());
-    return trangThai;
   } finally {
     khoa.releaseLock();
   }
+  baoKetQuaDuyet(o.NguoiTao, o.TieuDe || o.TieuDeThu, trangThai, ghi, String(tk.HoVaTen));
+  return trangThai;
 }
 
 /** Thư cuối cùng không phải do CLB gửi (để trả lời đúng người). */

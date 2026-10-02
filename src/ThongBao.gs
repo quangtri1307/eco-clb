@@ -1,25 +1,48 @@
 /**
- * Thông báo cho BOD và ban nhân sự (nhắc việc hằng ngày, task mới).
- * Mỗi người chọn ít nhất một cách nhận: Zalo, app trên điện thoại (thông báo đẩy), mail.
- * Lựa chọn lưu ở cột NhanThongBao của tab TaiKhoan; BOD xem và sửa được cho mọi người trong Cài đặt.
+ * Thông báo cho mọi người dùng ECODesk (BOD, ban nhân sự, UCV).
+ *  - BOD: nhắc task của mình, task mới được giao, góp ý mới, thư UCV gửi chờ duyệt.
+ *  - Ban nhân sự: nhắc deadline task của thành viên vào giờ BOD chọn.
+ *  - UCV: kết quả duyệt thư.
+ * Mỗi người tự chọn cách nhận: Zalo, app trên điện thoại (thông báo đẩy), mail. BOD sửa được cho mọi người.
+ * Lựa chọn lưu ở cột NhanThongBao của tab TaiKhoan; các máy đã bật thông báo app lưu ở tab ThietBi.
  */
 
 var GIU_THONG_BAO_NGAY = 30;
 
 /* ---------- Ai nhận thông báo, nhận bằng cách nào ---------- */
 
-/** Danh sách BOD và ban nhân sự kèm cách nhận: [{ email, ten, vaiTro, cach, chatId, tenZalo, ma, soMay }]. */
+/** Mã ngắn của một máy (từ địa chỉ nhận tin), dùng khi gỡ máy. */
+function maMay(diaChi) {
+  return base64Url(byteKhongDau_(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, String(diaChi)))).slice(0, 12);
+}
+
+/** Các máy đã bật thông báo app, theo email: { email: [{ ma, tenMay, thoiGian }] }. */
+function mayTheoEmail() {
+  var may = {};
+  docBang('ThietBi').forEach(function (t) {
+    var e = String(t.Email).toLowerCase();
+    (may[e] = may[e] || []).push({ ma: maMay(t.DiaChi), tenMay: String(t.TenMay || 'Máy không rõ tên'), thoiGian: t.ThoiGian ? new Date(t.ThoiGian).getTime() : 0 });
+  });
+  return may;
+}
+
+/** Cách nhận đã lưu của một tài khoản. Chưa chọn thì BOD, ban nhân sự nhận qua Zalo; UCV nhận qua mail. */
+function cachMacDinh(tk) {
+  return String(tk.NhanThongBao || '').trim() ? chuanHoaCachNhan(tk.NhanThongBao) : (tk.VaiTro === 'UCV' ? ['mail'] : ['zalo']);
+}
+
+/** Mọi tài khoản ECODesk kèm cách nhận: [{ email, ten, vaiTro, cach, chatId, tenZalo, ma, soMay, may }]. */
 function nguoiNhanThongBao() {
   var zalo = {};
   dongBoNguoiNhanZalo().forEach(function (n) { zalo[n.ten] = n; });
-  var may = {};
-  docBang('ThietBi').forEach(function (t) { var e = String(t.Email).toLowerCase(); may[e] = (may[e] || 0) + 1; });
-  return docBang('TaiKhoan').filter(function (t) { return t.VaiTro === 'BOD' || t.VaiTro === 'HR'; }).map(function (t) {
+  var may = mayTheoEmail();
+  return docBang('TaiKhoan').filter(function (t) { return t.Email; }).map(function (t) {
     var z = zalo[String(t.HoVaTen)] || {};
-    var email = String(t.Email);
+    var email = String(t.Email), m = may[email.toLowerCase()] || [];
+    var cach = cachMacDinh(t);
     return {
-      email: email, ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), cach: chuanHoaCachNhan(t.NhanThongBao),
-      chatId: String(z.chatId || ''), tenZalo: String(z.tenZalo || ''), ma: String(z.ma || ''), soMay: may[email.toLowerCase()] || 0
+      email: email, ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), cach: cach,
+      chatId: String(z.chatId || ''), tenZalo: String(z.tenZalo || ''), ma: String(z.ma || ''), soMay: m.length, may: m
     };
   });
 }
@@ -48,7 +71,7 @@ function guiThongBao(n, tieuDe, noiDung, baoCao) {
     else { try { guiZalo(token, n.chatId, noiDung); duoc++; ghi('Zalo: đã gửi.'); } catch (e) { ghi('Zalo: lỗi ' + e.message); } }
   }
   if (n.cach.indexOf('mail') >= 0 && emailHopLe(n.email)) {
-    try { MailApp.sendEmail(n.email, 'ECODesk: ' + tieuDe, noiDung + '\n\n(Thư tự động từ ECODesk. Đổi cách nhận thông báo trong ECODesk, mục Task.)'); duoc++; ghi('Mail: đã gửi tới ' + n.email + '.'); } catch (e) { ghi('Mail: lỗi ' + e.message); }
+    try { MailApp.sendEmail(n.email, 'ECODesk: ' + tieuDe, noiDung + '\n\n(Thư tự động từ ECODesk. Đổi cách nhận trong ECODesk, mục Thông báo.)'); duoc++; ghi('Mail: đã gửi tới ' + n.email + '.'); } catch (e) { ghi('Mail: lỗi ' + e.message); }
   }
   if (n.cach.indexOf('app') >= 0) {
     try { if (guiLenApp(n.email, tieuDe, noiDung, baoCao)) duoc++; } catch (e) { ghi('App: lỗi ' + e.message); }
@@ -151,15 +174,53 @@ function damBaoLichNhac() {
   if (!coLichNhac()) caiLichNhac(caiDatNhacZalo().gioNhac);
 }
 
+/* ---------- Sự kiện cần báo ---------- */
+
+/** Bật/tắt từng loại thông báo (BOD chỉnh trong Cài đặt). Mặc định là bật. */
+function batSuKien(khoa) {
+  return String(layCaiDat(khoa) || '') !== 'tat';
+}
+
+/** Báo cho mọi BOD. Lỗi thì bỏ qua, không ảnh hưởng việc đang làm. */
+function baoChoBod(tieuDe, noiDung, truTen) {
+  try {
+    nguoiNhanThongBao().forEach(function (n) {
+      if (n.vaiTro !== 'BOD' || n.ten === truTen) return;
+      try { guiThongBao(n, tieuDe, noiDung); } catch (e) { /* bỏ qua người này */ }
+    });
+  } catch (e) { /* bỏ qua */ }
+}
+
+/** UCV vừa gửi thư chờ BOD duyệt. */
+function baoThuChoDuyet(nguoiTao, tieuDeThu) {
+  if (!batSuKien('BaoThuChoDuyet')) return;
+  baoChoBod('Thư chờ duyệt', 'ECODesk: ' + nguoiTao + ' vừa gửi thư "' + (String(tieuDeThu || '').trim() || '(chưa có tiêu đề)') + '" chờ BOD duyệt. Mở ECODesk, mục Mail để xem.');
+}
+
+/** Báo cho UCV kết quả duyệt thư của mình. */
+function baoKetQuaDuyet(nguoiTao, tieuDeThu, trangThai, ghiChu, nguoiDuyet) {
+  try {
+    var n = nguoiNhanThongBao().filter(function (x) { return x.ten === String(nguoiTao) && x.vaiTro === 'UCV'; })[0];
+    if (!n) return;
+    var ten = '"' + (String(tieuDeThu || '').trim() || '(chưa có tiêu đề)') + '"';
+    var tin = trangThai === TRANG_THAI_VIEC.DUYET ? 'ECODesk: thư ' + ten + ' đã được ' + nguoiDuyet + ' duyệt và gửi đi.'
+      : trangThai === TRANG_THAI_VIEC.SUA ? 'ECODesk: thư ' + ten + ' cần sửa lại.'
+      : 'ECODesk: thư ' + ten + ' không được duyệt.';
+    if (ghiChu && trangThai !== TRANG_THAI_VIEC.DUYET) tin += ' Ghi chú của BOD: ' + String(ghiChu).slice(0, 500);
+    guiThongBao(n, trangThai === TRANG_THAI_VIEC.DUYET ? 'Thư đã được duyệt' : 'Kết quả duyệt thư', tin);
+  } catch (e) { /* bỏ qua */ }
+}
+
 /* ---------- Gọi từ ECODesk ---------- */
 
-/** Cách nhận thông báo của chính mình (BOD, ban nhân sự). */
+/** Cách nhận thông báo của chính mình (ai đăng nhập cũng xem được). */
 function layThongBaoCuaToi(phien) {
-  var tk = canDangNhap(phien, 'task');
-  var toi = nguoiNhanThongBao().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
+  var tk = canDangNhap(phien);
+  var toi = nguoiNhanThongBao().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0] || { cach: ['zalo'], may: [] };
   return {
-    email: String(tk.Email), cach: toi ? toi.cach : ['zalo'], soMay: toi ? toi.soMay : 0,
-    zalo: trangThaiZaloCuaToi(String(tk.HoVaTen)), khoaCong: khoaVapid().cong
+    email: String(tk.Email), vaiTro: String(tk.VaiTro), cach: toi.cach, soMay: toi.may.length, may: toi.may,
+    zalo: trangThaiZaloCuaToi(String(tk.HoVaTen)), khoaCong: khoaVapid().cong,
+    suKien: { gioNhac: caiDatNhacZalo().gioNhac, gopY: baoGopYQuaMail(), thuChoDuyet: batSuKien('BaoThuChoDuyet') }
   };
 }
 
@@ -170,7 +231,7 @@ function kiemTraCachNhan(cach) {
 }
 
 function luuCachNhanCuaToi(phien, cach) {
-  var tk = canDangNhap(phien, 'task');
+  var tk = canDangNhap(phien);
   ghiCotTaiKhoan(String(tk.Email), 'NhanThongBao', kiemTraCachNhan(cach));
   damBaoLichNhac();
   return layThongBaoCuaToi(phien);
@@ -178,7 +239,7 @@ function luuCachNhanCuaToi(phien, cach) {
 
 /** Ghi lại máy vừa bật thông báo (gọi sau khi trang vỏ đăng ký nhận thông báo đẩy). */
 function luuThietBi(phien, tb) {
-  var tk = canDangNhap(phien, 'task');
+  var tk = canDangNhap(phien);
   tb = tb || {};
   var diaChi = String(tb.diaChi || ''), khoa = String(tb.khoa || '');
   if (!diaChiDayHopLe(diaChi)) throw new Error('Máy này chưa hỗ trợ thông báo của app.');
@@ -186,28 +247,61 @@ function luuThietBi(phien, tb) {
   var con = docBang('ThietBi').filter(function (t) { return String(t.DiaChi) !== diaChi; });
   con.push({ Email: String(tk.Email), DiaChi: diaChi, Khoa: khoa, TenMay: String(tb.tenMay || '').slice(0, 80), ThoiGian: new Date(), LayCuoi: new Date() });
   ghiDeBang('ThietBi', con);
-  var cach = chuanHoaCachNhan(tk.NhanThongBao);
+  var cach = cachMacDinh(tk);
   if (cach.indexOf('app') < 0) { cach.push('app'); ghiCotTaiKhoan(String(tk.Email), 'NhanThongBao', chuanHoaCachNhan(cach).join(',')); }
   damBaoLichNhac();
   return layThongBaoCuaToi(phien);
 }
 
+/** Gỡ một máy khỏi danh sách nhận thông báo app. Chủ máy hoặc BOD gỡ được. */
+function goThietBi(phien, ma) {
+  var tk = canDangNhap(phien);
+  var ds = docBang('ThietBi');
+  var may = ds.filter(function (t) { return maMay(t.DiaChi) === String(ma); })[0];
+  if (!may) throw new Error('Máy này đã được gỡ rồi.');
+  if (String(may.Email).toLowerCase() !== String(tk.Email).toLowerCase() && !coQuyen(String(tk.VaiTro), 'caidat')) throw new Error('Bạn chỉ gỡ được máy của mình.');
+  ghiDeBang('ThietBi', ds.filter(function (t) { return t !== may; }));
+  return true;
+}
+
 /** Gửi thử một thông báo cho chính mình theo các cách đã chọn. */
 function guiThuThongBaoCuaToi(phien) {
-  var tk = canDangNhap(phien, 'task');
+  var tk = canDangNhap(phien);
   var toi = nguoiNhanThongBao().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
-  if (!toi) throw new Error('Chỉ BOD và ban nhân sự nhận thông báo.');
+  if (!toi) throw new Error('Không tìm thấy tài khoản của bạn.');
   var baoCao = [];
-  var duoc = guiThongBao(toi, 'Thông báo thử', 'ECODesk: đây là thông báo thử. Bạn sẽ nhận nhắc việc theo cách này.', baoCao);
+  var duoc = guiThongBao(toi, 'Thông báo thử', 'ECODesk: đây là thông báo thử. Bạn sẽ nhận thông báo theo cách này.', baoCao);
   if (!baoCao.length) baoCao.push('Chưa chọn cách nhận nào.');
   return { duoc: duoc, chiTiet: baoCao };
 }
 
-/** BOD xem mọi người đang nhận thông báo bằng cách nào. */
+/** BOD gửi thử cho một người hoặc tất cả (email = '*'), bằng các cách tự chọn (không theo lựa chọn của người nhận). */
+function guiThuThongBao(phien, yc) {
+  var tk = canDangNhap(phien, 'caidat');
+  yc = yc || {};
+  var cach = (Array.isArray(yc.cach) ? yc.cach : []).filter(function (c) { return CACH_THONG_BAO.indexOf(c) >= 0; });
+  if (!cach.length) throw new Error('Chọn ít nhất một cách gửi.');
+  var ai = String(yc.email || '');
+  var ds = nguoiNhanThongBao().filter(function (n) { return ai === '*' || n.email.toLowerCase() === ai.toLowerCase(); });
+  if (!ds.length) throw new Error('Không tìm thấy người nhận.');
+  var chiTiet = [], duoc = 0;
+  ds.forEach(function (n) {
+    var bc = [];
+    var x = {}; Object.keys(n).forEach(function (k) { x[k] = n[k]; });
+    x.cach = cach;
+    try { if (guiThongBao(x, 'Thông báo thử', 'ECODesk: ' + tk.HoVaTen + ' gửi thử thông báo cho bạn. Nếu bạn đọc được dòng này là đã nhận được.', bc)) duoc++; }
+    catch (e) { bc.push('Lỗi: ' + e.message); }
+    if (cach.indexOf('mail') >= 0 && !emailHopLe(n.email)) bc.push('Mail: email không hợp lệ.');
+    bc.forEach(function (d) { chiTiet.push(n.ten + ' · ' + d); });
+  });
+  return { duoc: duoc, tong: ds.length, chiTiet: chiTiet };
+}
+
+/** BOD xem mọi người đang nhận thông báo bằng cách nào, có những máy nào. */
 function layNguoiNhanThongBao(phien) {
   canDangNhap(phien, 'caidat');
   return nguoiNhanThongBao().map(function (n) {
-    return { email: n.email, ten: n.ten, vaiTro: n.vaiTro, cach: n.cach, daKetNoiZalo: !!n.chatId, soMay: n.soMay };
+    return { email: n.email, ten: n.ten, vaiTro: n.vaiTro, cach: n.cach, daKetNoiZalo: !!n.chatId, tenZalo: n.tenZalo, soMay: n.soMay, may: n.may };
   });
 }
 
@@ -215,9 +309,18 @@ function layNguoiNhanThongBao(phien) {
 function luuCachNhan(phien, email, cach) {
   canDangNhap(phien, 'caidat');
   var tk = timTaiKhoan(email);
-  if (!tk || (tk.VaiTro !== 'BOD' && tk.VaiTro !== 'HR')) throw new Error('Không tìm thấy tài khoản ' + email + '.');
+  if (!tk) throw new Error('Không tìm thấy tài khoản ' + email + '.');
   ghiCotTaiKhoan(String(tk.Email), 'NhanThongBao', kiemTraCachNhan(cach));
   damBaoLichNhac();
+  return true;
+}
+
+/** Bật/tắt thông báo góp ý mới và thư chờ duyệt. */
+function luuSuKienThongBao(phien, cd) {
+  canDangNhap(phien, 'caidat');
+  cd = cd || {};
+  if (cd.gopY !== undefined) datCaiDat('BaoGopYQuaMail', cd.gopY ? 'bat' : 'tat');
+  if (cd.thuChoDuyet !== undefined) datCaiDat('BaoThuChoDuyet', cd.thuChoDuyet ? 'bat' : 'tat');
   return true;
 }
 

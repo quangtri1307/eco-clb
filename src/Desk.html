@@ -12,15 +12,15 @@
 <script>window.ECO_LOGO = <?!= JSON.stringify(include('LogoDesk').trim()) ?>;
 window.ECO_GOOGLE_CLIENT_ID = <?!= JSON.stringify(googleClientId || '') ?>;</script>
 <?!= include('DeskChung') ?>
+<?!= include('DeskTrangChu') ?>
 <?!= include('DeskViec') ?>
 <?!= include('DeskMail') ?>
 <script>
-apGiaoDien();
 (function () {
   var p = docPhienMay();
   if (p) { moPhien(p); return; }
   // Trong app cài trên điện thoại, phiên đăng nhập được trang vỏ giữ hộ: chờ trang vỏ gửi sang một chút rồi mới hiện màn đăng nhập.
-  $('#app').innerHTML = '<div class="login-wrap"><p style="color:#fff">Đang mở ECODesk…</p></div>';
+  $('#app').innerHTML = manHinhCho(); apGiaoDien();
   setTimeout(function () { if (!PHIEN && !NGUOI) shell(); }, 700);
 })();
 </script>

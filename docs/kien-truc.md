@@ -22,10 +22,10 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | LoaiHoatDong | TenLoai, Diem | Mặc định Staff, Log, Tham gia hoạt động; BOD thêm hoặc sửa trong Cài đặt. |
 | BangGhim | TieuDe, DuongDan | Link ghim trên ECOBoard. |
 | GopY | ThoiGian, NoiDung, DaDoc | Góp ý ẩn danh. |
-| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`). `GiaoDien`: sáng/tối/theo máy của từng người. |
+| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`, riêng UCV trống là `mail`). `GiaoDien`: sáng/tối/theo máy của từng người. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
 | Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
-| KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai trong BOD và ban nhân sự đã kết nối bot Zalo. |
+| KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai đã kết nối bot Zalo (mọi tài khoản ECODesk đều có mã kết nối). |
 | ThietBi | Email, DiaChi, Khoa, TenMay, ThoiGian, LayCuoi | Điện thoại/máy đã bật thông báo của app (địa chỉ đẩy tin của trình duyệt và mã riêng của máy). |
 | ThongBao | ThoiGian, Email, TieuDe, NoiDung | Thông báo app đã gửi, để máy lấy nội dung. Tự xoá sau 30 ngày. |
 | ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet, TuyChon | Mỗi thao tác mail của UCV (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. TuyChon (JSON) ghi thư viết dạng HTML và có trích dẫn thư cũ hay không. |
@@ -75,7 +75,11 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 ### Thông báo (`src/ThongBao.gs`)
 
-- BOD và ban nhân sự nhận nhắc việc hằng ngày và tin task mới theo các cách mình chọn (ít nhất một): Zalo, app trên điện thoại, mail. Tự đổi ở trang Task; BOD xem và sửa cho mọi người ở Cài đặt > Ai nhận thông báo bằng cách nào. `guiThongBao` gửi theo từng cách.
+- Mọi tài khoản ECODesk nhận thông báo theo các cách mình chọn (ít nhất một): Zalo, app trên điện thoại, mail. `guiThongBao` gửi theo từng cách.
+  - BOD: nhắc task của mình (hằng ngày), task mới được giao, góp ý mới từ ECOBoard (`thongBaoGopYMoi`, tối đa mỗi 10 phút), thư UCV gửi chờ duyệt (`baoThuChoDuyet`). Hai loại sau bật/tắt ở Cài đặt > Báo cho BOD.
+  - Ban nhân sự: nhắc deadline task của thành viên không phải BOD (hằng ngày).
+  - UCV: kết quả duyệt thư (`baoKetQuaDuyet`, gọi sau khi BOD quyết định).
+- Trang Thông báo (`src/DeskTrangChu.html`): ai cũng chọn cách nhận, kết nối Zalo, bật app trên máy, xem và gỡ máy của mình, gửi thử. BOD thấy thêm phần cho mọi người: đổi cách nhận, gỡ máy (`goThietBi`, nhận diện máy bằng `maMay` là băm ngắn của địa chỉ đẩy tin), gửi thử cho một người hoặc tất cả bằng cách tự chọn (`guiThuThongBao`).
 - Mail: gửi bằng `MailApp` từ tài khoản CLB, tiêu đề `ECODesk: …`.
 - App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
 - Bật app trên máy: ECODesk nhờ trang vỏ (`bat-thong-bao`) xin quyền và đăng ký, trang vỏ trả `dang-ky-thong-bao` để lưu vào ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
@@ -83,8 +87,8 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 ### Nhắc việc qua Zalo (`src/Zalo.gs`)
 
 - Gọi Zalo Bot API `https://bot-api.zapps.me/bot<mã bot>/<phương thức>` (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
-- Kết nối: mỗi BOD và thành viên ban nhân sự có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
-- Lưu giờ nhắc sẽ cài một lịch chạy hằng ngày (`nhacViecHangNgay`) vào giờ đã chọn; lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger.
+- Kết nối: mỗi tài khoản ECODesk có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
+- Giờ nhắc nằm cùng chỗ với số ngày sắp đến hạn (Cài đặt > Sắp đến hạn và giờ nhắc, `luuNhacViec`). Lưu sẽ cài một lịch chạy hằng ngày (`nhacViecHangNgay`) vào giờ đã chọn; lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger; UCV không nhận nhắc việc.
 - Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
 - Khi BOD được giao task mới, người đó được báo ngay theo các cách đã chọn.
 
@@ -119,7 +123,9 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 |---|---|
 | Loại hoạt động và điểm | tab LoaiHoatDong |
 | Quy chế cộng điểm (link file Docs) | CaiDat, khoá `QuyChe` |
-| Mail báo góp ý mới về tài khoản CLB | CaiDat, khoá `BaoGopYQuaMail` (`tat` là tắt) |
+| Báo BOD khi có góp ý mới | CaiDat, khoá `BaoGopYQuaMail` (`tat` là tắt) |
+| Báo BOD khi UCV gửi thư chờ duyệt | CaiDat, khoá `BaoThuChoDuyet` (`tat` là tắt) |
+| Ảnh nền trang đăng nhập | CaiDat, khoá `AnhNenId` (file JPEG trong thư mục Drive `ThuMucAnhNenId`), `AnhNenPhienBan` (máy chỉ tải lại ảnh khi số này đổi) |
 | Có thêm chữ ký Gmail vào thư UCV | CaiDat, khoá `DungChuKy` |
 | Client ID đăng nhập Google | CaiDat, khoá `GoogleClientId` |
 | Bảng ghim | tab BangGhim |
@@ -127,7 +133,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Bot Zalo | CaiDat, khoá `ZaloToken`, `ZaloTenBot`, `ZaloGioNhac`, `ZaloNhacSapDenHan`, `ZaloNhacTre`, `ZaloLanNhacCuoi`; người nhận ở tab KetNoiZalo |
 | Ban nhân sự, UCV, mật khẩu | tab TaiKhoan |
 | Quyền xem hộp thư của UCV | CaiDat, khoá `UcvXemHopThu` |
-| Ai nhận thông báo bằng cách nào | tab TaiKhoan, cột `NhanThongBao` |
+| Ai nhận thông báo bằng cách nào | tab TaiKhoan, cột `NhanThongBao` (sửa ở trang Thông báo) |
 | Danh bạ gửi hàng loạt | tab DanhBa |
 | Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |
 
@@ -141,3 +147,9 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app (`vien`). App trả lời `ho-tro-vien` thì trang vỏ cho khung tràn toàn màn hình; app cũ không trả lời thì khung vẫn chừa phần trên như trước. App gửi `mau` (màu thanh tiêu đề và thanh tab) để trang vỏ tô phần tai thỏ và thanh vuốt cùng màu. Trên iPhone (app ở màn hình chính) khung được kéo cao bằng màn hình nếu trình duyệt báo thiếu.
 - Icon: `tab-*.png` tách nền cho tab trình duyệt (cả trang Apps Script qua `setFaviconUrl`); `apple-*.png` vuông nền trắng cho iPhone (máy tự bo góc); `*-192/512.png` vuông nền trắng cho Android (máy tự cắt theo hình của máy); `badge-96.png` hình trắng cho thanh trạng thái Android. Trong app, logo hiện trong khung tròn.
 - Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.
+
+## Trang chủ và màn chờ (`src/DeskTrangChu.html`)
+
+- Mở ECODesk là vào Trang chủ: lời chào theo giờ, một câu hỏi thăm ngẫu nhiên (danh sách `CAU_HOI`, sửa thoải mái), các ô tóm tắt theo vai trò (`layTrangChu`) và lối tắt.
+- Màn chờ dùng chung `cho()`: chiếc lá quay trong vòng tái chế kèm câu đùa (`CAU_CHO`).
+- Màn đăng nhập và màn chờ có nền xanh đậm; `apGiaoDien` báo trang vỏ tô phần dưới màn hình cùng màu để không lộ vệt trắng.
