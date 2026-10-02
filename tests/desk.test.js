@@ -82,3 +82,15 @@ test('chuanHoaDsGio', () => {
   assert.deepStrictEqual(L.chuanHoaDsGio('0'), [0]);
   assert.strictEqual(L.chuanHoaDsGio([1, 2, 3, 4, 5, 6, 7, 8]).length, 6);
 });
+
+test('capNhatThanhVienCu giữ hồ sơ người rời và bỏ người quay lại', () => {
+  const t = new Date(2026, 9, 2);
+  const cu = [{ HoVaTen: 'Nguyễn A', Ban: 'PG', Email: 'a@x.com' }, { HoVaTen: 'Lê B', Ban: 'BOD' }];
+  const moi = [{ HoVaTen: 'lê b', Ban: 'BOD' }, { HoVaTen: 'Trần C', Ban: 'PR' }];
+  const daRoi = [{ HoVaTen: 'Trần C', Ban: 'PR', NgayRoi: t }, { HoVaTen: 'Phạm D', Ban: 'HR', NgayRoi: t }];
+  const kq = L.capNhatThanhVienCu(cu, moi, daRoi, t);
+  assert.strictEqual(kq.soMoiRoi, 1);
+  assert.deepStrictEqual(kq.ds.map(d => d.HoVaTen), ['Phạm D', 'Nguyễn A']);
+  assert.strictEqual(kq.ds[1].Email, 'a@x.com');
+  assert.strictEqual(kq.ds[1].NgayRoi, t);
+});

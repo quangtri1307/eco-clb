@@ -16,6 +16,7 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | Tab | Cột | Ghi chú |
 |---|---|---|
 | ThanhVien | HoVaTen, Lop, Ban, ChucVu, NgaySinh, SoDienThoaiCaNhan, SoDienThoaiPhuHuynh, Email, LinkFacebook, TenFacebook, NoiSong | Danh sách hiện tại. Bị ghi đè mỗi lần tải danh sách. |
+| ThanhVienCu | các cột của ThanhVien, NgayRoi | Hồ sơ đầy đủ của người không còn trong danh sách mới (tự thêm khi tải danh sách). Ai quay lại CLB thì tự bỏ khỏi đây. |
 | LichSuDiem | ThoiGian, HoVaTen, LoaiHoatDong, TenHoatDong, Diem, NguoiCong, NhiemKy, HocKy | Mỗi lần cộng điểm là một dòng. Không bao giờ xoá. Điểm được ghi lại tại thời điểm cộng, nên đổi số điểm của loại hoạt động không làm đổi lịch sử. |
 | KyHoatDong | NhiemKy, HocKy, BatDau, KieuTaiLen | Dòng cuối là kỳ hiện tại. |
 | LuuTruThanhVien | NhiemKy, HocKy, HoVaTen, Ban | Danh sách thành viên ở đầu mỗi học kỳ, dùng để biết ai được xem điểm học kỳ 1. |
@@ -43,7 +44,7 @@ Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần d�
    - **Sau tuyển đợt 1**: mở nhiệm kỳ mới (đặt tên theo năm học, từ tháng 8 là năm học mới), học kỳ 1.
    - **Sau tuyển đợt 2**: cùng nhiệm kỳ, học kỳ 2.
    - **Cập nhật**: không đổi kỳ.
-4. Ghi đè tab ThanhVien. Điểm "về 0" vì ECOBoard chỉ cộng các dòng LichSuDiem của kỳ hiện tại, lịch sử cũ vẫn còn nguyên.
+4. Chuyển hồ sơ người không còn trong danh sách sang tab ThanhVienCu, rồi ghi đè tab ThanhVien. Điểm "về 0" vì ECOBoard chỉ cộng các dòng LichSuDiem của kỳ hiện tại, lịch sử cũ vẫn còn nguyên.
 5. Đồng bộ tài khoản BOD: ai có Ban = BOD và có email thì được tạo tài khoản với mật khẩu mặc định; ai không còn là BOD thì bị gỡ tài khoản BOD.
 
 ## ECOBoard
