@@ -108,6 +108,9 @@
       if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với ECODesk rồi thử lại.');
       return navigator.serviceWorker.ready;
     }).then(function (reg) {
+      // Lấy bản service worker mới nhất (bản cũ không biết hiện thông báo) trước khi đăng ký.
+      return reg.update().catch(function () {}).then(function () { return navigator.serviceWorker.ready; });
+    }).then(function (reg) {
       var khoa = khoaSangByte(khoaCong);
       return reg.pushManager.getSubscription().then(function (cu) { return cu ? cu.unsubscribe() : true; })
         .then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: khoa }); });

@@ -95,7 +95,12 @@ function moThongBao(sauKhiLuu) {
     };
     $('#tbthu').onclick = function () {
       var b = this; b.disabled = true; thongBao(m, 'cho', 'Đang gửi…');
-      goiPhien('guiThuThongBaoCuaToi').then(function () { b.disabled = false; thongBao(m, 'ok', 'Đã gửi. Kiểm tra Zalo, điện thoại hoặc hộp thư của bạn. Nhớ bấm Lưu nếu vừa đổi lựa chọn.'); })
+      goiPhien('guiThuThongBaoCuaToi').then(function (kq) {
+        b.disabled = false;
+        m.innerHTML = '<div class="note' + (kq.duoc ? ' info' : '') + '" style="display:block"><b>' + (kq.duoc ? 'Đã gửi thử.' : 'Chưa gửi được.') + '</b>' +
+          kq.chiTiet.map(function (x) { return '<div style="font-size:13px;margin-top:4px;overflow-wrap:anywhere">' + esc(x) + '</div>'; }).join('') +
+          '<div class="hint" style="margin-top:6px">Gửi thử theo lựa chọn đã lưu. Nếu vừa đổi, bấm Lưu trước.</div></div>';
+      })
         .catch(function (err) { b.disabled = false; thongBao(m, 'loi', err.message); });
     };
   };

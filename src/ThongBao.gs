@@ -39,17 +39,19 @@ function ghiCotTaiKhoan(email, cot, giaTri) {
  * Gửi một thông báo cho một người theo các cách người đó chọn. Lỗi ở cách này không chặn cách khác.
  * Trả về số cách đã gửi được.
  */
-function guiThongBao(n, tieuDe, noiDung) {
-  var duoc = 0;
-  if (n.cach.indexOf('zalo') >= 0 && n.chatId) {
+function guiThongBao(n, tieuDe, noiDung, baoCao) {
+  var duoc = 0, ghi = function (x) { if (baoCao) baoCao.push(x); };
+  if (n.cach.indexOf('zalo') >= 0) {
     var token = layTokenZalo();
-    if (token) { try { guiZalo(token, n.chatId, noiDung); duoc++; } catch (e) { /* bỏ qua */ } }
+    if (!n.chatId) ghi('Zalo: chưa kết nối bot.');
+    else if (!token) ghi('Zalo: CLB chưa nhập mã bot.');
+    else { try { guiZalo(token, n.chatId, noiDung); duoc++; ghi('Zalo: đã gửi.'); } catch (e) { ghi('Zalo: lỗi ' + e.message); } }
   }
   if (n.cach.indexOf('mail') >= 0 && emailHopLe(n.email)) {
-    try { MailApp.sendEmail(n.email, 'ECODesk: ' + tieuDe, noiDung + '\n\n(Thư tự động từ ECODesk. Đổi cách nhận thông báo trong ECODesk, mục Task.)'); duoc++; } catch (e) { /* hết lượt gửi trong ngày */ }
+    try { MailApp.sendEmail(n.email, 'ECODesk: ' + tieuDe, noiDung + '\n\n(Thư tự động từ ECODesk. Đổi cách nhận thông báo trong ECODesk, mục Task.)'); duoc++; ghi('Mail: đã gửi tới ' + n.email + '.'); } catch (e) { ghi('Mail: lỗi ' + e.message); }
   }
   if (n.cach.indexOf('app') >= 0) {
-    try { if (guiLenApp(n.email, tieuDe, noiDung)) duoc++; } catch (e) { /* bỏ qua */ }
+    try { if (guiLenApp(n.email, tieuDe, noiDung, baoCao)) duoc++; } catch (e) { ghi('App: lỗi ' + e.message); }
   }
   return duoc;
 }
@@ -88,23 +90,29 @@ function jwtVapid(goc, khoa) {
 }
 
 /** Báo cho các máy của một người là có thông báo mới. App trên máy tự hỏi lại nội dung. Trả về true nếu gửi tới ít nhất một máy. */
-function guiLenApp(email, tieuDe, noiDung) {
+function guiLenApp(email, tieuDe, noiDung, baoCao) {
+  var ghi = function (x) { if (baoCao) baoCao.push(x); };
   var may = docBang('ThietBi').filter(function (t) { return String(t.Email).toLowerCase() === String(email).toLowerCase(); });
-  if (!may.length) return false;
+  if (!may.length) { ghi('App: chưa có máy nào bật thông báo.'); return false; }
   themDong('ThongBao', [{ ThoiGian: new Date(), Email: email, TieuDe: String(tieuDe).slice(0, 200), NoiDung: String(noiDung).slice(0, 3000) }]);
   var khoa = khoaVapid(), duoc = false, hong = [];
   may.forEach(function (m) {
     var diaChi = String(m.DiaChi);
-    if (!diaChiDayHopLe(diaChi)) return;
-    var ma = 0;
+    var ten = 'App (' + (m.TenMay || 'máy') + ')';
+    if (!diaChiDayHopLe(diaChi)) { ghi(ten + ': địa chỉ nhận tin không hợp lệ (' + gocDiaChi(diaChi) + ').'); return; }
+    var ma = 0, tl = '';
     try {
-      ma = UrlFetchApp.fetch(diaChi, {
+      var res = UrlFetchApp.fetch(diaChi, {
         method: 'post', payload: '', muteHttpExceptions: true,
         headers: { Authorization: 'vapid t=' + jwtVapid(gocDiaChi(diaChi), khoa) + ', k=' + khoa.cong, TTL: '86400', Urgency: 'high' }
-      }).getResponseCode();
-    } catch (e) { return; } // lỗi mạng tạm thời: bỏ qua máy này lần này
-    if (ma >= 200 && ma < 300) duoc = true;
-    else if (ma === 404 || ma === 410) hong.push(diaChi); // máy đã tắt thông báo hoặc gỡ app
+      });
+      ma = res.getResponseCode(); tl = String(res.getContentText() || '').replace(/\s+/g, ' ').slice(0, 160);
+    } catch (e) { ghi(ten + ': lỗi mạng ' + e.message); return; } // lỗi mạng tạm thời: bỏ qua máy này lần này
+    if (ma >= 200 && ma < 300) { duoc = true; ghi(ten + ': máy chủ thông báo đã nhận (' + ma + ').'); }
+    else {
+      ghi(ten + ': bị từ chối, mã ' + ma + (tl ? ' · ' + tl : '') + (ma === 404 || ma === 410 ? ' (máy đã tắt thông báo, đã gỡ khỏi danh sách)' : ''));
+      if (ma === 404 || ma === 410) hong.push(diaChi); // máy đã tắt thông báo hoặc gỡ app
+    }
   });
   if (hong.length) ghiDeBang('ThietBi', docBang('ThietBi').filter(function (t) { return hong.indexOf(String(t.DiaChi)) < 0; }));
   return duoc;
@@ -189,9 +197,10 @@ function guiThuThongBaoCuaToi(phien) {
   var tk = canDangNhap(phien, 'task');
   var toi = nguoiNhanThongBao().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
   if (!toi) throw new Error('Chỉ BOD và ban nhân sự nhận thông báo.');
-  var duoc = guiThongBao(toi, 'Thông báo thử', 'ECODesk: đây là thông báo thử. Bạn sẽ nhận nhắc việc theo cách này.');
-  if (!duoc) throw new Error('Chưa gửi được theo cách nào. Kiểm tra Zalo đã kết nối hoặc máy đã bật thông báo chưa.');
-  return duoc;
+  var baoCao = [];
+  var duoc = guiThongBao(toi, 'Thông báo thử', 'ECODesk: đây là thông báo thử. Bạn sẽ nhận nhắc việc theo cách này.', baoCao);
+  if (!baoCao.length) baoCao.push('Chưa chọn cách nhận nào.');
+  return { duoc: duoc, chiTiet: baoCao };
 }
 
 /** BOD xem mọi người đang nhận thông báo bằng cách nào. */
