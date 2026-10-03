@@ -213,8 +213,7 @@ function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
   if (loi && guiDuyet) throw new Error(loi);
   if (viec.thaoTac !== THAO_TAC_MAIL.SOAN && viec.maThu) canXemLuong(tk, viec.maThu);
 
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   try {
     var sh = bangDuLieu('ViecMail');
     var v = sh.getDataRange().getValues();
@@ -260,7 +259,7 @@ function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
     if (dongCu) sh.getRange(dongCu, 1, 1, td.length).setValues([dong]);
     else sh.getRange(sh.getLastRow() + 1, 1, 1, td.length).setValues([dong]);
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
   if (guiDuyet) baoThuChoDuyet(String(tk.HoVaTen), o.TieuDe || o.TieuDeThu);
   // Trả về để khung soạn biết việc đã lưu (lần lưu sau sẽ sửa đúng việc này, không tải tệp lên lại).
@@ -270,18 +269,20 @@ function luuViecMail(phien, viec, guiDuyet, thoiGianCu) {
 /** UCV xoá việc nháp hoặc việc bị trả về của mình. */
 function xoaViecMail(phien, thoiGian) {
   var tk = canDangNhap(phien, 'hopthu');
-  var sh = bangDuLieu('ViecMail');
-  var v = sh.getDataRange().getValues();
-  var td = v[0];
-  for (var r = 1; r < v.length; r++) {
-    if (new Date(v[r][td.indexOf('ThoiGian')]).getTime() === Number(thoiGian) && String(v[r][td.indexOf('NguoiTao')]) === String(tk.HoVaTen)) {
-      var st = String(v[r][td.indexOf('TrangThai')]);
-      if ([TRANG_THAI_VIEC.NHAP, TRANG_THAI_VIEC.SUA, TRANG_THAI_VIEC.TU_CHOI].indexOf(st) < 0) throw new Error('Chỉ xoá được việc nháp, cần sửa lại hoặc bị từ chối.');
-      sh.deleteRow(r + 1);
-      return true;
+  return voiKhoa_(function () {
+    var sh = bangDuLieu('ViecMail');
+    var v = sh.getDataRange().getValues();
+    var td = v[0];
+    for (var r = 1; r < v.length; r++) {
+      if (new Date(v[r][td.indexOf('ThoiGian')]).getTime() === Number(thoiGian) && String(v[r][td.indexOf('NguoiTao')]) === String(tk.HoVaTen)) {
+        var st = String(v[r][td.indexOf('TrangThai')]);
+        if ([TRANG_THAI_VIEC.NHAP, TRANG_THAI_VIEC.SUA, TRANG_THAI_VIEC.TU_CHOI].indexOf(st) < 0) throw new Error('Chỉ xoá được việc nháp, cần sửa lại hoặc bị từ chối.');
+        sh.deleteRow(r + 1);
+        return true;
+      }
     }
-  }
-  throw new Error('Không tìm thấy việc cần xoá.');
+    throw new Error('Không tìm thấy việc cần xoá.');
+  });
 }
 
 /* ===================== BOD duyệt việc ===================== */
@@ -310,8 +311,7 @@ function xemLuongKhiDuyet(phien, maThu) {
 function duyetViecMail(phien, thoiGian, nguoiTao, quyetDinh, ghiChu) {
   var tk = canDangNhap(phien, 'duyetmail');
   if ([TRANG_THAI_VIEC.DUYET, TRANG_THAI_VIEC.SUA, TRANG_THAI_VIEC.TU_CHOI].indexOf(quyetDinh) < 0) throw new Error('Quyết định không hợp lệ.');
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   var trangThai, ghi, o = {};
   try {
     var sh = bangDuLieu('ViecMail');
@@ -333,7 +333,7 @@ function duyetViecMail(phien, thoiGian, nguoiTao, quyetDinh, ghiChu) {
     set('TrangThai', trangThai); set('GhiChu', ghi); set('NguoiDuyet', String(tk.HoVaTen)); set('ThoiGianDuyet', new Date()); set('MaThu', maThu);
     if (trangThai === TRANG_THAI_VIEC.LOI) throw new Error('Không thực hiện được: ' + ghi.split('Lỗi: ').pop());
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
   baoKetQuaDuyet(o.NguoiTao, o.TieuDe || o.TieuDeThu, trangThai, ghi, String(tk.HoVaTen));
   return trangThai;
@@ -543,39 +543,55 @@ function caiLichGuiThu() {
   if (!co) ScriptApp.newTrigger('guiThuDaLenLich').timeBased().everyMinutes(10).create();
 }
 
-/** Chạy tự động mỗi 10 phút: gửi các thư đã đến giờ hẹn. */
+/**
+ * Chạy tự động mỗi 10 phút: gửi các thư đã đến giờ hẹn.
+ * Chỉ khoá lúc đánh dấu "Đang gửi" và lúc ghi kết quả, để trong lúc gửi (có thể vài phút) mọi người vẫn lưu được việc khác.
+ */
 function guiThuDaLenLich() {
-  var khoa = LockService.getScriptLock();
-  if (!khoa.tryLock(1000)) return;
+  var khoa = layKhoa_(1000, true);
+  if (khoa === false) return;
+  var canGui = [], td;
   try {
     var sh = bangDuLieu('LichGui');
-    var v = sh.getDataRange().getValues(), td = v[0];
-    var c = function (ten) { return td.indexOf(ten); };
+    var v = sh.getDataRange().getValues();
+    td = v[0];
     for (var r = 1; r < v.length; r++) {
-      if (String(v[r][c('TrangThai')]) !== 'Đã lên lịch') continue;
-      if (new Date(v[r][c('ThoiGianGui')]).getTime() > Date.now()) continue;
-      sh.getRange(r + 1, c('TrangThai') + 1).setValue('Đang gửi');
-      SpreadsheetApp.flush();
-      var trangThai = 'Đã gửi', ketQua;
-      try {
-        var nn = JSON.parse(String(v[r][c('NguoiNhan')]));
-        var maNhap = c('MaNhap') >= 0 ? String(v[r][c('MaNhap')] || '') : '';
-        var mau = maNhap ? mauTuNhap(maNhap) : null;
-        var kq = mau ? chuanBiGuiTuNhap(mau, nn, MailApp.getRemainingDailyQuota())
-          : chuanBiGuiHangLoat(v[r][c('TieuDe')], v[r][c('NoiDung')], nn, MailApp.getRemainingDailyQuota());
-        if (kq.loi) { trangThai = 'Lỗi'; ketQua = kq.loi; }
-        else {
-          var g = guiDanhSach(kq.ds, mau);
-          ketQua = 'Đã gửi ' + g.daGui + '/' + kq.ds.length + (g.loi.length ? '. Lỗi: ' + g.loi.slice(0, 5).join('; ') : '');
-          if (!g.daGui) trangThai = 'Lỗi';
-        }
-      } catch (e) { trangThai = 'Lỗi'; ketQua = e.message; }
-      sh.getRange(r + 1, c('TrangThai') + 1).setValue(trangThai);
-      sh.getRange(r + 1, c('KetQua') + 1).setValue(ketQua);
+      if (String(v[r][td.indexOf('TrangThai')]) !== 'Đã lên lịch') continue;
+      if (new Date(v[r][td.indexOf('ThoiGianGui')]).getTime() > Date.now()) continue;
+      sh.getRange(r + 1, td.indexOf('TrangThai') + 1).setValue('Đang gửi');
+      canGui.push(v[r]);
     }
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
+  var c = function (ten) { return td.indexOf(ten); };
+  canGui.forEach(function (gia) {
+    var trangThai = 'Đã gửi', ketQua;
+    try {
+      var nn = JSON.parse(String(gia[c('NguoiNhan')]));
+      var maNhap = c('MaNhap') >= 0 ? String(gia[c('MaNhap')] || '') : '';
+      var mau = maNhap ? mauTuNhap(maNhap) : null;
+      var kq = mau ? chuanBiGuiTuNhap(mau, nn, MailApp.getRemainingDailyQuota())
+        : chuanBiGuiHangLoat(gia[c('TieuDe')], gia[c('NoiDung')], nn, MailApp.getRemainingDailyQuota());
+      if (kq.loi) { trangThai = 'Lỗi'; ketQua = kq.loi; }
+      else {
+        var g = guiDanhSach(kq.ds, mau);
+        ketQua = 'Đã gửi ' + g.daGui + '/' + kq.ds.length + (g.loi.length ? '. Lỗi: ' + g.loi.slice(0, 5).join('; ') : '');
+        if (!g.daGui) trangThai = 'Lỗi';
+      }
+    } catch (e) { trangThai = 'Lỗi'; ketQua = e.message; }
+    voiKhoa_(function () {
+      var sh2 = bangDuLieu('LichGui');
+      var v2 = sh2.getDataRange().getValues(), td2 = v2[0];
+      var tao = new Date(gia[c('ThoiGianTao')]).getTime();
+      for (var r2 = 1; r2 < v2.length; r2++) {
+        if (new Date(v2[r2][td2.indexOf('ThoiGianTao')]).getTime() !== tao || String(v2[r2][td2.indexOf('TrangThai')]) !== 'Đang gửi') continue;
+        sh2.getRange(r2 + 1, td2.indexOf('TrangThai') + 1).setValue(trangThai);
+        sh2.getRange(r2 + 1, td2.indexOf('KetQua') + 1).setValue(ketQua);
+        return;
+      }
+    });
+  });
 }
 
 function layLichGui(phien) {
@@ -605,8 +621,7 @@ function timDongLich(sh, thoiGianTao) {
 
 function suaLichGui(phien, thoiGianTao, moi) {
   canDangNhap(phien, 'duyetmail');
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   try {
     var sh = bangDuLieu('LichGui');
     var x = timDongLich(sh, thoiGianTao);
@@ -614,21 +629,20 @@ function suaLichGui(phien, thoiGianTao, moi) {
     if (!(luc.getTime() > Date.now() + 60000)) throw new Error('Giờ hẹn phải sau bây giờ ít nhất 1 phút.');
     sh.getRange(x.dong, x.td.indexOf('ThoiGianGui') + 1).setValue(luc);
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
   return true;
 }
 
 function huyLichGui(phien, thoiGianTao) {
   canDangNhap(phien, 'duyetmail');
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   try {
     var sh = bangDuLieu('LichGui');
     var x = timDongLich(sh, thoiGianTao);
     sh.getRange(x.dong, x.td.indexOf('TrangThai') + 1).setValue('Đã huỷ');
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
   return true;
 }

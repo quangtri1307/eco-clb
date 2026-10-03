@@ -9,6 +9,12 @@
   - `…/exec?app=desk` mở ECODesk.
 - Trong file Google Sheet có menu **ECO hậu kỳ → Tải danh sách lên hệ thống**. Đây là thao tác duy nhất không làm trên giao diện app.
 
+## Ghi cùng lúc và tốc độ (`src/Code.gs`)
+
+- **Khoá ghi:** mọi chỗ ghi vào sheet chạy trong khoá chung (`voiKhoa_`, hoặc `layKhoa_`/`traKhoa_`). Hai người bấm lưu cùng lúc thì lần lượt từng người ghi, không ai ghi đè hay chen vào dòng của người kia. Việc đọc rồi sửa (tìm dòng rồi ghi, lọc bảng rồi ghi đè) phải nằm trọn trong một khoá. Gọi lồng nhau vẫn được. Chờ quá 30 giây thì báo "Đang có nhiều người lưu cùng lúc". Việc chạy lâu (gửi thư hẹn giờ, nhắc việc) chỉ khoá lúc ghi, không khoá lúc gửi.
+- **Nhớ tạm trên máy chủ:** `docBang` đọc mỗi bảng một lần trong một lần chạy. Bốn bảng ít đổi (`BANG_NHO_TAM`: CaiDat, TaiKhoan, ThanhVien, LoaiHoatDong) còn được nhớ 10 phút giữa các lần chạy. Ghi vào bảng nào (qua `bangDuLieu`) thì bản nhớ của bảng đó bị bỏ ngay; sửa tay trên sheet thì `onEdit` bỏ giúp. Trong khoá luôn đọc thẳng từ sheet.
+- **Mở app nhanh:** ECODesk hỏi máy chủ một lần (`moDesk`: người dùng + trang chào). Máy nhớ kết quả lần mở trước (`eco_lan_mo`) nên lần sau hiện ngay rồi mới cập nhật. Sau khi mở, app lấy sẵn dữ liệu các trang trên thanh dưới; dữ liệu đọc của vài trang (`DOC_NHANH`) được giữ 60 giây trên máy, và bị bỏ hết ngay khi người dùng lưu, sửa hay xoá bất cứ gì.
+
 ## Các tab dữ liệu
 
 Tên cột viết tiếng Việt không dấu, không cách. Không có cột mã (id): thành viên phân biệt bằng họ tên, các bản ghi khác phân biệt bằng thời gian.
