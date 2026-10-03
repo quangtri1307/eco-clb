@@ -119,6 +119,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 ### File đăng ký log
 
 - Cài đặt có link Google Sheet mẫu (`LinkMauLog`) và thư mục Drive để lưu (`LinkThuMucLog`).
+- File tạo ra được mở cho "bất kỳ ai có link" với quyền chỉnh sửa (tab Đăng ký log đã khoá, chỉ chừa ô tích và Ghi chú).
 - Tạo file từ mẫu của tool cũ (có tab "Đăng ký log"): làm giống hệt tool cũ. Người được chọn xếp theo ban, từ dòng 5 ghi Họ tên, Lớp, Ban, SĐT (cột A–D); mỗi buổi một cột ô tích từ cột E (chép định dạng cột E), tên buổi ở dòng 4 (nền lấy từ ô Ghi chú F4), dòng 3 đếm số người tích; cột Ghi chú ở cuối; cột Ban gộp ô theo ban và xoay chữ; kẻ khung; khoá tab, chỉ chừa ô tích và Ghi chú. Tab "Kế hoạch" (nếu có) thêm cột buổi, dòng 3 lấy số đếm từ tab Đăng ký log. Tên file giữ đúng như người tạo gõ.
 - Tạo file từ mẫu khác: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Chưa có file mẫu thì không cho tạo.
 
@@ -165,3 +166,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Lưới ô (thống kê, loại hoạt động, ô tóm tắt, ô điều hướng, hàng ô nhập) chia đều bằng `chiaDeu` trong `DeskChung.html`: ít hàng nhất, số ô mỗi hàng chênh tối đa 1, ô giãn cho đầy hàng. Bề rộng tối thiểu mỗi ô là biến CSS `--o`, số cột tối đa là `--toida` (điện thoại tối đa 2).
 - Thẻ người dùng: BOD hiện chức vụ lấy từ cột ChucVu của danh sách thành viên (`chucVuCua_`), vai trò khác hiện BOD/HR/UCV.
 - Cài đặt nhớ vị trí cuộn và nội dung ô tìm khi mở một mục rồi quay lại (`CUON_CAI_DAT`).
+
+## Thứ tự ban
+
+Mọi chỗ liệt kê theo ban trong hai app (nút lọc ban, danh sách chọn người, báo cáo, danh bạ, file log, tab Thành viên sau khi tải danh sách) dùng thứ tự chuẩn `THU_TU_BAN` trong `src/Logic.gs`: BOD, PG, PR CAP, PR DES, PR PHO, AD, HR. Ban mới cùng nhóm (ví dụ "PR MKT") đứng ngay sau nhóm đó; ban lạ hẳn đứng cuối theo chữ cái. Máy chủ gửi danh sách đã xếp (`docThanhVien_`), giao diện giữ nguyên thứ tự nhận được.

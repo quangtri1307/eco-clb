@@ -192,10 +192,10 @@ VIEWS.baocao = function () {
       var kq = B.kq, cd = kq.cheDo;
       var nhomBan = [];
       if (cd === 'thanhvien') kq.bang.forEach(function (d) { var g = String(d.ban).trim().split(/\s+/)[0].toUpperCase(); if (g && nhomBan.indexOf(g) < 0) nhomBan.push(g); });
-      nhomBan.sort();
       var q = boDau(B.tim);
       var dong = kq.bang.filter(function (d) { return cd !== 'thanhvien' || ((B.ban === 'Tất cả' || String(d.ban).trim().split(/\s+/)[0].toUpperCase() === B.ban) && (!q || boDau(d.ten).indexOf(q) >= 0)); });
-      dong.sort(function (a, b) { var va = a.so[B.sapXep] || 0, vb = b.so[B.sapXep] || 0; return (B.tang ? va - vb : vb - va) || a.ten.localeCompare(b.ten, 'vi'); });
+      var viTri = {}; kq.bang.forEach(function (d, i) { viTri[d.ten] = i; });
+      dong.sort(function (a, b) { var va = a.so[B.sapXep] || 0, vb = b.so[B.sapXep] || 0; return (B.tang ? va - vb : vb - va) || (cd === 'ban' ? viTri[a.ten] - viTri[b.ten] : a.ten.localeCompare(b.ten, 'vi')); });
       var tong = {};
       kq.chiSo.forEach(function (c) { tong[c.khoa] = 0; dong.forEach(function (d) { tong[c.khoa] += d.so[c.khoa] || 0; }); });
       var sx = function (k, ten) { return '<th class="n"><button class="back" data-sx="' + esc(k) + '" style="font-size:11px;text-transform:uppercase">' + esc(ten) + (B.sapXep === k ? (B.tang ? ' ▲' : ' ▼') : '') + '</button></th>'; };
@@ -225,7 +225,7 @@ VIEWS.log = function () {
     if (page !== 'log') return;
     var buoi = ['Buổi 1'];
     var coMau = !!d.linkMau;
-    $('#main').innerHTML = '<div class="head"><div><h2>Làm log</h2><p class="lead">Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi.</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Làm log</h2><p class="lead">Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi. Ai có link file đều mở và đăng ký được.</p></div></div>' +
       '<div class="card"><div class="ctitle"><h3>File mẫu</h3>' + (coMau ? '<a class="btn ghost sm" href="' + esc(d.linkMau) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Mở file mẫu</a>' : '') + '</div>' +
       (coMau ? '' : '<div class="note" style="margin-bottom:12px">' + ic('info') + '<span>Chưa có file mẫu nên chưa tạo được file đăng ký. Dán link Google Sheet mẫu của CLB vào ô bên dưới rồi bấm Lưu.</span></div>') +
       '<form class="form" id="mauf"><div class="grid2"><label class="f">Link Google Sheet mẫu <small>Dùng file mẫu của tool cũ (có tab Đăng ký log). Mẫu khác cần một dòng tiêu đề có cột Họ và tên</small><input type="url" id="lm" value="' + esc(d.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
@@ -254,7 +254,7 @@ VIEWS.log = function () {
       $('#lg-b').disabled = true; thongBao($('#lg-m'), 'cho', 'Đang tạo file…');
       goiPhien('taoFileLog', { tenFile: $('#lg-t').value, nguoi: layChon(), buoi: buoi }).then(function (kq) {
         $('#lg-b').disabled = false;
-        $('#lg-m').innerHTML = '<span class="toast">Đã tạo: <a href="' + esc(kq.url) + '" target="_blank" rel="noopener">' + esc(kq.ten) + '</a></span>';
+        $('#lg-m').innerHTML = '<span class="toast">Đã tạo: <a href="' + esc(kq.url) + '" target="_blank" rel="noopener">' + esc(kq.ten) + '</a>' + (kq.canhBao ? '. ' + esc(kq.canhBao) : '') + '</span>';
       }).catch(function (err) { $('#lg-b').disabled = false; thongBao($('#lg-m'), 'loi', err.message); });
     };
   }).catch(loiTai);

@@ -464,7 +464,7 @@ function mauTuNhap_(maNhap) {
 /** Dữ liệu cho bước chọn người nhận. */
 function layNguonGui(phien) {
   canDangNhap_(phien, 'duyetmail');
-  var tv = docBang_('ThanhVien').map(function (t) {
+  var tv = docThanhVien_().map(function (t) {
     var o = {};
     COT_THANH_VIEN.forEach(function (c) { o[c[0]] = t[c[0]] instanceof Date ? Utilities.formatDate(t[c[0]], Session.getScriptTimeZone(), 'dd/MM/yyyy') : String(t[c[0]] == null ? '' : t[c[0]]); });
     return o;
@@ -665,7 +665,7 @@ function layCaiDatMail(phien) {
 
 /** Thành viên CLB có email luôn nằm sẵn trong danh bạ (lấy từ danh sách thành viên, không cần nhập). */
 function danhBaThanhVien_() {
-  return docBang_('ThanhVien').filter(function (t) { return emailHopLe_(t.Email); }).map(function (t) {
+  return docThanhVien_().filter(function (t) { return emailHopLe_(t.Email); }).map(function (t) {
     return { nhom: 'Thành viên CLB', ten: String(t.HoVaTen), email: String(t.Email).trim(), ghiChu: String(t.Ban || '') };
   });
 }
@@ -695,7 +695,7 @@ function luuCaiDatMail(phien, cd) {
 function layCauHinhSoan(phien) {
   canDangNhap_(phien, 'hopthu');
   var ds = [];
-  docBang_('ThanhVien').forEach(function (t) {
+  docThanhVien_().forEach(function (t) {
     if (emailHopLe_(t.Email)) ds.push({ nhom: 'Thành viên · ' + (nhomBan_(t.Ban) || 'Khác'), ten: String(t.HoVaTen), email: String(t.Email).trim() });
   });
   docBang_('DanhBa').forEach(function (d) {

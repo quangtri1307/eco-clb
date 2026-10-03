@@ -226,7 +226,6 @@ function moTab(k) {
 function renderBans() {
   var nhom = [];
   D.thanhVien.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
-  nhom.sort(function (a, b) { return a.localeCompare(b); });
   $('bans').innerHTML = ['Tất cả'].concat(nhom).map(function (b) {
     return '<button class="chip" aria-pressed="' + (b === ban) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>';
   }).join('');

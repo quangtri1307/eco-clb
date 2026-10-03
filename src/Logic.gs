@@ -91,6 +91,35 @@ function nhomBan_(ban) {
   return s.split(/\s+/)[0] || '';
 }
 
+/** Thứ tự chuẩn của các ban, dùng ở mọi chỗ liệt kê theo ban trong hai app. */
+var THU_TU_BAN = ['BOD', 'PG', 'PR CAP', 'PR DES', 'PR PHO', 'AD', 'HR'];
+
+/**
+ * Vị trí của một ban (hoặc một nhóm như "PR") trong thứ tự chuẩn.
+ * Ban mới cùng nhóm với ban đã có (ví dụ "PR MKT") đứng ngay sau nhóm đó; ban lạ hẳn đứng cuối.
+ */
+function hangBan_(ban) {
+  var s = String(ban == null ? '' : ban).trim().toUpperCase().replace(/\s+/g, ' ');
+  var i = THU_TU_BAN.indexOf(s);
+  if (i >= 0) return i;
+  var nhom = nhomBan_(s), cuoi = -1;
+  THU_TU_BAN.forEach(function (b, j) { if (nhomBan_(b) === nhom) cuoi = j; });
+  return cuoi >= 0 ? cuoi + 0.5 : THU_TU_BAN.length;
+}
+
+/** So sánh hai tên ban theo thứ tự chuẩn; ban lạ thì xếp theo chữ cái. */
+function soSanhBan_(a, b) {
+  return (hangBan_(a) - hangBan_(b)) || String(a || '').trim().toUpperCase().localeCompare(String(b || '').trim().toUpperCase());
+}
+
+/** Xếp danh sách thành viên (có Ban hoặc ban) theo thứ tự ban chuẩn; cùng ban thì giữ thứ tự cũ. */
+function xepThanhVienTheoBan_(ds) {
+  var banCua = function (t) { return t.Ban !== undefined ? t.Ban : t.ban; };
+  return ds.map(function (t, i) { return { t: t, i: i }; })
+    .sort(function (a, b) { return soSanhBan_(banCua(a.t), banCua(b.t)) || a.i - b.i; })
+    .map(function (x) { return x.t; });
+}
+
 /**
  * Tìm dòng tiêu đề và vị trí các cột theo tên (không phụ thuộc thứ tự cột).
  * @param {Array<Array>} values toàn bộ dữ liệu của tab nguồn
@@ -863,14 +892,14 @@ function chuCot_(so) {
 }
 
 /**
- * Xếp người theo ban như tool cũ; cùng ban thì giữ thứ tự trong danh sách thành viên.
+ * Xếp người theo thứ tự ban chuẩn (THU_TU_BAN); cùng ban thì giữ thứ tự trong danh sách thành viên.
  * Trả về { nguoi[], nhomBan[{dau, so}] } — dau là vị trí (từ 0) của người đầu tiên mỗi nhóm ban liền nhau.
  */
 function xepTheoBan_(nguoi, thuTu) {
   var viTri = {};
   (thuTu || []).forEach(function (t, i) { viTri[String(t.HoVaTen)] = i; });
   var ds = nguoi.map(function (t, i) { return { t: t, i: viTri[String(t.HoVaTen)] !== undefined ? viTri[String(t.HoVaTen)] : 1e6 + i }; });
-  ds.sort(function (a, b) { return String(a.t.Ban).trim().localeCompare(String(b.t.Ban).trim()) || a.i - b.i; });
+  ds.sort(function (a, b) { return soSanhBan_(a.t.Ban, b.t.Ban) || a.i - b.i; });
   var kq = ds.map(function (x) { return x.t; }), nhom = [];
   kq.forEach(function (t, i) {
     if (i && String(t.Ban).trim() === String(kq[i - 1].Ban).trim()) nhom[nhom.length - 1].so++;
@@ -1116,7 +1145,7 @@ function chuanHoaCachNhan_(giaTri) {
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
-    boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, nhanDienCot: nhanDienCot_,
+    boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
     dongThanhDoiTuong: dongThanhDoiTuong_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
