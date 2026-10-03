@@ -42,7 +42,7 @@ function duLieuBaoCao_() {
     task: docBang_('Task').map(function (t) {
       return { nguoi: String(t.NguoiPhuTrach), hanChot: ngayChuoi_(t.HanChot), trangThaiLuu: String(t.TrangThai || TRANG_THAI_TASK.GIAO), ngayXong: ngayCuaThoiGian_(t.ThoiGianXong) };
     }),
-    thanhVien: docBang_('ThanhVien').filter(khongPhaiBod_).map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban) }; }),
+    thanhVien: docThanhVien_().filter(khongPhaiBod_).map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban) }; }),
     loai: docBang_('LoaiHoatDong').map(function (l) { return String(l.TenLoai); })
   };
 }
@@ -120,7 +120,7 @@ function maTuLink_(link) {
 function layDuLieuLog(phien) {
   canDangNhap_(phien, 'log');
   return {
-    thanhVien: docBang_('ThanhVien').map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
+    thanhVien: docThanhVien_().map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
     linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || ''),
     ganDay: docBang_('FileLog').map(function (f) {
       return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan), soNguoi: Number(f.SoNguoi) || 0, soBuoi: Number(f.SoBuoi) || 0, nguoiTao: String(f.NguoiTao) };
@@ -142,6 +142,10 @@ function taoFileLog(phien, yc) {
   var file;
   try { file = DriveApp.getFileById(maMau).makeCopy(k.tenFile, thuMuc || DriveApp.getRootFolder()); }
   catch (e) { throw new Error('Không chép được file mẫu. Kiểm tra lại link file mẫu.'); }
+  // Ai có link cũng mở và tích đăng ký được; tab Đăng ký log đã khoá, chỉ chừa ô tích và Ghi chú.
+  var canhBao = '';
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); }
+  catch (e) { canhBao = 'Chưa mở được quyền cho người có link, bạn mở file và bật chia sẻ bằng tay nhé.'; }
   var ss = SpreadsheetApp.openById(file.getId());
   var dangKy = timTab_(ss, 'Đăng ký log');
   if (dangKy) dienMauToolCu_(ss, dangKy, xepTheoBan_(k.nguoi, tv), k.buoi);
@@ -150,7 +154,7 @@ function taoFileLog(phien, yc) {
 
   var url = ss.getUrl();
   themDong_('FileLog', [{ ThoiGian: new Date(), TenFile: k.tenFile, DuongDan: url, SoNguoi: k.nguoi.length, SoBuoi: k.buoi.length, NguoiTao: String(tk.HoVaTen) }]);
-  return { url: url, ten: k.tenFile };
+  return { url: url, ten: k.tenFile, canhBao: canhBao };
 }
 
 /** Tìm tab theo tên, không phân biệt hoa thường và khoảng trắng thừa. */

@@ -160,7 +160,7 @@ function layDuLieuCongDiem(phien) {
   var ky = layKyHienTai_();
   return {
     ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
-    thanhVien: docBang_('ThanhVien').filter(khongPhaiBod_).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
+    thanhVien: docThanhVien_().filter(khongPhaiBod_).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
     loai: docBang_('LoaiHoatDong').filter(loaiCongTay_).map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     ganDay: lichSuGanDay_(ky, 30)
   };
@@ -237,7 +237,7 @@ function danhDauDaDoc(phien, thoiGianMs) {
 
 function layCaiDatDesk(phien) {
   canDangNhap_(phien, 'caidat');
-  var tv = docBang_('ThanhVien');
+  var tv = docThanhVien_();
   return {
     loai: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, congTay: loaiCongTay_(l) }; }),
     quyChe: String(layCaiDat_('QuyChe') || ''),
@@ -401,7 +401,7 @@ function layDuLieuTask(phien) {
     homNay: homNay_(),
     sapDenHanNgay: soNgaySapDenHan_(),
     task: ds,
-    thanhVien: docBang_('ThanhVien').map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
+    thanhVien: docThanhVien_().map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
     thongBao: (function () {
       var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
       return toi ? { cach: toi.cach } : null;

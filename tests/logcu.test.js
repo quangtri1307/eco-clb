@@ -76,11 +76,12 @@ function taoFileMau() {
 
 const TV = [
   { HoVaTen: 'Nguyễn An', Lop: '11A1', Ban: 'PR CAP', SoDienThoaiCaNhan: '0912000001' },
-  { HoVaTen: 'Trần Bình', Lop: '10A2', Ban: 'HR', SoDienThoaiCaNhan: '0912000002' },
+  { HoVaTen: 'Trần Bình', Lop: '10A2', Ban: 'PG', SoDienThoaiCaNhan: '0912000002' },
   { HoVaTen: 'Lê Chi', Lop: '11A3', Ban: 'PR CAP', SoDienThoaiCaNhan: '' },
   { HoVaTen: 'Phạm Dũng', Lop: '12A1', Ban: 'BOD', SoDienThoaiCaNhan: '0912000004' },
-  { HoVaTen: 'Võ Em', Lop: '10A1', Ban: 'HR', SoDienThoaiCaNhan: '0912000005' }
+  { HoVaTen: 'Võ Em', Lop: '10A1', Ban: 'PR DES', SoDienThoaiCaNhan: '0912000005' }
 ];
+// Tool cũ xếp ban theo chữ cái; với các ban này thứ tự chữ cái trùng thứ tự chuẩn nên hai bên phải ra giống hệt.
 const KIEU = { BorderStyle: { SOLID: 'SOLID' } };
 
 function chayToolCu(buoi) {
@@ -122,20 +123,32 @@ for (const buoi of [['Sáng T7'], ['Sáng T7', 'Chiều T7', 'Sáng CN']]) {
 }
 
 test('tab Đăng ký log điền đúng chỗ', () => {
+  TV.push({ HoVaTen: 'Đỗ Giang', Lop: '10A4', Ban: 'HR', SoDienThoaiCaNhan: '' }, { HoVaTen: 'Hồ Hà', Lop: '10A5', Ban: 'AD', SoDienThoaiCaNhan: '' });
   const { mau } = chayApp(['A', 'B'], TV.map((t) => t.HoVaTen));
+  TV.splice(5, 2);
   const dk = mau.tabs[0], o = (r, c) => dk.o[r + ',' + c] || {};
-  assert.deepStrictEqual([5, 6, 7, 8, 9].map((r) => o(r, 1).gt), ['Phạm Dũng', 'Trần Bình', 'Võ Em', 'Nguyễn An', 'Lê Chi']);
+  // Thứ tự chuẩn: BOD, PG, PR CAP, PR DES, PR PHO, AD, HR.
+  assert.deepStrictEqual([5, 6, 7, 8, 9, 10, 11].map((r) => o(r, 1).gt), ['Phạm Dũng', 'Trần Bình', 'Nguyễn An', 'Lê Chi', 'Võ Em', 'Hồ Hà', 'Đỗ Giang']);
   assert.strictEqual(o(5, 4).gt, '0912000004');
   assert.deepStrictEqual([o(4, 5).gt, o(4, 6).gt, o(4, 7).gt], ['A', 'B', 'Ghi chú']);
-  assert.strictEqual(o(3, 6).ct, '=COUNTIF(F5:F9, TRUE)');
+  assert.strictEqual(o(3, 6).ct, '=COUNTIF(F5:F11, TRUE)');
   assert.strictEqual(o(4, 7).nen, '#fce5cd');
-  assert.ok(o(9, 6).tich && !o(9, 7).tich);
-  assert.ok(dk.gop.includes('6,3,2,1') && dk.gop.includes('8,3,2,1') && !dk.gop.includes('5,3,1,1'));
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(dk.khoa.mo)), [[5, 5, 5, 2], [5, 7, 5, 1]]);
+  assert.ok(o(11, 6).tich && !o(11, 7).tich);
+  assert.ok(dk.gop.includes('7,3,2,1') && !dk.gop.includes('5,3,1,1'));
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(dk.khoa.mo)), [[5, 5, 7, 2], [5, 7, 7, 1]]);
   assert.strictEqual(mau.tabs[1].o['3,3'].ct, "='Đăng ký log'!F3");
 });
 
 test('chữ cột', () => {
   const L = require('./load-logic');
   assert.deepStrictEqual([1, 5, 26, 27, 52, 703].map(L.chuCot), ['A', 'E', 'Z', 'AA', 'AZ', 'AAA']);
+});
+
+test('thứ tự ban chuẩn: BOD, PG, PR CAP, PR DES, PR PHO, AD, HR', () => {
+  const L = require('./load-logic');
+  const ban = ['hr', 'AD', 'PR PHO', 'Ban Lạ', 'PR  des', 'PR MKT', 'PR CAP', 'PG', 'BOD', ''];
+  assert.deepStrictEqual(ban.slice().sort(L.soSanhBan), ['BOD', 'PG', 'PR CAP', 'PR  des', 'PR PHO', 'PR MKT', 'AD', 'hr', '', 'Ban Lạ']);
+  assert.deepStrictEqual(['HR', 'PR', 'AD', 'BOD', 'PG'].sort(L.soSanhBan), ['BOD', 'PG', 'PR', 'AD', 'HR']);
+  const ds = [{ HoVaTen: 'a', Ban: 'HR' }, { HoVaTen: 'b', Ban: 'BOD' }, { HoVaTen: 'c', Ban: 'HR' }, { ten: 'd', ban: 'PG' }];
+  assert.deepStrictEqual(L.xepThanhVienTheoBan(ds).map((t) => t.HoVaTen || t.ten), ['b', 'd', 'a', 'c']);
 });

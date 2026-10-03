@@ -458,7 +458,6 @@ function datSo(b, n) {
 function picker(id, thanhVien, chonHet) {
   var nhom = [];
   thanhVien.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
-  nhom.sort();
   return '<div class="picker" id="' + id + '"><div class="row sb"><b style="font-size:13px">Chọn người</b><span class="hint" data-cnt></span></div>' +
     '<div class="row"><input type="search" id="' + id + '-q" placeholder="Tìm tên…" aria-label="Tìm thành viên" class="pk-tim">' +
     '<div class="row" data-bans>' + ['Tất cả'].concat(nhom).map(function (b, i) { return '<button type="button" class="chip" aria-pressed="' + (i === 0) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div></div>' +

@@ -85,7 +85,7 @@ function taiDanhSachThanhVien(yeuCau) {
     // Người không còn trong danh sách mới: giữ hồ sơ đầy đủ ở tab Thành viên cũ để sau này còn tra cứu.
     var cu = capNhatThanhVienCu_(docBang_('ThanhVien'), kq.thanhVien, docBang_('ThanhVienCu'), bayGio);
     ghiDeBang_('ThanhVienCu', cu.ds);
-    ghiDeBang_('ThanhVien', kq.thanhVien);
+    ghiDeBang_('ThanhVien', xepThanhVienTheoBan_(kq.thanhVien));
 
     if (kyMoi) {
       themDong_('KyHoatDong', [{ NhiemKy: kyMoi.NhiemKy, HocKy: kyMoi.HocKy, BatDau: bayGio, KieuTaiLen: yeuCau.kieu }]);
@@ -145,7 +145,7 @@ function layDuLieuBoard() {
   if (daLuu) return JSON.parse(daLuu);
 
   var ky = layKyHienTai_();
-  var thanhVien = docBang_('ThanhVien');
+  var thanhVien = docThanhVien_();
   var lichSu = ky ? docBang_('LichSuDiem') : [];
   var luuTru = ky && Number(ky.HocKy) === 2 ? docBang_('LuuTruThanhVien') : [];
   var duLieu = {
@@ -352,6 +352,11 @@ function ghiDeBang_(ten, doiTuong) {
     var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
     sh.getRange(2, 1, dong.length, td.length).setValues(dong);
   });
+}
+
+/** Danh sách thành viên theo thứ tự ban chuẩn, dùng cho mọi chỗ hiện danh sách. */
+function docThanhVien_() {
+  return xepThanhVienTheoBan_(docBang_('ThanhVien'));
 }
 
 function layKyHienTai_() {
