@@ -72,6 +72,8 @@
       var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', mau);
       // Trên cùng (tai thỏ) cùng màu thanh tiêu đề, dưới cùng (thanh vuốt) cùng màu thanh tab của app.
       document.documentElement.style.background = 'linear-gradient(' + mau + ' 50%, ' + chan + ' 50%)';
+      // iPhone tô phần ngoài khung app (dưới thanh vuốt) bằng màu nền gốc, không theo dải màu: đặt màu chân, kẻo lộ vệt trắng.
+      document.documentElement.style.backgroundColor = chan;
       document.body.style.background = 'transparent';
       khung.style.background = nen;
       return;
