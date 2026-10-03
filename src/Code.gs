@@ -70,8 +70,7 @@ function taiDanhSachThanhVien(yeuCau) {
     throw new Error('Có ' + canTaoMoi.length + ' BOD mới cần tài khoản. Nhập mật khẩu mặc định (ít nhất 6 ký tự).');
   }
 
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   try {
     var bayGio = new Date();
     var kyHienTai = layKyHienTai();
@@ -99,7 +98,7 @@ function taiDanhSachThanhVien(yeuCau) {
       (soTaoMoi ? ' Đã tạo ' + soTaoMoi + ' tài khoản BOD mới.' : '') +
       (cu.soMoiRoi ? ' ' + cu.soMoiRoi + ' người không còn trong danh sách, hồ sơ đã được giữ ở tab ThanhVienCu.' : '');
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
 }
 
@@ -195,6 +194,8 @@ function khoiTaoCoSoDuLieu() {
       sh.setFrozenRows(1);
     }
   });
+  BANG_NHO_TAM.forEach(boNhoTamBang_); // có thể vừa thêm cột: đọc lại cho đủ cột
+  BO_NHO_BANG_ = {};
   if (!docBang('LoaiHoatDong').length) {
     themDong('LoaiHoatDong', ['Staff', 'Log', 'Tham gia hoạt động'].map(function (t) { return { TenLoai: t, Diem: 0 }; }));
   }
@@ -213,19 +214,100 @@ function damBaoCauTrucBang() {
   kho.setProperty('CauTrucBang', mau);
 }
 
+/** Lấy tab để ghi. Bảng này sắp đổi nên bản nhớ tạm của nó bị bỏ. */
 function bangDuLieu(ten) {
   damBaoCauTrucBang();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(ten);
   if (!sh && BANG[ten]) { khoiTaoCoSoDuLieu(); sh = ss.getSheetByName(ten); } // tab mới thêm ở bản cập nhật
   if (!sh) throw new Error('Thiếu tab ' + ten + '. Mở menu ECO hậu kỳ để khởi tạo.');
+  delete BO_NHO_BANG_[ten];
+  BANG_DA_GHI_[ten] = true;
+  boNhoTamBang_(ten);
   return sh;
 }
 
+/**
+ * Đọc cả bảng thành danh sách đối tượng.
+ * Trong một lần chạy, mỗi bảng chỉ đọc từ sheet một lần. Vài bảng ít đổi (BANG_NHO_TAM) còn được nhớ tạm
+ * giữa các lần chạy, để mở app nhanh hơn; ghi vào bảng nào thì bản nhớ tạm của bảng đó bị bỏ ngay.
+ */
+var BANG_NHO_TAM = ['CaiDat', 'TaiKhoan', 'ThanhVien', 'LoaiHoatDong'];
+var GIAY_NHO_TAM = 600;
+var BO_NHO_BANG_ = {};
+var BANG_DA_GHI_ = {};
 function docBang(ten) {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ten);
-  if (!sh || sh.getLastRow() < 2) return [];
-  return dongThanhDoiTuong(sh.getDataRange().getValues());
+  var chuoi = BO_NHO_BANG_[ten];
+  if (chuoi === undefined) {
+    var nhoTam = BANG_NHO_TAM.indexOf(ten) >= 0 && !DO_SAU_KHOA_; // đang giữ khoá để ghi thì luôn đọc thẳng từ sheet
+    var bo = nhoTam ? CacheService.getScriptCache() : null, phienBan = '';
+    if (nhoTam) {
+      try {
+        var co = bo.getAll(['bang_' + ten, 'phienban_' + ten]);
+        phienBan = co['phienban_' + ten] || '0';
+        var luu = co['bang_' + ten];
+        if (luu && luu.indexOf(phienBan + '|') === 0) chuoi = luu.slice(phienBan.length + 1);
+      } catch (e) { nhoTam = false; }
+    }
+    if (chuoi === undefined) {
+      var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ten);
+      chuoi = maHoaBang(!sh || sh.getLastRow() < 2 ? [] : dongThanhDoiTuong(sh.getDataRange().getValues()));
+      // Ghi kèm phiên bản đã thấy trước khi đọc: nếu có người ghi chen vào giữa thì bản này tự hết hiệu lực.
+      if (nhoTam) { try { bo.put('bang_' + ten, phienBan + '|' + chuoi, GIAY_NHO_TAM); } catch (e) { /* bảng lớn quá thì thôi không nhớ tạm */ } }
+    }
+    BO_NHO_BANG_[ten] = chuoi;
+  }
+  return giaiMaBang(chuoi);
+}
+
+/** Bỏ bản nhớ tạm của một bảng (sau khi ghi, hoặc khi có người sửa tay trên sheet). */
+function boNhoTamBang_(ten) {
+  if (BANG_NHO_TAM.indexOf(ten) < 0) return;
+  try {
+    var bo = CacheService.getScriptCache();
+    bo.put('phienban_' + ten, String(Date.now()) + Math.random().toString(36).slice(2, 6), 21600);
+    bo.remove('bang_' + ten);
+  } catch (e) { /* bản nhớ tạm tự hết hạn sau GIAY_NHO_TAM giây */ }
+}
+
+/** Có người sửa tay trên sheet: bỏ bản nhớ tạm của tab đó để app thấy ngay. */
+function onEdit(e) {
+  try { boNhoTamBang_(e.range.getSheet().getName()); } catch (x) { /* bỏ qua */ }
+}
+
+/* ===================== Khoá ghi ===================== */
+
+/**
+ * Hai người bấm lưu cùng lúc thì lần lượt từng người ghi, không ai ghi đè hay chen vào dòng của người kia.
+ * Cách dùng: var khoa = layKhoa_(); try { ... } finally { traKhoa_(khoa); }   hoặc   voiKhoa_(function () { ... }).
+ * Gọi lồng nhau trong cùng một lần chạy vẫn được: chỉ lần ngoài cùng mới thật sự khoá.
+ * khongChoDuoc = true: đang bận thì trả về false thay vì báo lỗi (dùng cho việc chạy tự động).
+ */
+var DO_SAU_KHOA_ = 0;
+function layKhoa_(choMs, khongChoDuoc) {
+  if (DO_SAU_KHOA_) { DO_SAU_KHOA_++; return null; }
+  var khoa = LockService.getScriptLock();
+  if (!khoa.tryLock(choMs || 30000)) {
+    if (khongChoDuoc) return false;
+    throw new Error('Đang có nhiều người lưu cùng lúc. Bạn đợi vài giây rồi thử lại nhé.');
+  }
+  DO_SAU_KHOA_ = 1;
+  BO_NHO_BANG_ = {}; // đọc lại từ sheet: có thể người khác vừa ghi trước mình
+  BANG_DA_GHI_ = {};
+  return khoa;
+}
+function traKhoa_(khoa) {
+  if (khoa === false) return;
+  DO_SAU_KHOA_ = Math.max(0, DO_SAU_KHOA_ - 1);
+  if (!khoa) return;
+  try { SpreadsheetApp.flush(); } catch (e) { /* bỏ qua */ }
+  Object.keys(BANG_DA_GHI_).forEach(boNhoTamBang_); // bỏ lần nữa sau khi ghi xong hẳn
+  BANG_DA_GHI_ = {};
+  khoa.releaseLock();
+}
+function voiKhoa_(viec) {
+  var khoa = layKhoa_();
+  try { return viec(); } finally { traKhoa_(khoa); }
 }
 
 function tieuDe(sh) {
@@ -234,19 +316,24 @@ function tieuDe(sh) {
 
 function themDong(ten, doiTuong) {
   if (!doiTuong.length) return;
-  var sh = bangDuLieu(ten);
-  var td = tieuDe(sh);
-  var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
-  sh.getRange(sh.getLastRow() + 1, 1, dong.length, td.length).setValues(dong);
+  voiKhoa_(function () {
+    var sh = bangDuLieu(ten);
+    var td = tieuDe(sh);
+    var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
+    sh.getRange(sh.getLastRow() + 1, 1, dong.length, td.length).setValues(dong);
+  });
 }
 
+/** Ghi đè cả bảng. Nếu danh sách mới lấy từ chính bảng đó thì phải đọc và ghi trong cùng một khoá (voiKhoa_). */
 function ghiDeBang(ten, doiTuong) {
-  var sh = bangDuLieu(ten);
-  var td = tieuDe(sh);
-  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, td.length).clearContent();
-  if (!doiTuong.length) return;
-  var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
-  sh.getRange(2, 1, dong.length, td.length).setValues(dong);
+  voiKhoa_(function () {
+    var sh = bangDuLieu(ten);
+    var td = tieuDe(sh);
+    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, td.length).clearContent();
+    if (!doiTuong.length) return;
+    var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
+    sh.getRange(2, 1, dong.length, td.length).setValues(dong);
+  });
 }
 
 function layKyHienTai() {
@@ -261,15 +348,17 @@ function layCaiDat(khoa) {
 }
 
 function datCaiDat(khoa, giaTri) {
-  var sh = bangDuLieu('CaiDat');
-  var v = sh.getDataRange().getValues();
-  var dong = v.length + 1;
-  for (var r = 1; r < v.length; r++) if (v[r][0] === khoa) { dong = r + 1; break; }
-  if (dong > v.length) sh.getRange(dong, 1).setValue(khoa);
-  var o = sh.getRange(dong, 2);
-  // Chữ thì giữ nguyên là chữ, để sheet không tự đổi thành ngày giờ hay số.
-  o.setNumberFormat(typeof giaTri === 'string' ? '@' : 'General');
-  o.setValue(giaTri);
+  voiKhoa_(function () {
+    var sh = bangDuLieu('CaiDat');
+    var v = sh.getDataRange().getValues();
+    var dong = v.length + 1;
+    for (var r = 1; r < v.length; r++) if (v[r][0] === khoa) { dong = r + 1; break; }
+    if (dong > v.length) sh.getRange(dong, 1).setValue(khoa);
+    var o = sh.getRange(dong, 2);
+    // Chữ thì giữ nguyên là chữ, để sheet không tự đổi thành ngày giờ hay số.
+    o.setNumberFormat(typeof giaTri === 'string' ? '@' : 'General');
+    o.setValue(giaTri);
+  });
 }
 
 function xoaBoNhoTam() {

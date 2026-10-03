@@ -67,6 +67,16 @@ function taoMaKetNoi() {
  * Trả về danh sách người nhận: [{ ten, vaiTro, ma, chatId, tenZalo }].
  */
 function dongBoNguoiNhanZalo() {
+  var kq = nguoiNhanZalo_();
+  if (!kq.moi.length) return kq.ds;
+  // Có người mới: thêm dòng trong khoá (kiểm lại trong khoá để hai người mở cùng lúc không thêm trùng).
+  return voiKhoa_(function () {
+    var k = nguoiNhanZalo_();
+    if (k.moi.length) themDong('KetNoiZalo', k.moi);
+    return k.ds;
+  });
+}
+function nguoiNhanZalo_() {
   var tk = docBang('TaiKhoan').filter(function (t) { return t.HoVaTen && (t.VaiTro === 'BOD' || t.VaiTro === 'HR'); });
   var ketNoi = docBang('KetNoiZalo');
   var theoTen = {};
@@ -79,11 +89,10 @@ function dongBoNguoiNhanZalo() {
       moi.push(dong);
     }
   });
-  if (moi.length) themDong('KetNoiZalo', moi);
-  return tk.map(function (t) {
+  return { moi: moi, ds: tk.map(function (t) {
     var k = theoTen[String(t.HoVaTen)];
     return { ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), ma: String(k.MaKetNoi), chatId: String(k.ChatId || ''), tenZalo: String(k.TenZalo || '') };
-  });
+  }) };
 }
 
 function trangThaiZaloCuaToi(ten) {
@@ -153,17 +162,19 @@ function moTaKiemTraZalo(bao) {
 }
 
 function ghiKetNoiZalo(ten, chatId, tenZalo) {
-  var sh = bangDuLieu('KetNoiZalo');
-  var v = sh.getDataRange().getValues();
-  var td = v[0];
-  for (var r = 1; r < v.length; r++) {
-    if (String(v[r][td.indexOf('HoVaTen')]) === ten) {
-      sh.getRange(r + 1, td.indexOf('ChatId') + 1).setValue(chatId);
-      sh.getRange(r + 1, td.indexOf('TenZalo') + 1).setValue(tenZalo);
-      sh.getRange(r + 1, td.indexOf('ThoiGianKetNoi') + 1).setValue(chatId ? new Date() : '');
-      return;
+  voiKhoa_(function () {
+    var sh = bangDuLieu('KetNoiZalo');
+    var v = sh.getDataRange().getValues();
+    var td = v[0];
+    for (var r = 1; r < v.length; r++) {
+      if (String(v[r][td.indexOf('HoVaTen')]) === ten) {
+        sh.getRange(r + 1, td.indexOf('ChatId') + 1).setValue(chatId);
+        sh.getRange(r + 1, td.indexOf('TenZalo') + 1).setValue(tenZalo);
+        sh.getRange(r + 1, td.indexOf('ThoiGianKetNoi') + 1).setValue(chatId ? new Date() : '');
+        return;
+      }
     }
-  }
+  });
 }
 
 /* ---------- Nhắc việc hằng ngày ---------- */
@@ -255,8 +266,10 @@ function luuCaiDatZalo(phien, cd) {
     datCaiDat('ZaloTenBot', tenHienThiBot(bot));
     boWebhookZalo();
     // Bot mới thì mọi người phải nhắn mã kết nối lại.
-    var ds = docBang('KetNoiZalo').map(function (k) { k.ChatId = ''; k.TenZalo = ''; k.ThoiGianKetNoi = ''; return k; });
-    ghiDeBang('KetNoiZalo', ds);
+    voiKhoa_(function () {
+      var ds = docBang('KetNoiZalo').map(function (k) { k.ChatId = ''; k.TenZalo = ''; k.ThoiGianKetNoi = ''; return k; });
+      ghiDeBang('KetNoiZalo', ds);
+    });
   }
   damBaoLichNhac();
   return true;

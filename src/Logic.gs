@@ -177,6 +177,20 @@ function tinhKyMoi(kyHienTai, kieu, ngay) {
 }
 
 /** Biến các dòng của một tab (có dòng tiêu đề) thành danh sách đối tượng. */
+/** Chuyển một bảng thành chữ để cất vào bộ nhớ tạm, và đổi ngược lại. Ô ngày giờ vẫn giữ là ngày giờ. */
+function maHoaBang(ds) {
+  return JSON.stringify(ds.map(function (o) {
+    var x = {};
+    Object.keys(o).forEach(function (k) { var v = o[k]; x[k] = Object.prototype.toString.call(v) === '[object Date]' ? { $ngay: v.getTime() } : v; });
+    return x;
+  }));
+}
+function giaiMaBang(chuoi) {
+  return JSON.parse(chuoi, function (k, v) {
+    return v && typeof v === 'object' && typeof v.$ngay === 'number' && Object.keys(v).length === 1 ? new Date(v.$ngay) : v;
+  });
+}
+
 function dongThanhDoiTuong(values) {
   if (!values || values.length < 2) return [];
   var tieuDe = values[0];
@@ -1078,7 +1092,7 @@ if (typeof module !== 'undefined') {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
     boDau: boDau, chuanHoaTenCot: chuanHoaTenCot, nhomBan: nhomBan, nhanDienCot: nhanDienCot,
     docDanhSachThanhVien: docDanhSachThanhVien, capNhatThanhVienCu: capNhatThanhVienCu, tenNhiemKy: tenNhiemKy, tinhKyMoi: tinhKyMoi,
-    dongThanhDoiTuong: dongThanhDoiTuong, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
+    dongThanhDoiTuong: dongThanhDoiTuong, maHoaBang: maHoaBang, giaiMaBang: giaiMaBang, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
     linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo, khongPhaiBod: khongPhaiBod,
     htmlSangChu: htmlSangChu, lamSachHtml: lamSachHtml, chuanBiGuiTuNhap: chuanBiGuiTuNhap,
     coQuyen: coQuyen, kiemTraMatKhauMoi: kiemTraMatKhauMoi, taoDongCongDiem: taoDongCongDiem,

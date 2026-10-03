@@ -58,27 +58,30 @@ VIEWS.home = function () {
   $('#main').innerHTML = khungChao(tenGoi(NGUOI.ten)) +
     '<div id="tomtat">' + cho() + '</div>' +
     '<div class="card"><h3>Đi tới</h3><div class="tiles">' + chucNang.map(function (x) { return '<button class="tile" data-p="' + x[0] + '">' + ic(x[2], 22) + x[1] + huyHieu(x[0]) + '</button>'; }).join('') + '</div></div>';
-  goiPhien('layTrangChu').then(function (d) {
-    if (page !== 'home') return;
-    var o = [];
-    var phuTask = function (t) { return [t.sap ? t.sap + ' sắp đến hạn' : '', t.tre ? t.tre + ' trễ hạn' : ''].filter(String).join(' · ') || 'Không có gì gấp'; };
-    if (d.taskCuaToi) o.push(oTom(d.taskCuaToi.dangLam, 'Task của bạn', phuTask(d.taskCuaToi), 'task', d.taskCuaToi.tre ? 'do' : d.taskCuaToi.sap ? 'vang' : ''));
-    if (d.taskThanhVien) o.push(oTom(d.taskThanhVien.sap + d.taskThanhVien.tre, 'Task thành viên cần nhắc', phuTask(d.taskThanhVien), 'task', d.taskThanhVien.tre ? 'do' : d.taskThanhVien.sap ? 'vang' : ''));
-    if (d.choDuyet !== undefined) o.push(oTom(d.choDuyet, 'Thư chờ duyệt', d.choDuyet ? 'UCV đang chờ bạn' : 'Đã duyệt hết', 'mail', d.choDuyet ? 'vang' : ''));
-    if (d.gopYMoi !== undefined) o.push(oTom(d.gopYMoi, 'Góp ý mới', d.gopYMoi ? 'Chưa đọc' : 'Đã đọc hết', 'gopy', d.gopYMoi ? 'vang' : ''));
-    if (d.thu) {
-      o.push(oTom(d.thu.cho, 'Thư chờ duyệt', 'BOD đang xem', 'mail'));
-      o.push(oTom(d.thu.sua, 'Cần sửa lại', d.thu.sua ? 'Mở để sửa' : 'Không có', 'mail', d.thu.sua ? 'vang' : ''));
-      o.push(oTom(d.thu.nhap, 'Thư nháp', 'Chưa gửi duyệt', 'mail'));
-      o.push(oTom(d.thu.duyet, 'Đã duyệt', 'Đã gửi đi', 'mail'));
-    }
-    var tb = d.thongBao, nhac = '';
-    if (tb && ((tb.cach.indexOf('app') >= 0 && !tb.soMay) || (tb.cach.indexOf('zalo') >= 0 && !tb.daKetNoiZalo))) {
-      nhac = '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('bell', 15) + ' Bạn chưa cài xong cách nhận thông báo, nên có thể bỏ lỡ tin quan trọng.</span><button class="btn sm" data-p="thongbao">Cài thông báo</button></div>';
-    }
-    $('#tomtat').innerHTML = nhac + '<div class="toms">' + o.join('') + '</div>';
-  }).catch(function (err) { if ($('#tomtat')) $('#tomtat').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  goiPhien('layTrangChu').then(function (d) { if (page === 'home') veTomTat(d); })
+    .catch(function (err) { if ($('#tomtat')) $('#tomtat').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
 };
+function veTomTat(d) {
+  if (!$('#tomtat')) return;
+  capNhatTuTrangChu(d);
+  var o = [];
+  var phuTask = function (t) { return [t.sap ? t.sap + ' sắp đến hạn' : '', t.tre ? t.tre + ' trễ hạn' : ''].filter(String).join(' · ') || 'Không có gì gấp'; };
+  if (d.taskCuaToi) o.push(oTom(d.taskCuaToi.dangLam, 'Task của bạn', phuTask(d.taskCuaToi), 'task', d.taskCuaToi.tre ? 'do' : d.taskCuaToi.sap ? 'vang' : ''));
+  if (d.taskThanhVien) o.push(oTom(d.taskThanhVien.sap + d.taskThanhVien.tre, 'Task thành viên cần nhắc', phuTask(d.taskThanhVien), 'task', d.taskThanhVien.tre ? 'do' : d.taskThanhVien.sap ? 'vang' : ''));
+  if (d.choDuyet !== undefined) o.push(oTom(d.choDuyet, 'Thư chờ duyệt', d.choDuyet ? 'UCV đang chờ bạn' : 'Đã duyệt hết', 'mail', d.choDuyet ? 'vang' : ''));
+  if (d.gopYMoi !== undefined) o.push(oTom(d.gopYMoi, 'Góp ý mới', d.gopYMoi ? 'Chưa đọc' : 'Đã đọc hết', 'gopy', d.gopYMoi ? 'vang' : ''));
+  if (d.thu) {
+    o.push(oTom(d.thu.cho, 'Thư chờ duyệt', 'BOD đang xem', 'mail'));
+    o.push(oTom(d.thu.sua, 'Cần sửa lại', d.thu.sua ? 'Mở để sửa' : 'Không có', 'mail', d.thu.sua ? 'vang' : ''));
+    o.push(oTom(d.thu.nhap, 'Thư nháp', 'Chưa gửi duyệt', 'mail'));
+    o.push(oTom(d.thu.duyet, 'Đã duyệt', 'Đã gửi đi', 'mail'));
+  }
+  var tb = d.thongBao, nhac = '';
+  if (tb && ((tb.cach.indexOf('app') >= 0 && !tb.soMay) || (tb.cach.indexOf('zalo') >= 0 && !tb.daKetNoiZalo))) {
+    nhac = '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('bell', 15) + ' Bạn chưa cài xong cách nhận thông báo, nên có thể bỏ lỡ tin quan trọng.</span><button class="btn sm" data-p="thongbao">Cài thông báo</button></div>';
+  }
+  $('#tomtat').innerHTML = nhac + '<div class="toms">' + o.join('') + '</div>';
+}
 
 /* ---------- Trang Thông báo ---------- */
 var TEN_CACH = { zalo: 'Zalo', app: 'App trên điện thoại', mail: 'Mail' };

@@ -55,6 +55,13 @@ function dangXuat(phien) {
   return true;
 }
 
+/** Mở app: người dùng và trang chào trong một lần hỏi máy chủ (mở nhanh hơn). Phiên hết hạn thì trả về null. */
+function moDesk(phien) {
+  var u = layNguoiDung(phien);
+  if (!u) return null;
+  return { nguoiDung: u, trangChu: layTrangChu(phien) };
+}
+
 /** Trả về người dùng của phiên, hoặc null nếu phiên hết hạn. Mỗi lần mở app thì gia hạn phiên. */
 function layNguoiDung(phien) {
   var u = docPhien(phien);
@@ -119,19 +126,21 @@ function canDangNhap(phien, chucNang) {
 }
 
 function ghiMatKhau(email, matKhau) {
-  var sh = bangDuLieu('TaiKhoan');
-  var v = sh.getDataRange().getValues();
-  var td = v[0];
-  var cE = td.indexOf('Email'), cM = td.indexOf('MatKhau'), cS = td.indexOf('Muoi');
-  for (var r = 1; r < v.length; r++) {
-    if (String(v[r][cE]).toLowerCase() === String(email).toLowerCase()) {
-      var muoi = Utilities.getUuid();
-      sh.getRange(r + 1, cM + 1).setValue(bamMatKhau(String(matKhau), muoi));
-      sh.getRange(r + 1, cS + 1).setValue(muoi);
-      return;
+  voiKhoa_(function () {
+    var sh = bangDuLieu('TaiKhoan');
+    var v = sh.getDataRange().getValues();
+    var td = v[0];
+    var cE = td.indexOf('Email'), cM = td.indexOf('MatKhau'), cS = td.indexOf('Muoi');
+    for (var r = 1; r < v.length; r++) {
+      if (String(v[r][cE]).toLowerCase() === String(email).toLowerCase()) {
+        var muoi = Utilities.getUuid();
+        sh.getRange(r + 1, cM + 1).setValue(bamMatKhau(String(matKhau), muoi));
+        sh.getRange(r + 1, cS + 1).setValue(muoi);
+        return;
+      }
     }
-  }
-  throw new Error('Không tìm thấy tài khoản ' + email + '.');
+    throw new Error('Không tìm thấy tài khoản ' + email + '.');
+  });
 }
 
 /** Xoá các phiên đã hết hạn. Gọi kèm mỗi lần đăng nhập thành công là đủ, không cần lịch chạy. */
@@ -172,8 +181,7 @@ function lichSuGanDay(ky, soDong) {
 
 function congDiem(phien, yeuCau) {
   var tk = canDangNhap(phien, 'congdiem');
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   try {
     var kq = taoDongCongDiem(yeuCau, docBang('ThanhVien').filter(khongPhaiBod), docBang('LoaiHoatDong').filter(loaiCongTay), String(tk.HoVaTen), layKyHienTai(), new Date());
     if (kq.loi) throw new Error(kq.loi);
@@ -181,24 +189,26 @@ function congDiem(phien, yeuCau) {
     xoaBoNhoTam();
     return kq.dong.length;
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
 }
 
 /** Xoá một lần cộng nhầm, nhận diện bằng thời gian cộng và họ tên. */
 function xoaDongDiem(phien, thoiGianMs, hoVaTen) {
   canDangNhap(phien, 'congdiem');
-  var sh = bangDuLieu('LichSuDiem');
-  var v = sh.getDataRange().getValues();
-  var cT = v[0].indexOf('ThoiGian'), cN = v[0].indexOf('HoVaTen');
-  for (var r = v.length - 1; r >= 1; r--) {
-    if (new Date(v[r][cT]).getTime() === Number(thoiGianMs) && String(v[r][cN]) === String(hoVaTen)) {
-      sh.deleteRow(r + 1);
-      xoaBoNhoTam();
-      return true;
+  return voiKhoa_(function () {
+    var sh = bangDuLieu('LichSuDiem');
+    var v = sh.getDataRange().getValues();
+    var cT = v[0].indexOf('ThoiGian'), cN = v[0].indexOf('HoVaTen');
+    for (var r = v.length - 1; r >= 1; r--) {
+      if (new Date(v[r][cT]).getTime() === Number(thoiGianMs) && String(v[r][cN]) === String(hoVaTen)) {
+        sh.deleteRow(r + 1);
+        xoaBoNhoTam();
+        return true;
+      }
     }
-  }
-  throw new Error('Không tìm thấy dòng cần xoá, có thể đã bị xoá trước đó.');
+    throw new Error('Không tìm thấy dòng cần xoá, có thể đã bị xoá trước đó.');
+  });
 }
 
 /* ===================== Góp ý ===================== */
@@ -212,13 +222,15 @@ function layGopY(phien) {
 
 function danhDauDaDoc(phien, thoiGianMs) {
   canDangNhap(phien, 'gopy');
-  var sh = bangDuLieu('GopY');
-  var v = sh.getDataRange().getValues();
-  var cT = v[0].indexOf('ThoiGian'), cD = v[0].indexOf('DaDoc');
-  for (var r = 1; r < v.length; r++) {
-    if (new Date(v[r][cT]).getTime() === Number(thoiGianMs)) { sh.getRange(r + 1, cD + 1).setValue(true); return true; }
-  }
-  return false;
+  return voiKhoa_(function () {
+    var sh = bangDuLieu('GopY');
+    var v = sh.getDataRange().getValues();
+    var cT = v[0].indexOf('ThoiGian'), cD = v[0].indexOf('DaDoc');
+    for (var r = 1; r < v.length; r++) {
+      if (new Date(v[r][cT]).getTime() === Number(thoiGianMs)) { sh.getRange(r + 1, cD + 1).setValue(true); return true; }
+    }
+    return false;
+  });
 }
 
 /* ===================== Cài đặt ===================== */
@@ -316,8 +328,11 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   var loi = kiemTraMatKhauMoi(matKhau);
   if (loi) throw new Error(loi);
   var muoi = Utilities.getUuid();
-  themDong('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: bamMatKhau(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date() }]);
-  return true;
+  return voiKhoa_(function () {
+    if (timTaiKhoan(email)) throw new Error(hoVaTen + ' đã có tài khoản ECODesk.'); // kiểm lại trong khoá: có thể ai đó vừa thêm
+    themDong('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: bamMatKhau(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date() }]);
+    return true;
+  });
 }
 
 /** Gỡ tài khoản ban nhân sự hoặc UCV. Tài khoản BOD đi theo danh sách thành viên nên không gỡ ở đây. */
@@ -326,7 +341,9 @@ function goTaiKhoan(phien, email) {
   var tk = timTaiKhoan(email);
   if (!tk) throw new Error('Không tìm thấy tài khoản.');
   if (tk.VaiTro === 'BOD') throw new Error('Tài khoản BOD được cấp theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại.');
-  ghiDeBang('TaiKhoan', docBang('TaiKhoan').filter(function (t) { return String(t.Email).toLowerCase() !== String(email).toLowerCase(); }));
+  voiKhoa_(function () {
+    ghiDeBang('TaiKhoan', docBang('TaiKhoan').filter(function (t) { return String(t.Email).toLowerCase() !== String(email).toLowerCase(); }));
+  });
   return true;
 }
 
@@ -394,15 +411,14 @@ function layDuLieuTask(phien) {
 
 function taoTask(phien, yeuCau) {
   var tk = canDangNhap(phien, 'task');
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   var kq;
   try {
     kq = taoDongTask(yeuCau, docBang('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date());
     if (kq.loi) throw new Error(kq.loi);
     themDong('Task', kq.dong);
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
   baoTaskMoiChoBod(kq.dong, String(tk.HoVaTen));
   return kq.dong.length;
@@ -422,8 +438,7 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
   canDangNhap(phien, 'task');
   var k = kiemTraTask({ ten: moi && moi.ten, moTa: moi && moi.moTa, hanChot: moi && moi.hanChot, nguoi: [moi && moi.nguoi] }, docBang('ThanhVien'));
   if (k.loi) throw new Error(k.loi);
-  var khoa = LockService.getScriptLock();
-  khoa.waitLock(30000);
+  var khoa = layKhoa_();
   try {
     var sh = bangDuLieu('Task');
     var v = sh.getDataRange().getValues();
@@ -436,7 +451,7 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
     gia[td.indexOf('NguoiPhuTrach')] = k.nguoi[0];
     sh.getRange(dong, 1, 1, td.length).setValues([gia]);
   } finally {
-    khoa.releaseLock();
+    traKhoa_(khoa);
   }
   return true;
 }
@@ -445,13 +460,15 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
 function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
   canDangNhap(phien, 'task');
   if ([TRANG_THAI_TASK.XONG, TRANG_THAI_TASK.HUY, TRANG_THAI_TASK.GIAO].indexOf(trangThai) < 0) throw new Error('Trạng thái không hợp lệ.');
-  var sh = bangDuLieu('Task');
-  var v = sh.getDataRange().getValues();
-  var dong = timDongTask(v, thoiGianTao, nguoi);
-  var td = v[0];
-  sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
-  sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
-  return true;
+  return voiKhoa_(function () {
+    var sh = bangDuLieu('Task');
+    var v = sh.getDataRange().getValues();
+    var dong = timDongTask(v, thoiGianTao, nguoi);
+    var td = v[0];
+    sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
+    sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
+    return true;
+  });
 }
 
 function luuGoogleClientId(phien, clientId) {

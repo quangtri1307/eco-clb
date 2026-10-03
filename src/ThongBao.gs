@@ -47,14 +47,16 @@ function nguoiNhanThongBao() {
 }
 
 function ghiCotTaiKhoan(email, cot, giaTri) {
-  var sh = bangDuLieu('TaiKhoan');
-  var v = sh.getDataRange().getValues();
-  var td = v[0], cE = td.indexOf('Email'), c = td.indexOf(cot);
-  if (c < 0) throw new Error('Thiếu cột ' + cot + ' trong tab TaiKhoan.');
-  for (var r = 1; r < v.length; r++) {
-    if (String(v[r][cE]).toLowerCase() === String(email).toLowerCase()) { sh.getRange(r + 1, c + 1).setValue(giaTri); return true; }
-  }
-  throw new Error('Không tìm thấy tài khoản ' + email + '.');
+  return voiKhoa_(function () {
+    var sh = bangDuLieu('TaiKhoan');
+    var v = sh.getDataRange().getValues();
+    var td = v[0], cE = td.indexOf('Email'), c = td.indexOf(cot);
+    if (c < 0) throw new Error('Thiếu cột ' + cot + ' trong tab TaiKhoan.');
+    for (var r = 1; r < v.length; r++) {
+      if (String(v[r][cE]).toLowerCase() === String(email).toLowerCase()) { sh.getRange(r + 1, c + 1).setValue(giaTri); return true; }
+    }
+    throw new Error('Không tìm thấy tài khoản ' + email + '.');
+  });
 }
 
 /**
@@ -144,7 +146,7 @@ function guiLenApp(email, tieuDe, noiDung, baoCao) {
       if (ma === 404 || ma === 410) hong.push(diaChi); // máy đã tắt thông báo hoặc gỡ app
     }
   });
-  if (hong.length) ghiDeBang('ThietBi', docBang('ThietBi').filter(function (t) { return hong.indexOf(String(t.DiaChi)) < 0; }));
+  if (hong.length) voiKhoa_(function () { ghiDeBang('ThietBi', docBang('ThietBi').filter(function (t) { return hong.indexOf(String(t.DiaChi)) < 0; })); });
   return duoc;
 }
 
@@ -168,28 +170,32 @@ function byteBase64Url_(s) {
 function layThongBaoChoMay(khoaMay) {
   khoaMay = String(khoaMay || '');
   if (khoaMay.length < 20) return { ds: [] };
-  var sh = bangDuLieu('ThietBi');
-  var v = sh.getDataRange().getValues(), td = v[0];
-  var cK = td.indexOf('Khoa'), cE = td.indexOf('Email'), cL = td.indexOf('LayCuoi');
-  for (var r = 1; r < v.length; r++) {
-    if (String(v[r][cK]) !== khoaMay) continue;
-    var email = String(v[r][cE]).toLowerCase();
-    var tu = v[r][cL] ? new Date(v[r][cL]).getTime() : 0;
-    var ds = docBang('ThongBao').filter(function (t) {
-      return String(t.Email).toLowerCase() === email && new Date(t.ThoiGian).getTime() > tu;
-    }).slice(-5).map(function (t) { return { tieuDe: String(t.TieuDe), noiDung: String(t.NoiDung) }; });
-    sh.getRange(r + 1, cL + 1).setValue(new Date());
-    return { ds: ds };
-  }
-  return { ds: [] };
+  return voiKhoa_(function () {
+    var sh = bangDuLieu('ThietBi');
+    var v = sh.getDataRange().getValues(), td = v[0];
+    var cK = td.indexOf('Khoa'), cE = td.indexOf('Email'), cL = td.indexOf('LayCuoi');
+    for (var r = 1; r < v.length; r++) {
+      if (String(v[r][cK]) !== khoaMay) continue;
+      var email = String(v[r][cE]).toLowerCase();
+      var tu = v[r][cL] ? new Date(v[r][cL]).getTime() : 0;
+      var ds = docBang('ThongBao').filter(function (t) {
+        return String(t.Email).toLowerCase() === email && new Date(t.ThoiGian).getTime() > tu;
+      }).slice(-5).map(function (t) { return { tieuDe: String(t.TieuDe), noiDung: String(t.NoiDung) }; });
+      sh.getRange(r + 1, cL + 1).setValue(new Date());
+      return { ds: ds };
+    }
+    return { ds: [] };
+  });
 }
 
 /** Xoá thông báo cũ (chạy kèm nhắc việc hằng ngày). */
 function donThongBaoCu() {
   var moc = Date.now() - GIU_THONG_BAO_NGAY * 864e5;
-  var ds = docBang('ThongBao');
-  var con = ds.filter(function (t) { return new Date(t.ThoiGian).getTime() >= moc; });
-  if (con.length < ds.length) ghiDeBang('ThongBao', con);
+  voiKhoa_(function () {
+    var ds = docBang('ThongBao');
+    var con = ds.filter(function (t) { return new Date(t.ThoiGian).getTime() >= moc; });
+    if (con.length < ds.length) ghiDeBang('ThongBao', con);
+  });
 }
 
 /** Đảm bảo có lịch nhắc việc hằng ngày (dù chưa có bot Zalo). */
@@ -270,11 +276,13 @@ function luuThietBi(phien, tb) {
   var diaChi = String(tb.diaChi || ''), khoa = String(tb.khoa || '');
   if (!diaChiDayHopLe(diaChi)) throw new Error('Máy này chưa hỗ trợ thông báo của app.');
   if (!/^[A-Za-z0-9-]{20,80}$/.test(khoa)) throw new Error('Thiếu mã của máy. Bạn thử bật lại nhé.');
-  var con = docBang('ThietBi').filter(function (t) { return String(t.DiaChi) !== diaChi; });
   var p256dh = /^[A-Za-z0-9_-]{80,100}$/.test(String(tb.p256dh || '')) ? String(tb.p256dh) : '';
   var auth = /^[A-Za-z0-9_-]{16,30}$/.test(String(tb.auth || '')) ? String(tb.auth) : '';
-  con.push({ Email: String(tk.Email), DiaChi: diaChi, Khoa: khoa, TenMay: String(tb.tenMay || '').slice(0, 80), ThoiGian: new Date(), LayCuoi: new Date(), P256dh: p256dh, Auth: auth });
-  ghiDeBang('ThietBi', con);
+  voiKhoa_(function () {
+    var con = docBang('ThietBi').filter(function (t) { return String(t.DiaChi) !== diaChi; });
+    con.push({ Email: String(tk.Email), DiaChi: diaChi, Khoa: khoa, TenMay: String(tb.tenMay || '').slice(0, 80), ThoiGian: new Date(), LayCuoi: new Date(), P256dh: p256dh, Auth: auth });
+    ghiDeBang('ThietBi', con);
+  });
   var cach = cachMacDinh(tk);
   if (cach.indexOf('app') < 0) { cach.push('app'); ghiCotTaiKhoan(String(tk.Email), 'NhanThongBao', chuanHoaCachNhan(cach).join(',')); }
   damBaoLichNhac();
@@ -284,12 +292,14 @@ function luuThietBi(phien, tb) {
 /** Gỡ một máy khỏi danh sách nhận thông báo app. Chủ máy hoặc BOD gỡ được. */
 function goThietBi(phien, ma) {
   var tk = canDangNhap(phien);
-  var ds = docBang('ThietBi');
-  var may = ds.filter(function (t) { return maMay(t.DiaChi) === String(ma); })[0];
-  if (!may) throw new Error('Máy này đã được gỡ rồi.');
-  if (String(may.Email).toLowerCase() !== String(tk.Email).toLowerCase() && !coQuyen(String(tk.VaiTro), 'caidat')) throw new Error('Bạn chỉ gỡ được máy của mình.');
-  ghiDeBang('ThietBi', ds.filter(function (t) { return t !== may; }));
-  return true;
+  return voiKhoa_(function () {
+    var ds = docBang('ThietBi');
+    var may = ds.filter(function (t) { return maMay(t.DiaChi) === String(ma); })[0];
+    if (!may) throw new Error('Máy này đã được gỡ rồi.');
+    if (String(may.Email).toLowerCase() !== String(tk.Email).toLowerCase() && !coQuyen(String(tk.VaiTro), 'caidat')) throw new Error('Bạn chỉ gỡ được máy của mình.');
+    ghiDeBang('ThietBi', ds.filter(function (t) { return t !== may; }));
+    return true;
+  });
 }
 
 /** Gửi thử một thông báo cho chính mình theo các cách đã chọn. */

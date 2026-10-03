@@ -99,7 +99,10 @@ function datGiaoDien(k, khongLuu) {
   GIAO_DIEN = ['light', 'dark'].indexOf(k) >= 0 ? k : 'auto';
   try { localStorage.setItem('eco_giao_dien', GIAO_DIEN); } catch (e) {}
   apGiaoDien();
-  if (!khongLuu && NGUOI) { NGUOI.giaoDien = GIAO_DIEN; goiPhien('luuGiaoDien', GIAO_DIEN).catch(function () {}); }
+  if (!khongLuu && NGUOI) {
+    NGUOI.giaoDien = GIAO_DIEN; goiPhien('luuGiaoDien', GIAO_DIEN).catch(function () {});
+    var lm = docLanMo(PHIEN); if (lm) { lm.nguoiDung.giaoDien = GIAO_DIEN; luuLanMo(lm); }
+  }
 }
 if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (GIAO_DIEN === 'auto') apGiaoDien(); }); } catch (e) {} }
 
@@ -155,18 +158,60 @@ var PHIEN = null, NGUOI = null;
 function luuPhien(p) {
   PHIEN = p;
   try { if (p) localStorage.setItem('eco_phien', p); else localStorage.removeItem('eco_phien'); } catch (e) {}
+  if (!p) { NHO_TAM = {}; luuLanMo(null); }
   guiVo({ eco: 'phien', phien: p || '' });
 }
 function docPhienMay() { try { return localStorage.getItem('eco_phien'); } catch (e) { return null; } }
 function vaoApp(u) { NGUOI = u; if (u.giaoDien && u.giaoDien !== GIAO_DIEN) datGiaoDien(u.giaoDien, true); shell(); demGopYMoi(); }
 function daDangNhap(kq) { luuPhien(kq.phien); page = null; vaoApp(kq.nguoiDung); }
+
+/*
+ * Mở app cho nhanh: máy nhớ người dùng và trang chào của lần mở trước, nên hiện ngay, rồi hỏi máy chủ
+ * (một lần duy nhất) để cập nhật. Phiên đã hết hạn thì quay về màn đăng nhập như cũ.
+ */
+function docLanMo(p) { try { var x = JSON.parse(localStorage.getItem('eco_lan_mo') || 'null'); return x && x.phien === p && x.nguoiDung ? x : null; } catch (e) { return null; } }
+function luuLanMo(x) { try { if (x) localStorage.setItem('eco_lan_mo', JSON.stringify(x)); else localStorage.removeItem('eco_lan_mo'); } catch (e) {} }
 function moPhien(p) {
   PHIEN = p;
-  $('#app').innerHTML = manHinhCho(); apGiaoDien();
-  goi('layNguoiDung', p).then(function (u) {
-    if (!u) { luuPhien(null); NGUOI = null; shell(); return; }
-    luuPhien(p); vaoApp(u);
-  }).catch(function () { PHIEN = null; shell(); });
+  var cu = docLanMo(p);
+  if (cu) { datTrangChuSan(cu.trangChu); vaoApp(cu.nguoiDung); }
+  else { $('#app').innerHTML = manHinhCho(); apGiaoDien(); }
+  var hoi = goi('moDesk', p);
+  // Trang chào (đang hiện bản cũ) chờ chính lần hỏi này, không hỏi thêm lần nữa.
+  var kTc = khoaNho('layTrangChu', []), tc = hoi.then(function (kq) { if (!kq) throw new Error('PHIEN_HET_HAN'); return kq.trangChu; });
+  NHO_TAM[kTc] = { t: Date.now(), p: tc };
+  tc.catch(function () { if (NHO_TAM[kTc] && NHO_TAM[kTc].p === tc) delete NHO_TAM[kTc]; });
+  hoi.then(function (kq) {
+    if (PHIEN !== p) return;
+    if (!kq) { luuPhien(null); NGUOI = null; dongHop(); shell(); return; }
+    luuPhien(p);
+    luuLanMo({ phien: p, nguoiDung: kq.nguoiDung, trangChu: kq.trangChu });
+    datTrangChuSan(kq.trangChu);
+    if (!cu || JSON.stringify(cu.nguoiDung) !== JSON.stringify(kq.nguoiDung)) vaoApp(kq.nguoiDung);
+    else if (page === 'home' && JSON.stringify(cu.trangChu) !== JSON.stringify(kq.trangChu)) veTomTat(kq.trangChu);
+    setTimeout(docSan, 1500);
+  }).catch(function () { if (PHIEN === p && !NGUOI) { PHIEN = null; shell(); } });
+}
+/** Dữ liệu trang chào có sẵn (từ lần mở trước hoặc vừa hỏi máy chủ): dùng ngay, kèm số trên menu. */
+function datTrangChuSan(d) {
+  if (!d) return;
+  NHO_TAM[khoaNho('layTrangChu', [])] = { t: Date.now(), p: Promise.resolve(d) };
+  capNhatTuTrangChu(d);
+}
+function capNhatTuTrangChu(d) {
+  if (d.gopYMoi !== undefined) soGopYMoi = d.gopYMoi;
+  if (d.choDuyet !== undefined) soViecCho = d.choDuyet;
+  if (NGUOI) capNhatHuyHieu();
+}
+/** Sau khi mở app, lấy sẵn dữ liệu các trang trên thanh dưới, để bấm sang là hiện ngay. */
+var DOC_SAN = {
+  BOD: [['layDuLieuCongDiem'], ['layDuLieuTask'], ['layViecDuyet']],
+  HR: [['layDuLieuTask']],
+  UCV: [['layViecCuaToi'], ['layHopThu', 'Hộp thư đến', '', 0]]
+};
+function docSan() {
+  if (!NGUOI) return;
+  (DOC_SAN[NGUOI.vaiTro] || []).forEach(function (x) { goiPhien.apply(null, x).catch(function () {}); });
 }
 
 /* ---------- Gọi máy chủ ---------- */
@@ -181,7 +226,28 @@ function goi(ten) {
       })[ten].apply(null, thamSo);
   });
 }
-function goiPhien(ten) { return goi.apply(null, [ten, PHIEN].concat(Array.prototype.slice.call(arguments, 1))); }
+/*
+ * Dữ liệu vừa đọc của vài trang được giữ trong 60 giây: quay lại trang đó (hoặc trang đã được lấy sẵn) là hiện ngay.
+ * Hễ lưu, sửa, xoá bất cứ gì thì bỏ hết, để trang luôn hiện dữ liệu mới sau khi thay đổi.
+ */
+var DOC_NHANH = { layTrangChu: 1, layDuLieuCongDiem: 1, layDuLieuTask: 1, layViecDuyet: 1, layViecCuaToi: 1, layHopThu: 1 };
+var GIU_NHO_MS = 60000, NHO_TAM = {};
+function khoaNho(ten, thamSo) { return ten + '|' + JSON.stringify(thamSo); }
+function banSao(v) { return v === undefined ? v : JSON.parse(JSON.stringify(v)); }
+function goiPhien(ten) {
+  var thamSo = Array.prototype.slice.call(arguments, 1);
+  if (!DOC_NHANH[ten]) {
+    if (!/^(lay|doc|xem|dem)/.test(ten)) NHO_TAM = {};
+    return goi.apply(null, [ten, PHIEN].concat(thamSo));
+  }
+  var k = khoaNho(ten, thamSo), x = NHO_TAM[k];
+  if (!x || Date.now() - x.t > GIU_NHO_MS) {
+    var p = goi.apply(null, [ten, PHIEN].concat(thamSo));
+    x = NHO_TAM[k] = { t: Date.now(), p: p };
+    p.catch(function () { if (NHO_TAM[k] === x) delete NHO_TAM[k]; });
+  }
+  return x.p.then(banSao);
+}
 function thongBao(el, loai, chu) { if (el) el.innerHTML = '<span class="' + (loai === 'ok' ? 'toast' : loai === 'cho' ? 'hint' : 'err') + '">' + esc(chu) + '</span>'; }
 
 /* ---------- Hộp thoại: giữa màn hình trên máy tính, trượt từ dưới lên trên điện thoại ---------- */
@@ -371,8 +437,7 @@ function moDoiMatKhau() {
 }
 function demGopYMoi() {
   if (!NGUOI || NGUOI.vaiTro !== 'BOD') return;
-  goiPhien('layGopY').then(function (ds) { soGopYMoi = ds.filter(function (g) { return !g.daDoc; }).length; capNhatHuyHieu(); }).catch(function () {});
-  goiPhien('demViecChoDuyet').then(function (n) { soViecCho = n; capNhatHuyHieu(); }).catch(function () {});
+  goiPhien('layTrangChu').then(capNhatTuTrangChu).catch(function () {}); // trang chào đã đếm sẵn góp ý mới và thư chờ duyệt
 }
 /** Cập nhật số trên menu mà không vẽ lại trang. */
 function capNhatHuyHieu() {
