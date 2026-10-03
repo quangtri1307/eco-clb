@@ -406,7 +406,7 @@ function formSeeding(box) {
         var duoc = n.duoc || (n.ten || []).map(function (x) { return [x, '']; });
         var soNguoi = n.soNguoi != null ? n.soNguoi : duoc.length;
         var them = function (so, ds) { return so > ds.length ? '<li class="hint">và ' + (so - ds.length) + ' tên khác</li>' : ''; };
-        return '<details><summary><span class="sd-nk-dau"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + '</b><span class="hint">' + ngayGio(n.luc) + '</span></span>' +
+        return '<details><summary><span class="sd-nk-dau"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + '</b><span class="hint">nộp form · ' + ngayGio(n.luc) + (n.nguoiCong === undefined ? '' : ' · ' + (n.nguoiCong ? 'Người cộng: ' + esc(n.nguoiCong) : 'App tự cộng')) + '</span></span>' +
           '<span class="sd-nk-so"><span class="pill" style="background:var(--ok-bg);color:var(--ok)">' + soNguoi + ' người được cộng</span>' +
           (n.soKhongKhop ? '<span class="pill" style="background:var(--warn-bg);color:var(--warn)">' + n.soKhongKhop + ' tên không khớp</span>' : '') + '</span></summary>' +
           '<div class="sd-nk-ct"><div><b>Được cộng</b> <span class="hint">(' + n.soLuot + ' lượt)</span>' + (duoc.length ? '<ul>' + duoc.map(function (d) { return '<li>' + esc(d[0]) + (d[1] ? ' <span class="hint">· ' + esc(d[1]) + '</span>' : '') + '</li>'; }).join('') + them(soNguoi, duoc) + '</ul>' : '<p class="hint">Không ai.</p>') + '</div>' +

@@ -52,7 +52,7 @@ function layFormSeeding(phien) {
 
 /** Lưu và bật tự cộng. yc = { tab, anhXa: { cột: tên loại có sẵn }, congCu: true nếu cộng cả các câu đã có }. */
 function luuFormSeeding(phien, yc) {
-  canDangNhap_(phien, 'caidat');
+  var tk = canDangNhap_(phien, 'caidat');
   yc = yc || {};
   var sh = tabTheoMa_(yc.tab);
   if (!sh) throw new Error('Không tìm thấy tab câu trả lời. Bấm Tải lại rồi chọn lại nhé.');
@@ -72,7 +72,7 @@ function luuFormSeeding(phien, yc) {
     if (String(cu.tab) !== String(yc.tab) && !yc.congCu) danhDauBoQua_(sh);
     datCaiDat_('FormSeeding', JSON.stringify({ tab: String(yc.tab), anhXa: anhXa, baoMail: !!cu.baoMail }));
     if (!coLichForm_()) ScriptApp.newTrigger('khiNopForm').forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet()).onFormSubmit().create();
-    return xuLyFormSeeding_();
+    return xuLyFormSeeding_(String(tk.HoVaTen || ''));
   });
   return kq;
 }
@@ -99,8 +99,8 @@ function luuBaoMailSeeding(phien, bat) {
 
 /** Cộng ngay các câu trả lời chưa cộng (khi lịch tự chạy bị lỡ, hoặc vừa sửa Tên Facebook của ai đó). */
 function quetFormSeeding(phien) {
-  canDangNhap_(phien, 'caidat');
-  return xuLyFormSeeding_();
+  var tk = canDangNhap_(phien, 'caidat');
+  return xuLyFormSeeding_(String(tk.HoVaTen || ''));
 }
 
 /** Google gọi hàm này mỗi khi có người nộp form được liên kết về file dữ liệu. */
@@ -128,8 +128,11 @@ function danhDauBoQua_(sh) {
   o.setValues(v.map(function (r) { return [String(r[0]).trim() ? r[0] : 'Bỏ qua (có từ trước khi bật)']; }));
 }
 
-/** Cộng điểm cho mọi câu trả lời chưa đánh dấu. Trả về { soCau, soLuot, loi }. */
-function xuLyFormSeeding_() {
+/**
+ * Cộng điểm cho mọi câu trả lời chưa đánh dấu. Trả về { soCau, soLuot, loi }.
+ * nguoiCong: tên BOD bấm cộng trong app; bỏ trống khi app tự cộng (có người nộp form, hoặc lịch cộng bù hằng ngày).
+ */
+function xuLyFormSeeding_(nguoiCong) {
   var ch = docCauHinhSeeding_();
   var sh = ch.tab ? tabTheoMa_(ch.tab) : null;
   if (!sh) return { soCau: 0, soLuot: 0, loi: 'Chưa chọn tab câu trả lời của form.' };
@@ -153,7 +156,7 @@ function xuLyFormSeeding_() {
         cotCua[d.HoVaTen].push(d.TenHoatDong);
       });
       nhat.push({
-        luc: nay.getTime(), nguoiNop: kq.nguoiNop, soLuot: kq.dong.length, soNguoi: ten.length,
+        luc: nay.getTime(), nguoiNop: kq.nguoiNop, nguoiCong: nguoiCong || '', soLuot: kq.dong.length, soNguoi: ten.length,
         duoc: ten.slice(0, 50).map(function (x) { return [x, cotCua[x].join(', ')]; }),
         khongKhop: kq.khongKhop.slice(0, 50), soKhongKhop: kq.khongKhop.length
       });
@@ -177,7 +180,7 @@ function guiMailSeeding_(nhat) {
   var luot = 0;
   var noiDung = nhat.map(function (n) {
     luot += n.soLuot;
-    return 'Người nộp: ' + (n.nguoiNop || 'Không rõ') + '\nLúc: ' + Utilities.formatDate(new Date(n.luc), tz, 'dd/MM/yyyy HH:mm') +
+    return 'Người nộp: ' + (n.nguoiNop || 'Không rõ') + '\nNgười cộng: ' + (n.nguoiCong || 'App tự cộng') + '\nLúc: ' + Utilities.formatDate(new Date(n.luc), tz, 'dd/MM/yyyy HH:mm') +
       '\nĐược cộng (' + n.soNguoi + ' người, ' + n.soLuot + ' lượt): ' + (n.duoc.length ? n.duoc.map(function (d) { return d[0] + ' (' + d[1] + ')'; }).join(', ') + (n.soNguoi > n.duoc.length ? ', …' : '') : 'không ai') +
       (n.soKhongKhop ? '\nKhông được cộng (' + n.soKhongKhop + ' tên không khớp Tên Facebook của thành viên nào): ' + n.khongKhop.join(', ') + (n.soKhongKhop > n.khongKhop.length ? ', …' : '') : '');
   }).join('\n\n');

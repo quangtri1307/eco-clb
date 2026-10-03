@@ -98,6 +98,7 @@ test('bật form: bỏ qua câu cũ, cài lịch; nộp form thì cộng ngay, c
   const nk = m.lanChay().layFormSeeding('p').nhatKy;
   assert.strictEqual(nk[0].nguoiNop, 'Hà');
   assert.strictEqual(nk[0].soNguoi, 3);
+  assert.strictEqual(nk[0].nguoiCong, '', 'nộp form thì app tự cộng');
   assert.deepStrictEqual(j(nk[0].duoc), [['Nguyễn Văn An', 'Reaction'], ['Phan Văn', 'Reaction'], ['Trần Thị Bình', 'Comment']]);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(nk[0].khongKhop)), ['Người lạ']);
 
@@ -111,6 +112,7 @@ test('form khác trong cùng file thì không đụng tới; tắt thì gỡ l�
   const ma = m.lanChay().layFormSeeding('p').tabs[0].ma;
   m.lanChay().luuFormSeeding('p', { tab: ma, anhXa: { Reaction: 'Staff' }, congCu: true });
   assert.deepStrictEqual(diem(m), [['Nguyễn Văn An', 'Staff', 'Reaction', 3]], 'chọn cộng cả câu cũ');
+  assert.strictEqual(m.lanChay().layFormSeeding('p').nhatKy[0].nguoiCong, 'BOD A', 'BOD bấm Lưu và bật thì ghi tên BOD');
   const khac = m.lanChay().SpreadsheetApp.getActiveSpreadsheet().insertSheet('Câu trả lời biểu mẫu 2');
   khac.o.push(['Dấu thời gian', 'Họ và tên', 'Reaction']);
   nopForm(m, khac, [new Date(), 'X', 'Bình Trần']);
@@ -144,6 +146,7 @@ test('bật mail báo thì mỗi lần cộng gửi một mail tóm tắt về m
   assert.strictEqual(m.mail[0].den, 'clb@example.com');
   assert.match(m.mail[0].tieuDe, /2 lượt/);
   assert.match(m.mail[0].noiDung, /Được cộng \(1 người, 2 lượt\): Nguyễn Văn An \(Reaction, Comment\)/);
+  assert.match(m.mail[0].noiDung, /Người cộng: App tự cộng/);
   assert.match(m.mail[0].noiDung, /Không được cộng \(1 tên.*\): Người lạ/);
   m.lanChay().luuBaoMailSeeding('p', false);
   nopForm(m, form, [new Date(), 'Hà', 'Bình Trần', '']);
