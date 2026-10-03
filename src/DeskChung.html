@@ -220,7 +220,10 @@ function docSan() {
 function goi(ten) {
   var thamSo = Array.prototype.slice.call(arguments, 1);
   return new Promise(function (ok, loi) {
-    google.script.run
+    var r = google.script.run;
+    // Trang mở từ trước khi app cập nhật thì chưa biết các chức năng mới: nhờ người dùng tải lại.
+    if (typeof r[ten] !== 'function') { loi(new Error('App vừa được cập nhật. Bạn đóng hẳn app (hoặc tải lại trang) rồi mở lại nhé.')); return; }
+    r
       .withSuccessHandler(ok)
       .withFailureHandler(function (e) {
         if (String(e && e.message).indexOf('PHIEN_HET_HAN') >= 0) { luuPhien(null); NGUOI = null; dongHop(); shell(); loi(new Error('Phiên đăng nhập đã hết hạn, bạn đăng nhập lại nhé.')); return; }
