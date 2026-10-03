@@ -113,12 +113,8 @@ function ganGoMay(goc, xong) {
     };
   });
 }
-/** Trang Thông báo của tôi: với BOD nằm trong Cài đặt, với HR mở từ Menu. */
-VIEWS.thongbao = function () {
-  if (NGUOI.vaiTro === 'BOD') { diToi('caidat', 'tbtoi'); return; }
-  $('#main').innerHTML = '<div class="head"><div><h2>Thông báo của tôi</h2><p class="lead">Chọn cách bạn muốn được nhắc deadline.</p></div></div><div id="tbgoc"></div>';
-  veTrangThongBao($('#tbgoc'), 'toi');
-};
+/** Trang Thông báo của tôi nằm trong Cài đặt (BOD và HR). */
+VIEWS.thongbao = function () { diToi('caidat', NGUOI.vaiTro === 'UCV' ? null : 'tbtoi'); };
 /** phan = 'toi': cài đặt của chính mình; 'khac': BOD xem và chỉnh cách nhận của BOD và HR khác. Hai phần tách riêng, không trộn. */
 function veTrangThongBao(goc, phan) {
   if (phan === 'khac') { goc.innerHTML = '<div id="tb-moi" class="tb-khac"></div>'; veMoiNguoi(); return; }

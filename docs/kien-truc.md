@@ -170,3 +170,17 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 ## Thứ tự ban
 
 Mọi chỗ liệt kê theo ban trong hai app (nút lọc ban, danh sách chọn người, báo cáo, danh bạ, file log, tab Thành viên sau khi tải danh sách) dùng thứ tự chuẩn `THU_TU_BAN` trong `src/Logic.gs`: BOD, PG, PR CAP, PR DES, PR PHO, AD, HR. Ban mới cùng nhóm (ví dụ "PR MKT") đứng ngay sau nhóm đó; ban lạ hẳn đứng cuối theo chữ cái. Máy chủ gửi danh sách đã xếp (`docThanhVien_`), giao diện giữ nguyên thứ tự nhận được.
+
+## HR quản lý theo ban
+
+BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (cột `BanQuanLy` của tab TaiKhoan, ví dụ "PG, AD"; PR là cả nhóm PR CAP, PR DES, PR PHO). Luật nằm ở `boLocTaskHr_` trong `src/Logic.gs`:
+
+- HR đã phân ban chỉ thấy, tạo, sửa và được nhắc deadline task của các ban mình quản lý, cộng với task của chính mình. Mọi HR cùng quản lý một ban đều được nhắc.
+- Ban (không phải BOD) chưa có HR nào quản lý thì mọi HR đều thấy, để không task nào bị bỏ sót.
+- HR chưa phân ban và BOD thấy mọi task.
+
+## Gửi hàng loạt
+
+- Chỗ chèn viết `{Tên cột}` hoặc `{{Tên cột}}`, so khớp không phân biệt dấu, hoa thường, khoảng trắng. Thành viên CLB dùng đúng tiêu đề cột của danh sách thành viên (`{Họ và tên}`, `{Ban}`…); mọi người nhận trong Danh bạ có `{Tên}` và `{Email}`.
+- Nguồn người nhận: Danh bạ (thành viên CLB lọc theo ban và danh bạ khác), Nhập tay, Google Sheet. Bảng sheet chỉ hiện các cột ai cũng điền, ô dài bị cắt, rê chuột để xem đủ.
+- Mỗi đợt gửi ngay cũng được ghi vào tab LichGui (trạng thái Đã gửi) để xem ở Mail, Lịch sử gửi.

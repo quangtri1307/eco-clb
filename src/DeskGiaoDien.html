@@ -135,6 +135,11 @@ td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular
 .box{background:var(--surface-2);border:1px dashed var(--line-2);border-radius:11px;padding:12px;display:grid;gap:8px}
 .note{background:var(--warn-bg);color:var(--warn);border-radius:11px;padding:11px 13px;display:flex;gap:10px;align-items:flex-start}
 .note.info{background:var(--info-bg);color:var(--info)}
+.note.ok{background:var(--ok-bg);color:var(--ok)}
+.sheet-nguon{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px;align-items:end}
+.sheet-nguon .btn,.sheet-nguon input,.sheet-nguon select{height:40px}
+@media (max-width:700px){.sheet-nguon{grid-template-columns:1fr}.sheet-nguon .btn{justify-self:start}}
+.bang-gon td,.bang-gon th{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .note b{color:inherit}
 .back{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px}
 .crumb{font-size:12px;color:var(--muted)}

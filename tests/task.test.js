@@ -74,3 +74,21 @@ test('timMaTrongTin', () => {
   assert.strictEqual(L.timMaTrongTin('xin chào', ['K7M2QP']), '');
   assert.strictEqual(L.timMaTrongTin('XK7M2QP', ['K7M2QP']), '');
 });
+
+test('phân ban cho HR: chỉ thấy task của ban mình, ban chưa ai quản lý thì ai cũng thấy', () => {
+  assert.deepStrictEqual(L.banQuanLy('ad, PR cap; pg,'), ['PG', 'PR', 'AD']);
+  assert.deepStrictEqual(L.banQuanLy(''), []);
+  const nhom = { An: 'PG', Binh: 'PR', Chi: 'AD', Dung: 'BOD', Em: 'HR', Ha: 'HR' };
+  const tk = [
+    { VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR' },
+    { VaiTro: 'HR', HoVaTen: 'Khoa', BanQuanLy: 'PR, AD' },
+    { VaiTro: 'HR', HoVaTen: 'Linh', BanQuanLy: '' },
+    { VaiTro: 'BOD', HoVaTen: 'Dung', BanQuanLy: '' }
+  ];
+  const ha = L.boLocTaskHr(tk[0], tk, nhom);
+  assert.deepStrictEqual(['An', 'Binh', 'Chi', 'Dung', 'Em', 'Ha', 'Người cũ'].filter(ha), ['An', 'Binh', 'Em', 'Ha', 'Người cũ']);
+  const khoa = L.boLocTaskHr(tk[1], tk, nhom);
+  assert.ok(khoa('Binh') && khoa('Chi') && !khoa('Dung'));
+  assert.ok(['An', 'Binh', 'Chi', 'Dung'].every(L.boLocTaskHr(tk[2], tk, nhom)), 'HR chưa phân ban thấy hết');
+  assert.ok(['An', 'Binh', 'Chi', 'Dung'].every(L.boLocTaskHr(tk[3], tk, nhom)), 'BOD thấy hết');
+});

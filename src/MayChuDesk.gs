@@ -254,7 +254,7 @@ function layCaiDatDesk(phien) {
       var n = dongBoNguoiNhanZalo_();
       return { coBot: !!layTokenZalo_(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
     })(),
-    taiKhoan: docBang_('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro) }; }),
+    taiKhoan: docBang_('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy) }; }),
     thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), email: String(t.Email || '') }; })
   };
 }
@@ -335,6 +335,16 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   });
 }
 
+/** Phân ban cho một tài khoản HR (danh sách nhóm ban, trống là chưa phân ban: thấy mọi task). */
+function luuBanQuanLy(phien, email, dsBan) {
+  canDangNhap_(phien, 'caidat');
+  var tk = timTaiKhoan_(email);
+  if (!tk || String(tk.VaiTro) !== 'HR') throw new Error('Chỉ phân ban cho tài khoản HR.');
+  bangDuLieu_('TaiKhoan'); // thêm cột BanQuanLy nếu sheet còn bản cũ
+  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).join(', '));
+  return true;
+}
+
 /** Gỡ tài khoản ban nhân sự hoặc UCV. Tài khoản BOD đi theo danh sách thành viên nên không gỡ ở đây. */
 function goTaiKhoan(phien, email) {
   canDangNhap_(phien, 'caidat');
@@ -375,6 +385,17 @@ function soNgaySapDenHan_() {
   return n === null || n === '' ? 2 : Number(n);
 }
 
+/** Bộ lọc task theo ban HR quản lý (BOD và HR chưa phân ban thấy hết). */
+function boLocTaskCua_(tk) {
+  var nhomCua = {};
+  docBang_('ThanhVien').forEach(function (t) { nhomCua[String(t.HoVaTen)] = nhomBan_(t.Ban); });
+  return boLocTaskHr_(tk, docBang_('TaiKhoan'), nhomCua);
+}
+
+function kiemTraDuocGiao_(duoc, ten) {
+  if (!duoc(ten)) throw new Error('Bạn chỉ quản lý task của các ban được phân. ' + ten + ' không thuộc ban bạn quản lý.');
+}
+
 /** Đọc toàn bộ task kèm trạng thái đã tính. */
 function docTask_() {
   var hom = homNay_(), sap = soNgaySapDenHan_();
@@ -393,7 +414,9 @@ function docTask_() {
 function layDuLieuTask(phien) {
   var tk = canDangNhap_(phien, 'task');
   var moc = Date.now() - GIU_TASK_DA_KET_THUC_NGAY * 864e5;
+  var duoc = boLocTaskCua_(tk);
   var ds = docTask_().filter(function (t) {
+    if (!duoc(t.nguoi)) return false;
     if (t.trangThaiLuu !== TRANG_THAI_TASK.XONG && t.trangThaiLuu !== TRANG_THAI_TASK.HUY) return true;
     return (t.thoiGianXong || t.thoiGianTao) >= moc;
   }).sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : b.thoiGianTao - a.thoiGianTao; });
@@ -401,7 +424,8 @@ function layDuLieuTask(phien) {
     homNay: homNay_(),
     sapDenHanNgay: soNgaySapDenHan_(),
     task: ds,
-    thanhVien: docThanhVien_().map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
+    thanhVien: docThanhVien_().filter(function (tv) { return duoc(tv.HoVaTen); }).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
+    banQuanLy: banQuanLy_(tk.BanQuanLy),
     thongBao: (function () {
       var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
       return toi ? { cach: toi.cach } : null;
@@ -411,6 +435,8 @@ function layDuLieuTask(phien) {
 
 function taoTask(phien, yeuCau) {
   var tk = canDangNhap_(phien, 'task');
+  var duoc = boLocTaskCua_(tk);
+  ((yeuCau && yeuCau.nguoi) || []).forEach(function (n) { kiemTraDuocGiao_(duoc, n); });
   var khoa = layKhoa_();
   var kq;
   try {
@@ -435,7 +461,9 @@ function timDongTask_(v, thoiGianTao, nguoi) {
 
 /** Sửa tên, mô tả, hạn chót hoặc người phụ trách của một task. */
 function suaTask(phien, thoiGianTao, nguoiCu, moi) {
-  canDangNhap_(phien, 'task');
+  var duoc = boLocTaskCua_(canDangNhap_(phien, 'task'));
+  kiemTraDuocGiao_(duoc, nguoiCu);
+  kiemTraDuocGiao_(duoc, moi && moi.nguoi);
   var k = kiemTraTask_({ ten: moi && moi.ten, moTa: moi && moi.moTa, hanChot: moi && moi.hanChot, nguoi: [moi && moi.nguoi] }, docBang_('ThanhVien'));
   if (k.loi) throw new Error(k.loi);
   var khoa = layKhoa_();
@@ -458,7 +486,7 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
 
 /** Đánh dấu Đã xong, Đã huỷ, hoặc mở lại (Đã giao). */
 function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
-  canDangNhap_(phien, 'task');
+  kiemTraDuocGiao_(boLocTaskCua_(canDangNhap_(phien, 'task')), nguoi);
   if ([TRANG_THAI_TASK.XONG, TRANG_THAI_TASK.HUY, TRANG_THAI_TASK.GIAO].indexOf(trangThai) < 0) throw new Error('Trạng thái không hợp lệ.');
   return voiKhoa_(function () {
     var sh = bangDuLieu_('Task');
@@ -531,7 +559,8 @@ function layTrangChu(phien) {
     if (vaiTro === 'HR') {
       var bod = {};
       docBang_('TaiKhoan').forEach(function (t) { if (t.VaiTro === 'BOD') bod[String(t.HoVaTen)] = true; });
-      kq.taskThanhVien = dem(dsTask.filter(function (t) { return !bod[t.nguoi]; }));
+      var duoc = boLocTaskCua_(tk);
+      kq.taskThanhVien = dem(dsTask.filter(function (t) { return !bod[t.nguoi] && duoc(t.nguoi); }));
     }
   }
   if (vaiTro === 'BOD') {
