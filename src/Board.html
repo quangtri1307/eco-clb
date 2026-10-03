@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi"<?!= thuocTinhChuDe ?>>
 <head>
 <base target="_blank">
 <meta charset="utf-8">
@@ -82,12 +82,12 @@ td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 .btn:disabled{opacity:.6;cursor:wait}
 .closebar{display:flex;justify-content:space-between;align-items:start;gap:12px}
-.pins{display:grid;gap:10px}
+.pins{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .pin{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:inherit;text-decoration:none}
 .pin:hover{border-color:var(--accent)}
 .pin .ico{width:36px;height:36px;border-radius:9px;background:var(--brand-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;flex:none}
-.pin > div{min-width:0}
-.pin .t{font-weight:600}.pin .u{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pin > div{min-width:0;flex:1}
+.pin .t{font-weight:600;overflow-wrap:anywhere}.pin .u{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
 .card h3{margin:0 0 8px;font-size:16px}
 .rules{white-space:pre-wrap;max-width:65ch;margin:0}
@@ -96,6 +96,7 @@ td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
 .err{color:var(--bad);font-weight:600}
 
 </style>
+<?!= include('ChuDe') ?>
 </head>
 <body>
 <header>
@@ -175,7 +176,9 @@ td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
       try {
         e.source.postMessage({ eco: 'ho-tro-vien' }, e.origin);
         // Thanh trạng thái màu xanh như đầu trang; phần dưới cùng màu nền sáng (không có vệt xanh ở đáy).
-        e.source.postMessage({ eco: 'mau', mau: '#274e13', nen: '#f5f7f2', chan: '#f5f7f2' }, e.origin);
+        var bien = function (t, mac) { var v = getComputedStyle(document.documentElement).getPropertyValue(t).trim(); return /^#[0-9a-f]{6}$/i.test(v) ? v : mac; };
+        var nen = bien('--bg', '#f5f7f2');
+        e.source.postMessage({ eco: 'mau', mau: bien('--brand', '#274e13'), nen: nen, chan: nen }, e.origin);
       } catch (x) {}
     }
   });
@@ -292,6 +295,7 @@ $('toplist').addEventListener('click', function (e) { var b = e.target.closest('
 Array.prototype.forEach.call(document.querySelectorAll('[role=tab]'), function (t) { t.onclick = function () { moTab(t.getAttribute('data-tab')); }; });
 Array.prototype.forEach.call(document.querySelectorAll('[data-den]'), function (b) { b.onclick = function () { moTab(b.getAttribute('data-den')); if (b.getAttribute('data-den') === 'diem' && D) $('q').focus(); }; });
 $('chao').innerHTML = khungChao('Bạn');
+if (CHU_DE) { var dau = document.querySelector('header'); dau.classList.add('co-tt'); dau.insertAdjacentHTML('beforeend', trangTriDau()); }
 $('loading').innerHTML = cho();
 $('fb').addEventListener('submit', function (e) {
   e.preventDefault();

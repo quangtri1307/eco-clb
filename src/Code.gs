@@ -16,6 +16,7 @@ function doGet(e) {
   var laDesk = app === 'desk';
   var trang = HtmlService.createTemplateFromFile(laDesk ? 'Desk' : 'Board');
   trang.googleClientId = laDesk ? String(layCaiDat_('GoogleClientId') || '') : '';
+  trang.thuocTinhChuDe = thuocTinhChuDe_(layCaiDat_('ChuDe'));
   return trang.evaluate()
     .setTitle(laDesk ? 'ECODesk' : 'ECOBoard')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')

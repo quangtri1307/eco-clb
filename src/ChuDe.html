@@ -1,0 +1,427 @@
+<style>
+/* =================== Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt, áp dụng cho cả ECOBoard và ECODesk) ===================
+   Màu được tính sẵn trong đoạn script bên dưới. Ở đây chỉ có hình trang trí và hiệu ứng. */
+html[data-chude] .av{background:var(--soft-2);color:var(--accent)}
+html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--accent);color:var(--on-accent)}
+
+/* Hạt rơi khắp màn hình: hoa, lá, tuyết, sao, đèn trời, dơi. Không chặn bấm chuột. */
+#trangtri{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+#trangtri .ht{position:absolute;top:0;width:var(--co);height:var(--co);opacity:var(--do,.85);will-change:transform}
+#trangtri .ht>i{display:block;width:100%;height:100%}
+#trangtri svg,.tt-chao svg,.chude-the svg{display:block;width:100%;height:100%;overflow:visible}
+#trangtri .roi{animation:tt-roi var(--t) linear var(--tre) infinite}
+#trangtri .roi>i{animation:tt-lac calc(var(--t) / 3) ease-in-out var(--tre) infinite alternate}
+#trangtri .len{top:auto;bottom:0;animation:tt-len var(--t) linear var(--tre) infinite}
+#trangtri .len>i{filter:drop-shadow(0 0 6px rgb(255 170 60 / .8));animation:tt-lac calc(var(--t) / 4) ease-in-out var(--tre) infinite alternate}
+#trangtri .ngang{left:0;animation:tt-ngang var(--t) linear var(--tre) infinite}
+#trangtri .ngang.vo>i{animation:tt-vo .32s ease-in-out infinite alternate}
+.tt-tuyet{color:var(--tt-tuyet,#a9c9e8)}
+@keyframes tt-roi{from{transform:translate3d(0,-60px,0)}to{transform:translate3d(var(--lech),calc(100vh + 60px),0)}}
+@keyframes tt-lac{from{transform:translateX(-14px) rotate(-35deg)}to{transform:translateX(14px) rotate(35deg)}}
+@keyframes tt-len{0%{transform:translate3d(0,60px,0);opacity:0}10%{opacity:var(--do,.85)}80%{opacity:var(--do,.85)}100%{transform:translate3d(var(--lech),-100vh,0);opacity:0}}
+@keyframes tt-ngang{from{transform:translate3d(-70px,0,0)}to{transform:translate3d(calc(100vw + 70px),var(--lech),0)}}
+@keyframes tt-vo{from{transform:scaleY(1)}to{transform:scaleY(.4)}}
+
+/* Trang trí trong khung chào (và đầu trang ECOBoard). Kích thước tính theo em để thu nhỏ trên điện thoại. */
+.tt-chao{position:absolute;inset:0;z-index:-1;pointer-events:none;font-size:10px;overflow:hidden}
+.tt-chao>*{position:absolute}
+.tt-treo{top:-2px;transform-origin:50% 0;animation:tt-dua 3.4s ease-in-out infinite alternate}
+.tt-treo.cham{animation-duration:4.6s;animation-delay:-1.3s}
+.tt-treo.nhanh{animation-duration:2.8s;animation-delay:-.7s}
+.tt-canh{right:0;top:0;width:20em;height:9em;transform-origin:100% 0;animation:tt-gio 6s ease-in-out infinite alternate}
+.tt-chao .rc{top:-2em;width:var(--co);height:var(--co);animation:tt-rc var(--t) linear var(--tre) infinite}
+.tt-chao .bay{left:0;width:var(--co);height:calc(var(--co) / 2);animation:tt-bay var(--t) linear var(--tre) infinite}
+.tt-chao .bay>svg{animation:tt-vo .3s ease-in-out infinite alternate}
+.tt-chao .bay.giay>svg{animation:none}
+.tt-chao .sang-lap{animation:tt-nhap 2.2s ease-in-out var(--tre,0s) infinite alternate}
+.tt-chao .len{bottom:-3em;width:var(--co);height:calc(var(--co) * 1.3);filter:drop-shadow(0 0 5px rgb(255 170 60 / .9));animation:tt-len-chao var(--t) linear var(--tre) infinite}
+.tt-phao{width:7em;height:7em;margin:-3.5em 0 0 -3.5em}
+.tt-phao i{position:absolute;left:50%;top:50%;width:2px;height:1.1em;margin-left:-1px;border-radius:2px;background:var(--m);transform-origin:50% 0;opacity:0;animation:tt-no 2.8s ease-out var(--tre) infinite}
+.tt-phao i:nth-child(2n){height:.7em}
+.tt-trang{width:7em;height:7em;border-radius:50%;background:radial-gradient(circle at 40% 38%,#fffbe6 0%,#ffe9a3 45%,#f7c95c 100%);box-shadow:0 0 0 .8em rgb(255 233 163 / .18),0 0 4em 1.4em rgb(255 214 110 / .45)}
+.tt-trang.cam{background:radial-gradient(circle at 40% 38%,#fff3d6 0%,#ffcf8a 50%,#f29a3c 100%);box-shadow:0 0 0 .8em rgb(255 180 90 / .15),0 0 4em 1.4em rgb(255 150 60 / .4)}
+.tt-den{filter:drop-shadow(0 0 .6em rgb(255 110 50 / .55))}
+.tt-daydien{left:0;right:0;top:0;height:3.4em;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='20'%3E%3Cpath d='M0 3Q20 15 40 3T80 3' stroke='%23244a2c' stroke-width='1.6' fill='none'/%3E%3C/svg%3E") repeat-x 0 0/8em 2em;display:flex;justify-content:space-between;padding:0 1.2em}
+.tt-daydien i{display:block;width:.9em;height:1.4em;margin-top:calc(var(--y) * 1em);border-radius:45% 45% 50% 50%;background:var(--m);box-shadow:0 0 .8em .2em var(--m);animation:tt-nhap 1.3s ease-in-out var(--tre) infinite alternate}
+.tt-duoi{bottom:0}
+.tt-xoay{animation:tt-xoay 16s linear infinite}
+.chao.chao.tt-trungthu{background:linear-gradient(180deg,#141a46 0%,#26306e 60%,#3a2f5e 100%)}
+.chao.chao.tt-halloween{background:linear-gradient(180deg,#140a24 0%,#2e1248 55%,#7a3412 100%)}
+.chao.chao.tt-dong{background:linear-gradient(180deg,#b9d4ee 0%,#dce9f5 70%,#f3f8fc 100%)}
+.chao.chao.tt-dong.toi,.chao.chao.tt-dong.khuya{background:linear-gradient(180deg,#14213d 0%,#24365e 65%,#3a4f78 100%)}
+.chao.tt-trungthu .troi .mt,.chao.tt-halloween .troi .mt,.chao.tt-traidat .troi .mt{display:none}
+.chao.tt-trungthu .troi .may,.chao.tt-halloween .troi .may{display:none}
+.chao.tt-trungthu .troi .sao,.chao.tt-halloween .troi .sao{animation:sao-nhay 2.6s ease-in-out infinite}
+.chao.tt-trungthu .troi .chim,.chao.tt-halloween .troi .chim{display:none}
+.chao.tt-dong .chao-chu{text-shadow:0 1px 6px rgb(0 0 0 / .4)}
+@keyframes tt-dua{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+@keyframes tt-gio{from{transform:rotate(-1.5deg)}to{transform:rotate(2deg)}}
+@keyframes tt-rc{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--lech),22em) rotate(320deg)}}
+@keyframes tt-bay{0%{transform:translate(-4em,var(--y))}50%{transform:translate(45vw,calc(var(--y) - 1.4em))}100%{transform:translate(110vw,var(--y))}}
+@keyframes tt-nhap{from{opacity:.35}to{opacity:1}}
+@keyframes tt-len-chao{0%{transform:translate(0,0);opacity:0}15%{opacity:1}100%{transform:translate(var(--lech),-20em);opacity:0}}
+@keyframes tt-no{0%{transform:rotate(var(--g)) translateY(0) scaleY(.2);opacity:0}8%{opacity:1}55%{opacity:1}75%{transform:rotate(var(--g)) translateY(2.8em) scaleY(1);opacity:0}100%{transform:rotate(var(--g)) translateY(2.8em);opacity:0}}
+@keyframes tt-xoay{to{transform:translateX(-40px)}}
+@media (min-width:1000px){.tt-chao{font-size:12px}}
+@media (max-width:600px){
+  .tt-chao{font-size:6.5px}
+  .tt-canh{width:17em;height:7.6em}
+  .tt-chao .tt-duoi{display:none}
+}
+/* Đầu trang ECOBoard: thu nhỏ, chỉ giữ đồ treo phía trên. */
+header.co-tt{position:relative;overflow:hidden;isolation:isolate}
+.tt-chao.tt-dau{font-size:6.5px}
+@media (prefers-reduced-motion:reduce){#trangtri{display:none}.tt-chao,.tt-chao *{animation:none!important}}
+
+/* Thẻ chọn giao diện trong Cài đặt */
+.chude-luoi{display:grid;gap:10px;--o:150px}
+.chude-the{display:grid;gap:0;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer;text-align:left;overflow:hidden;color:inherit;font:inherit;position:relative}
+.chude-the:hover{border-color:var(--accent)}
+.chude-the[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.chude-the .dai{height:64px;position:relative;display:grid;place-items:center;overflow:hidden}
+.chude-the .dai>span{width:40px;height:40px;filter:drop-shadow(0 2px 4px rgb(0 0 0 / .25))}
+.chude-the .chu{padding:8px 11px 10px;display:grid;gap:1px}
+.chude-the b{font-size:13.5px}
+.chude-the small{font-size:12px;color:var(--muted)}
+.chude-the .dang{position:absolute;top:6px;right:6px;background:#fff;color:#1a1a1a;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+@media (max-width:860px){.chude-luoi{--toida:1}.chude-the{grid-template-columns:76px minmax(0,1fr);align-items:center}.chude-the .dai{height:100%;min-height:60px}.chude-the .dai>span{width:34px;height:34px}.chude-the .dang{top:50%;right:10px;transform:translateY(-50%);background:var(--accent);color:var(--on-accent)}}
+</style>
+<script>
+/* =================== Giao diện theo mùa và ngày lễ ===================
+   Mỗi giao diện: màu chính (c1 đậm, c2 sáng hơn, c3 đậm nhất), màu nền (nen), màu nhấn khi app ở chế độ tối (da).
+   "toi": luôn dùng giao diện tối. Danh sách mã phải khớp CHU_DE trong Logic.gs. */
+var DS_CHU_DE = [
+  { ma: 'xuan', nhom: 'mua', ten: 'Mùa xuân', khi: 'Tháng 2 đến tháng 4', c1: '#3b7a1e', c2: '#53992c', c3: '#295713', nen: '#fbf6f7', da: '#a8dc86', dai: 'linear-gradient(135deg,#fde2ea,#bfe3a5)' },
+  { ma: 'ha', nhom: 'mua', ten: 'Mùa hè', khi: 'Tháng 5 đến tháng 7', c1: '#0b6b6b', c2: '#13898a', c3: '#064d4d', nen: '#f1f8f7', da: '#7fd6cf', dai: 'linear-gradient(135deg,#7fd3f0,#ffe08a)' },
+  { ma: 'thu', nhom: 'mua', ten: 'Mùa thu', khi: 'Tháng 8 đến tháng 10', c1: '#8f4a10', c2: '#ad6118', c3: '#6a350a', nen: '#faf5ee', da: '#f0b46a', dai: 'linear-gradient(135deg,#f7c873,#c8642a)' },
+  { ma: 'dong', nhom: 'mua', ten: 'Mùa đông', khi: 'Tháng 11 đến tháng 1', c1: '#2d5677', c2: '#3c6d94', c3: '#1f3e57', nen: '#f2f6f9', da: '#a7cbea', dai: 'linear-gradient(135deg,#dbe9f6,#7aa3c8)' },
+  { ma: 'tet', nhom: 'le', ten: 'Tết Nguyên Đán', khi: 'Mùng 1 tháng Giêng', c1: '#b01c1c', c2: '#cc3326', c3: '#861212', nen: '#fff8ee', da: '#ffb4a8', dai: 'linear-gradient(135deg,#d8231c,#f5b400)' },
+  { ma: 'phunu', nhom: 'le', ten: 'Ngày Phụ nữ', khi: '8/3 và 20/10', c1: '#a4306a', c2: '#c0457f', c3: '#7b1f4e', nen: '#fcf5f8', da: '#f4a6cb', dai: 'linear-gradient(135deg,#f8b7d0,#c0457f)' },
+  { ma: 'traidat', nhom: 'le', ten: 'Trái Đất và Môi trường', khi: 'Giờ Trái Đất, 22/4, 5/6', c1: '#136b4f', c2: '#1b8a63', c3: '#0c4e39', nen: '#f0f7f4', da: '#7fd9b2', dai: 'linear-gradient(135deg,#2f86d6,#4caf50)' },
+  { ma: 'quockhanh', nhom: 'le', ten: 'Lễ 30/4 và Quốc khánh', khi: '30/4, 1/5 và 2/9', c1: '#c4161c', c2: '#da2a22', c3: '#93100f', nen: '#fff9f0', da: '#ffb3a6', dai: 'linear-gradient(135deg,#da251d,#e8501c)' },
+  { ma: 'trungthu', nhom: 'le', ten: 'Tết Trung thu', khi: 'Rằm tháng 8 âm lịch', c1: '#3a3f8f', c2: '#4a52a8', c3: '#282c6a', nen: '#f6f5fb', da: '#b7bdf5', dai: 'linear-gradient(160deg,#141a46,#3a2f5e)' },
+  { ma: 'halloween', nhom: 'le', ten: 'Halloween', khi: '31/10, luôn tối', c1: '#5a2d82', c2: '#6e3a9c', c3: '#3e1d5c', nen: '#f7f3fa', da: '#ff9f43', dam: .34, toi: true, dai: 'linear-gradient(160deg,#140a24,#2e1248 55%,#7a3412)' },
+  { ma: 'nhagiao', nhom: 'le', ten: 'Ngày Nhà giáo', khi: '20/11', c1: '#1f56a8', c2: '#2d6cc4', c3: '#163f7c', nen: '#f3f6fb', da: '#a3c4f3', dai: 'linear-gradient(135deg,#a3c4f3,#f8c8dc)' },
+  { ma: 'giangsinh', nhom: 'le', ten: 'Giáng sinh', khi: '24 và 25/12', c1: '#16603f', c2: '#1f7a50', c3: '#0e452c', nen: '#f5f8f5', da: '#9fdcb4', dai: 'linear-gradient(135deg,#16603f,#c62828)' }
+];
+var CHU_DE = document.documentElement.getAttribute('data-chude') || '';
+function timChuDe(ma) { for (var i = 0; i < DS_CHU_DE.length; i++) if (DS_CHU_DE[i].ma === ma) return DS_CHU_DE[i]; return null; }
+function chuDeToi() { var p = timChuDe(CHU_DE); return !!(p && p.toi); }
+
+/* ---------- Màu: tính sẵn thành mã hex (không phụ thuộc tính năng mới của trình duyệt) ---------- */
+function hexRgb_(h) { h = h.replace('#', ''); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+/** Trộn hai màu: t là phần của màu a (0 đến 1). */
+function tronMau(a, b, t) { var x = hexRgb_(a), y = hexRgb_(b); return '#' + x.map(function (v, i) { return ('0' + Math.round(v * t + y[i] * (1 - t)).toString(16)).slice(-2); }).join(''); }
+function rgbaMau(h, a) { return 'rgb(' + hexRgb_(h).join(' ') + ' / ' + a + ')'; }
+function bienSang(p) {
+  return {
+    '--brand': p.c1, '--brand-2': p.c2, '--brand-3': p.c3, '--brand-ink': '#ffffff', '--accent': p.c1, '--on-accent': '#ffffff',
+    '--side-bg': 'linear-gradient(170deg,' + p.c2 + ' 0%,' + p.c1 + ' 55%,' + p.c3 + ' 100%)',
+    '--soft': tronMau(p.c1, '#ffffff', .09), '--soft-2': tronMau(p.c1, '#ffffff', .16), '--brand-soft': tronMau(p.c1, '#ffffff', .1), '--ring': rgbaMau(p.c1, .16),
+    '--bg': p.nen, '--surface': '#ffffff', '--surface-2': tronMau(p.nen, '#ffffff', .5),
+    '--fg': tronMau(p.c3, '#141414', .22), '--muted': tronMau(p.c3, '#62645f', .18), '--line': tronMau(p.c1, '#e4e5e0', .1), '--line-2': tronMau(p.c1, '#d3d5ce', .16),
+    '--tt-tuyet': '#9fc2e4', 'color-scheme': 'light'
+  };
+}
+function bienToi(p) {
+  var d = p.da, k = p.dam || .16;
+  return {
+    '--brand': tronMau(p.c3, '#000000', .62), '--brand-2': tronMau(p.c2, '#000000', .5), '--brand-3': tronMau(p.c3, '#000000', .42), '--brand-ink': '#f3f3ee',
+    '--side-bg': 'linear-gradient(170deg,' + tronMau(p.c2, '#000000', .5) + ' 0%,' + tronMau(p.c3, '#000000', .6) + ' 55%,' + tronMau(p.c3, '#000000', .42) + ' 100%)',
+    '--accent': d, '--on-accent': '#111111', '--soft': tronMau(d, '#16181b', .13), '--soft-2': tronMau(d, '#16181b', .2), '--brand-soft': tronMau(d, '#16181b', .14), '--ring': rgbaMau(d, .22),
+    '--bg': tronMau(p.c3, '#0c0d0f', k), '--surface': tronMau(p.c3, '#15171a', k), '--surface-2': tronMau(p.c3, '#191b1f', k + .02),
+    '--fg': '#ecede8', '--muted': '#a7aaa3', '--line': tronMau(d, '#25282c', .1), '--line-2': tronMau(d, '#2f3337', .16), '--bad': '#f2968d',
+    '--tt-tuyet': '#ffffff', 'color-scheme': 'dark'
+  };
+}
+function cssChuDe(ma) {
+  var p = timChuDe(ma);
+  if (!p) return '';
+  var khoi = function (sel, o) { return sel + '{' + Object.keys(o).map(function (k) { return k + ':' + o[k]; }).join(';') + '}'; };
+  var sel = 'html[data-chude="' + ma + '"]';
+  return p.toi ? khoi(sel + ',' + sel + '[data-theme]', bienToi(p)) : khoi(sel, bienSang(p)) + khoi(sel + '[data-theme="dark"]', bienToi(p));
+}
+function vietMauChuDe() {
+  var s = document.getElementById('chude-mau');
+  if (!s) { s = document.createElement('style'); s.id = 'chude-mau'; document.head.appendChild(s); }
+  s.textContent = cssChuDe(CHU_DE);
+}
+vietMauChuDe();
+
+/* ---------- Hình vẽ ---------- */
+var demHinh = 0;
+function svgH(vb, noi, lop) { return '<svg viewBox="' + vb + '"' + (lop ? ' class="' + lop + '"' : '') + ' aria-hidden="true">' + noi + '</svg>'; }
+function diemSao(cx, cy, R, r) {
+  var o = [];
+  for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R; o.push((cx + rr * Math.cos(a)).toFixed(1) + ',' + (cy + rr * Math.sin(a)).toFixed(1)); }
+  return o.join(' ');
+}
+function hoa5(mau, nhuy) {
+  var c = '';
+  for (var i = 0; i < 5; i++) c += '<ellipse cx="0" cy="-6" rx="4.4" ry="6" transform="rotate(' + (i * 72) + ')" fill="' + mau + '"/>';
+  return c + '<circle r="2.8" fill="' + nhuy + '"/>';
+}
+var HINH = {
+  canh: function (m) { return svgH('0 0 24 24', '<path fill="' + m + '" d="M12 2C6.5 7 6.5 15 12 22c5.5-7 5.5-15 0-20z"/>'); },
+  hoa: function (m, n) { return svgH('-12 -12 24 24', hoa5(m, n || '#f5c518')); },
+  la: function (m) { return svgH('0 0 24 24', '<path fill="' + m + '" d="M12 22C6 19 4 13 7 5c6 1 11 5 11 11 0 3-2 5-6 6z"/><path d="M12 22c-1-6-2-10-5-15" stroke="rgb(0 0 0 / .3)" stroke-width="1.2" fill="none"/>'); },
+  phong: function (m) { return svgH('0 0 24 24', '<path fill="' + m + '" d="M12 1.5l1.7 4.3 3.1-1.7-.8 4.6 4-.7-1.7 3.1 2.6 1.3-4.9 3.6.9 2.1-4.9-.9V23h-.9v-5.8l-4.9.9.9-2.1-4.9-3.6 2.6-1.3-1.7-3.1 4 .7-.8-4.6 3.1 1.7z"/>'); },
+  tuyet: function () { return svgH('0 0 24 24', '<g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.8l3 2.2 3-2.2M9 20.2l3-2.2 3 2.2M3.6 10.6l3.4-1.4-.5-3.6M20.4 13.4l-3.4 1.4.5 3.6M3.6 13.4l3.4 1.4-.5 3.6M20.4 10.6l-3.4-1.4.5-3.6"/></g>', 'tt-tuyet'); },
+  tim: function (m) { return svgH('0 0 24 24', '<path fill="' + m + '" d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3.2 5 6.6 5c2.1 0 3.6 1.2 5.4 3.2C13.8 6.2 15.3 5 17.4 5c3.4 0 5.4 3.6 4.1 6.8C19.5 16.4 12 21 12 21z"/>'); },
+  sao: function (m) { return svgH('0 0 24 24', '<polygon fill="' + m + '" points="' + diemSao(12, 12.5, 11, 4.6) + '"/>'); },
+  doi: function (m) { return svgH('0 0 40 20', '<path fill="' + (m || '#120818') + '" d="M20 7c-1.2 0-2 .8-2.3 1.8C15 6.2 9 4.5 1 7c3 1 4.5 3 5 5.5 1.5-1.2 3.5-1.2 5 0 .8-1 2.2-1.6 3.6-1.2.6 1.4 1.8 2.7 5.4 4.7 3.6-2 4.8-3.3 5.4-4.7 1.4-.4 2.8.2 3.6 1.2 1.5-1.2 3.5-1.2 5 0 .5-2.5 2-4.5 5-5.5-8-2.5-14-.8-16.7 1.8C22 7.8 21.2 7 20 7zM18.6 7.8l-.7-2.6 1.6 1.5zM21.4 7.8l.7-2.6-1.6 1.5z"/>'); },
+  denTroi: function () { return svgH('0 0 20 26', '<path d="M5 3h10l3 17H2z" fill="#ff9a3a"/><path d="M7 5h6l2 13H5z" fill="#ffd36b" opacity=".85"/><rect x="5" y="20" width="10" height="2.4" rx="1" fill="#b4561a"/>'); },
+  mayBay: function () { return svgH('0 0 24 24', '<path d="M2 11l20-8-6 18-4-7z" fill="#ffffff" stroke="#5b7fae" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 14l10-11" stroke="#5b7fae" stroke-width="1.2"/>'); },
+  /* Đèn lồng treo (Tết đỏ, Trung thu cam). */
+  den: function (than, vien, gan) {
+    than = than || '#d8231c'; vien = vien || '#e5a50a'; gan = gan || '#a3120d';
+    return svgH('0 0 34 56', '<path d="M17 0v9" stroke="#8a6d1d" stroke-width="1.4"/><rect x="10" y="8" width="14" height="4" rx="1.2" fill="' + vien + '"/><ellipse cx="17" cy="24" rx="15" ry="13" fill="' + than + '"/>' +
+      '<path d="M17 11v26M10 12.5c-4.5 6.5-4.5 16.5 0 23M24 12.5c4.5 6.5 4.5 16.5 0 23" stroke="' + gan + '" stroke-width="1.1" fill="none"/><rect x="10" y="36" width="14" height="4" rx="1.2" fill="' + vien + '"/>' +
+      '<path d="M14 40v13M17 40v15M20 40v13" stroke="' + vien + '" stroke-width="1.3" stroke-linecap="round"/>');
+  },
+  denSao: function () {
+    return svgH('0 0 44 60', '<path d="M22 0v10" stroke="#c9b27a" stroke-width="1.3"/><polygon points="' + diemSao(22, 27, 17, 7.5) + '" fill="#ff5a36" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<polygon points="' + diemSao(22, 27, 8, 3.5) + '" fill="#ffd23f" opacity=".85"/><path d="M15 42l-3 13M22 43v15M29 42l3 13" stroke="#ffd23f" stroke-width="1.4" stroke-linecap="round"/>');
+  },
+  bi: function () {
+    return svgH('0 0 40 36', '<path d="M20 9c0-3 1-5 3-7" stroke="#3b6b1e" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="12" cy="22" rx="9" ry="12" fill="#d9661a"/><ellipse cx="28" cy="22" rx="9" ry="12" fill="#d9661a"/><ellipse cx="20" cy="22" rx="9.5" ry="13" fill="#f0842a"/>' +
+      '<path d="M11 19l4.5-4.5 2 5.5zM29 19l-4.5-4.5-2 5.5zM10 25.5c3 3.5 17 3.5 20 0l-2.2 4.6-2.2-2.2-2.2 3.2-2.4-3.2-2.4 3.2-2.2-3.2-2.2 2.2z" fill="#ffd23f"/>');
+  },
+  co: function () { return svgH('0 0 30 20', '<rect width="30" height="20" rx="1" fill="#da251d"/><polygon fill="#ffde00" points="' + diemSao(15, 10.6, 6.4, 2.5) + '"/>'); },
+  thong: function () {
+    return svgH('0 0 40 52', '<rect x="17.5" y="44" width="5" height="8" fill="#6b4226"/><path d="M20 5L7 22h6L4 34h8L2 46h36L28 34h8L27 22h6z" fill="#1f7a3e"/>' +
+      '<circle cx="14" cy="30" r="2" fill="#e53935"/><circle cx="25" cy="25" r="2" fill="#ffca28"/><circle cx="22" cy="38" r="2.2" fill="#42a5f5"/><circle cx="10" cy="42" r="1.8" fill="#ffca28"/><circle cx="31" cy="41" r="2" fill="#e53935"/>' +
+      '<polygon points="' + diemSao(20, 5, 5, 2.2) + '" fill="#ffd23f"/>');
+  },
+  sach: function () {
+    return svgH('0 0 60 44', '<rect x="6" y="32" width="48" height="9" rx="2" fill="#3f6fb5"/><rect x="10" y="23" width="42" height="9" rx="2" fill="#d9534f"/><rect x="4" y="14" width="46" height="9" rx="2" fill="#f0ad4e"/>' +
+      '<path d="M8 36.5h40M14 27.5h34M8 18.5h38" stroke="#ffffff" stroke-width="1.2" opacity=".75"/><g transform="translate(44 8) scale(.55)">' + hoa5('#f48fb1', '#ffd23f') + '</g><path d="M44 12v4" stroke="#3b7a1e" stroke-width="1.4"/>');
+  },
+  matNa: function () {
+    return svgH('0 -26 44 48', '<path d="M22 -26v28" stroke="#cfc6d8" stroke-width=".9"/><path d="M2 6c6-4 14-4 20 2 6-6 14-6 20-2-1 9-6 14-12 14-4 0-6-3-8-6-2 3-4 6-8 6C8 20 3 15 2 6z" fill="#7b2cbf" stroke="#ffb347" stroke-width="1.3"/>' +
+      '<ellipse cx="12" cy="11" rx="4.6" ry="3" fill="#120818"/><ellipse cx="32" cy="11" rx="4.6" ry="3" fill="#120818"/><path d="M42 6c3-3 2-7-1-9" stroke="#ffb347" stroke-width="1.3" fill="none"/>');
+  },
+  nhen: function () {
+    var o = '', diem = [], tia = 6, i, j;
+    for (i = 0; i <= tia; i++) { var a = Math.PI / 2 + i * (Math.PI / 2) / tia; diem.push([Math.cos(a), Math.sin(a)]); o += '<path d="M80 0L' + (80 + 80 * diem[i][0]).toFixed(1) + ' ' + (80 * diem[i][1]).toFixed(1) + '"/>'; }
+    [16, 30, 44, 58, 72].forEach(function (r) {
+      var d = '';
+      for (j = 0; j < tia; j++) {
+        var x1 = 80 + r * diem[j][0], y1 = r * diem[j][1], x2 = 80 + r * diem[j + 1][0], y2 = r * diem[j + 1][1];
+        var mx = 80 + r * .86 * (diem[j][0] + diem[j + 1][0]) / 2, my = r * .86 * (diem[j][1] + diem[j + 1][1]) / 2;
+        d += (j ? '' : 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1)) + 'Q' + mx.toFixed(1) + ' ' + my.toFixed(1) + ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+      }
+      o += '<path d="' + d + '"/>';
+    });
+    return svgH('0 0 80 80', '<g stroke="rgb(255 255 255 / .55)" stroke-width=".8" fill="none">' + o + '</g><path d="M52 0v34" stroke="rgb(255 255 255 / .6)" stroke-width=".7"/><circle cx="52" cy="37" r="3.2" fill="#0d0614"/><path d="M48 35l-3-2M48 38l-3 1M56 35l3-2M56 38l3 1" stroke="#0d0614" stroke-width=".9"/>');
+  },
+  nguoiTuyet: function () {
+    return svgH('0 0 40 54', '<circle cx="20" cy="40" r="13" fill="#ffffff"/><circle cx="20" cy="20" r="9" fill="#ffffff"/><path d="M11 27c6 3 12 3 18 0l1 3c-6 3-14 3-20 0z" fill="#d32f2f"/><path d="M26 28l3 9-3 1z" fill="#d32f2f"/>' +
+      '<rect x="12" y="7" width="16" height="3" rx="1" fill="#263238"/><rect x="15" y="-1" width="10" height="9" rx="1.5" fill="#263238"/><circle cx="17" cy="18" r="1.2" fill="#263238"/><circle cx="23" cy="18" r="1.2" fill="#263238"/><path d="M20 21l6 1.5-6 1z" fill="#ff8f00"/>' +
+      '<circle cx="20" cy="36" r="1.3" fill="#263238"/><circle cx="20" cy="42" r="1.3" fill="#263238"/>');
+  },
+  traiDat: function () {
+    var id = 'td' + (++demHinh);
+    var luc = '<path d="M6 13c4-3 9-2 11 2s-1 7-4 9-2 6-5 6-5-5-4-9 0-6 2-8zM25 26c3-2 8-1 9 3s-2 8-6 8-4-4-3-7zM29 7c4 0 7 2 6 5s-5 3-7 1-2-6 1-6z"/>';
+    return svgH('0 -8 48 56', '<defs><clipPath id="' + id + '"><circle cx="24" cy="24" r="20"/></clipPath></defs><circle cx="24" cy="24" r="20" fill="#2f86d6"/>' +
+      '<g clip-path="url(#' + id + ')"><g class="tt-xoay" fill="#5cb85c">' + luc + '<g transform="translate(40 0)">' + luc + '</g></g></g>' +
+      '<circle cx="24" cy="24" r="20" fill="none" stroke="rgb(255 255 255 / .4)" stroke-width="1.2"/><path d="M17 14a10 10 0 0 1 8-6" stroke="rgb(255 255 255 / .6)" stroke-width="2" stroke-linecap="round" fill="none"/>' +
+      '<path d="M24 4V-2" stroke="#3b7a1e" stroke-width="1.4"/><path d="M24 -1c1-4 4-6 8-6-1 4-4 6-8 6zM24 0c-1-3-3-5-6-5 0 3 3 5 6 5z" fill="#6cc04a"/>');
+  },
+  /* Cành cây có hoa hoặc lá, mọc từ góc trên bên phải. */
+  canhCay: function (kieu) {
+    var mau = { dao: ['#f7a8c4', '#d6336c'], mai: ['#ffcc1f', '#e07b00'], phuong: ['#e8352a', '#ffd23f'] }[kieu];
+    var o = '<path d="M200 4C170 10 150 24 120 30S70 44 38 64M150 22c-6 14-4 26 2 38M112 32c4-12 2-20-6-28M78 42c-10 2-18 8-22 18" stroke="#6b4226" stroke-width="3.4" fill="none" stroke-linecap="round"/>';
+    var cho = [[176, 11, 1], [140, 26, .9], [118, 31, 1.1], [152, 56, .85], [104, 9, .8], [70, 46, .95], [42, 62, 1], [57, 59, .7], [128, 20, .6]];
+    if (kieu === 'phong') {
+      var mauLa = ['#d9822b', '#c0392b', '#e0a526', '#b5651d'];
+      cho.forEach(function (c, i) { o += '<g transform="translate(' + (c[0] - 11) + ' ' + (c[1] - 9) + ') scale(' + c[2] + ') rotate(' + (i * 37 % 60 - 30) + ' 12 12)"><path fill="' + mauLa[i % 4] + '" d="M12 1.5l1.7 4.3 3.1-1.7-.8 4.6 4-.7-1.7 3.1 2.6 1.3-4.9 3.6.9 2.1-4.9-.9V23h-.9v-5.8l-4.9.9.9-2.1-4.9-3.6 2.6-1.3-1.7-3.1 4 .7-.8-4.6 3.1 1.7z"/></g>'; });
+      return svgH('0 0 200 90', o, 'tt-canh');
+    }
+    if (kieu === 'phuong') cho.forEach(function (c, i) { o += '<ellipse cx="' + (c[0] + 7) + '" cy="' + (c[1] + 6) + '" rx="7" ry="2.6" transform="rotate(' + (i * 40) + ' ' + (c[0] + 7) + ' ' + (c[1] + 6) + ')" fill="#4f9a2a"/>'; });
+    cho.forEach(function (c) { o += '<g transform="translate(' + c[0] + ' ' + c[1] + ') scale(' + c[2] + ')">' + hoa5(mau[0], mau[1]) + '</g>'; });
+    if (kieu === 'dao') [[92, 20], [160, 40], [60, 52]].forEach(function (c) { o += '<ellipse cx="' + c[0] + '" cy="' + c[1] + '" rx="3" ry="4.2" fill="#e8749b"/>'; });
+    return svgH('0 0 200 90', o, 'tt-canh');
+  },
+  /* Dây cờ đỏ sao vàng. */
+  dayCo: function () {
+    var o = '<path d="M0 2Q120 30 240 2" stroke="#7a5a3a" stroke-width="1.4" fill="none"/>';
+    for (var i = 1; i <= 7; i++) {
+      var t = i / 8, x = 240 * t, y = 2 * (1 - t) * (1 - t) + 60 * (1 - t) * t + 2 * t * t;
+      o += '<g transform="translate(' + (x - 10).toFixed(1) + ' ' + y.toFixed(1) + ')"><rect width="20" height="13" rx="1" fill="#da251d"/><polygon fill="#ffde00" points="' + diemSao(10, 6.9, 4.2, 1.7) + '"/></g>';
+    }
+    return svgH('0 0 240 46', o);
+  }
+};
+
+/* ---------- Hạt rơi khắp màn hình ---------- */
+var HAT = {
+  xuan: { kieu: 'roi', hinh: [['hoa', '#f7a8c4', '#d6336c'], ['canh', '#f9c0d3'], ['canh', '#f4a3bf']] },
+  ha: { kieu: 'roi', hinh: [['canh', '#e8352a'], ['canh', '#f05a3a'], ['hoa', '#e8352a', '#ffd23f']] },
+  thu: { kieu: 'roi', hinh: [['phong', '#d9822b'], ['phong', '#c0392b'], ['la', '#e0a526'], ['phong', '#b5651d']] },
+  dong: { kieu: 'roi', hinh: [['tuyet']], cham: true },
+  tet: { kieu: 'roi', hinh: [['hoa', '#ffcc1f', '#e07b00'], ['hoa', '#f7a8c4', '#d6336c'], ['canh', '#ffd84a']] },
+  phunu: { kieu: 'roi', hinh: [['canh', '#e0457b'], ['canh', '#f28cb1'], ['tim', '#e0457b']] },
+  traidat: { kieu: 'roi', hinh: [['la', '#4caf50'], ['la', '#7cc35a'], ['la', '#2e8b57']] },
+  quockhanh: { kieu: 'roi', hinh: [['sao', '#ffd400'], ['sao', '#ffc400']], cham: true },
+  trungthu: { kieu: 'len', hinh: [['denTroi']] },
+  halloween: { kieu: 'ngang', hinh: [['doi', '#0d0614']], it: true },
+  nhagiao: { kieu: 'roi', hinh: [['hoa', '#f48fb1', '#ffd23f'], ['hoa', '#ffd54f', '#ff8f00'], ['canh', '#ce93d8']] },
+  giangsinh: { kieu: 'roi', hinh: [['tuyet']], cham: true }
+};
+function ngauNhien(a, b) { return a + Math.random() * (b - a); }
+function hieuUngBat() { try { return localStorage.getItem('eco_hieu_ung') !== 'tat'; } catch (e) { return true; } }
+function veHatRoi() {
+  var cu = document.getElementById('trangtri');
+  if (cu) cu.parentNode.removeChild(cu);
+  var c = HAT[CHU_DE];
+  if (!c || !hieuUngBat() || !document.body) return;
+  var hep = window.innerWidth < 700, so = c.it ? (hep ? 3 : 5) : (hep ? 7 : 13), o = '';
+  for (var i = 0; i < so; i++) {
+    var h = c.hinh[i % c.hinh.length], t = c.kieu === 'ngang' ? ngauNhien(9, 16) : c.kieu === 'len' ? ngauNhien(14, 22) : ngauNhien(c.cham ? 13 : 10, c.cham ? 22 : 17);
+    var co = c.kieu === 'ngang' ? ngauNhien(30, 46) : c.kieu === 'len' ? ngauNhien(14, 22) : ngauNhien(12, 22);
+    var st = '--co:' + co.toFixed(0) + 'px;--t:' + t.toFixed(1) + 's;--tre:' + (-ngauNhien(0, t)).toFixed(1) + 's;--lech:' + ngauNhien(-80, 80).toFixed(0) + 'px;--do:' + ngauNhien(.55, .9).toFixed(2) + ';';
+    st += c.kieu === 'ngang' ? 'top:' + ngauNhien(8, 70).toFixed(0) + '%' : 'left:' + ((i + Math.random()) * 100 / so).toFixed(1) + '%';
+    o += '<span class="ht ' + c.kieu + (h[0] === 'doi' ? ' vo' : '') + '" style="' + st + '"><i>' + HINH[h[0]](h[1], h[2]) + '</i></span>';
+  }
+  var d = document.createElement('div');
+  d.id = 'trangtri'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = o;
+  document.body.appendChild(d);
+}
+
+/* ---------- Trang trí trong khung chào ---------- */
+function phaoHoa(phai, tren, mau, tre) {
+  var o = '';
+  for (var i = 0; i < 12; i++) o += '<i style="--g:' + (i * 30) + 'deg"></i>';
+  return '<span class="tt-phao" style="right:' + phai + 'em;top:' + tren + 'em;--m:' + mau + ';--tre:' + tre + 's">' + o + '</span>';
+}
+function roiChao(hinh, so, lop) {
+  var o = '';
+  for (var i = 0; i < so; i++) {
+    var h = hinh[i % hinh.length], t = ngauNhien(5, 9);
+    o += '<span class="rc ' + (lop || '') + '" style="left:' + ngauNhien(40, 98).toFixed(0) + '%;--co:' + ngauNhien(1, 1.6).toFixed(2) + 'em;--t:' + t.toFixed(1) + 's;--tre:' + (-ngauNhien(0, t)).toFixed(1) + 's;--lech:' + ngauNhien(-40, 20).toFixed(0) + 'px">' + HINH[h[0]](h[1], h[2]) + '</span>';
+  }
+  return o;
+}
+function treo(hinh, phai, rong, cao, lop) { return '<span class="tt-treo ' + (lop || '') + '" style="right:' + phai + 'em;width:' + rong + 'em;height:' + cao + 'em">' + hinh + '</span>'; }
+function bayNgang(hinh, so, lop) {
+  var o = '';
+  for (var i = 0; i < so; i++) { var t = ngauNhien(8, 13); o += '<span class="bay ' + (lop || '') + '" style="top:0;--y:' + ngauNhien(1, 8).toFixed(1) + 'em;--co:' + ngauNhien(2.6, 3.6).toFixed(1) + 'em;--t:' + t.toFixed(1) + 's;--tre:' + (-ngauNhien(0, t)).toFixed(1) + 's">' + hinh + '</span>'; }
+  return o;
+}
+/** Từng phần trang trí: dau = true là phần treo phía trên, dùng được cho cả đầu trang ECOBoard. */
+var TRANG_TRI = {
+  xuan: function () { return [{ h: HINH.canhCay('dao'), dau: true }, { h: roiChao([['hoa', '#f7a8c4', '#d6336c'], ['canh', '#f9c0d3']], 6) }]; },
+  ha: function () { return [{ h: HINH.canhCay('phuong'), dau: true }, { h: roiChao([['canh', '#e8352a'], ['canh', '#f05a3a']], 5) }]; },
+  thu: function () { return [{ h: HINH.canhCay('phong'), dau: true }, { h: roiChao([['phong', '#d9822b'], ['phong', '#c0392b'], ['la', '#e0a526']], 6) }]; },
+  dong: function () {
+    return [{ h: roiChao([['tuyet']], 12, 'tt-tuyet'), dau: true },
+      { h: '<span class="tt-duoi" style="left:0;right:0;height:1.6em;background:#ffffff;border-radius:60% 60% 0 0 / 100% 100% 0 0;opacity:.9"></span>' },
+      { h: '<span class="tt-duoi" style="right:3em;width:4.4em;height:6em;bottom:.6em">' + HINH.nguoiTuyet() + '</span>' }];
+  },
+  tet: function () {
+    return [{ h: treo(HINH.den(), 10, 3.4, 5.6, 'tt-den'), dau: true }, { h: treo(HINH.den(), 15.5, 2.8, 4.6, 'tt-den cham'), dau: true }, { h: treo(HINH.den(), 20, 2.4, 4, 'tt-den nhanh') },
+      { h: phaoHoa(24, 3.5, '#ffd23f', 0) + phaoHoa(5, 9, '#ff6b6b', -1.3) }, { h: roiChao([['hoa', '#ffcc1f', '#e07b00'], ['hoa', '#f7a8c4', '#d6336c']], 5) }];
+  },
+  phunu: function () {
+    var tim = function (mau, day) { return svgH('0 0 26 ' + (day + 28), '<path d="M13 0v' + (day + 2) + '" stroke="#c98aa8" stroke-width="1"/><g transform="translate(0 ' + day + ')"><path fill="' + mau + '" d="M13 25s-9-5.5-11.5-11C0 10 2.4 5.6 6.6 5.6c2.6 0 4.4 1.5 6.4 3.9 2-2.4 3.8-3.9 6.4-3.9 4.2 0 6.6 4.4 5.1 8.4C22 19.5 13 25 13 25z"/></g>'); };
+    return [{ h: treo(tim('#e0457b', 38), 9, 2.6, 6.4), dau: true }, { h: treo(tim('#f28cb1', 28), 13.5, 2, 4.6, 'cham'), dau: true }, { h: treo(tim('#c0457f', 34), 17.5, 2.3, 5.6, 'nhanh') },
+      { h: roiChao([['canh', '#e0457b'], ['canh', '#f28cb1'], ['hoa', '#f7a8c4', '#ffd23f']], 6) }];
+  },
+  traidat: function () {
+    return [{ h: '<span style="right:3em;top:1.6em;width:6em;height:7em">' + HINH.traiDat() + '</span>', dau: true },
+      { h: roiChao([['la', '#4caf50'], ['la', '#7cc35a'], ['la', '#2e8b57']], 6) }];
+  },
+  quockhanh: function () {
+    return [{ h: '<span style="right:0;top:0;width:26em;height:5em">' + HINH.dayCo() + '</span>', dau: true },
+      { h: phaoHoa(20, 6, '#ffd23f', 0) + phaoHoa(6, 9, '#ff5252', -.9) + phaoHoa(13, 4.5, '#ffffff', -1.8) }];
+  },
+  trungthu: function () {
+    return [{ h: '<span class="tt-trang" style="right:3em;top:1.4em"></span>' },
+      { h: treo(HINH.denSao(), 12.5, 4, 5.6, 'tt-den'), dau: true }, { h: treo(HINH.den('#ff8a1e', '#ffd23f', '#c9580c'), 18, 2.8, 4.6, 'tt-den cham'), dau: true },
+      { h: '<span class="len" style="right:22em;--co:1.8em;--t:9s;--tre:-2s;--lech:-30px">' + HINH.denTroi() + '</span><span class="len" style="right:8em;--co:1.4em;--t:11s;--tre:-7s;--lech:20px">' + HINH.denTroi() + '</span>' }];
+  },
+  halloween: function () {
+    return [{ h: '<span class="tt-trang cam" style="right:6em;top:2em;width:6em;height:6em"></span>' },
+      { h: '<span style="right:0;top:0;width:9em;height:9em">' + HINH.nhen() + '</span>', dau: true },
+      { h: treo(HINH.matNa(), 14, 4.6, 5, 'cham'), dau: true },
+      { h: bayNgang(HINH.doi('#0d0614'), 3), dau: true },
+      { h: '<span class="tt-duoi" style="right:2em;width:5em;height:4.6em">' + HINH.bi() + '</span><span class="tt-duoi" style="right:7.4em;width:3.6em;height:3.3em">' + HINH.bi() + '</span>' }];
+  },
+  nhagiao: function () {
+    return [{ h: bayNgang(HINH.mayBay(), 2, 'giay'), dau: true },
+      { h: roiChao([['hoa', '#f48fb1', '#ffd23f'], ['hoa', '#ffd54f', '#ff8f00'], ['canh', '#ce93d8']], 6), dau: true },
+      { h: '<span class="tt-duoi" style="right:2.5em;width:8em;height:6em;bottom:.4em">' + HINH.sach() + '</span>' }];
+  },
+  giangsinh: function () {
+    var mau = ['#ff5252', '#ffd23f', '#40c4ff', '#69f0ae', '#ff80ab'], o = '';
+    for (var i = 0; i < 16; i++) o += '<i style="--m:' + mau[i % 5] + ';--y:' + (i % 2 ? .25 : .9) + ';--tre:' + (-(i % 4) * .35).toFixed(2) + 's"></i>';
+    return [{ h: '<span class="tt-daydien">' + o + '</span>', dau: true },
+      { h: roiChao([['tuyet']], 9, 'tt-tuyet') },
+      { h: '<span class="tt-duoi" style="right:3em;width:5.6em;height:7.4em">' + HINH.thong() + '</span>' }];
+  }
+};
+function trangTriChao() {
+  var f = TRANG_TRI[CHU_DE];
+  return f ? '<div class="tt-chao" aria-hidden="true">' + f().map(function (x) { return x.h; }).join('') + '</div>' : '';
+}
+function trangTriDau() {
+  var f = TRANG_TRI[CHU_DE];
+  return f ? '<div class="tt-chao tt-dau" aria-hidden="true">' + f().filter(function (x) { return x.dau; }).map(function (x) { return x.h; }).join('') + '</div>' : '';
+}
+
+/* ---------- Lời chúc trong khung chào và màu lá ở màn chờ ---------- */
+var LOI_CHUC = {
+  xuan: ['Xuân về rồi, cây đâm chồi, mình cũng nạp năng lượng mới nha.', 'Mùa xuân là mùa trồng cây. Năm nay bạn trồng được cây nào chưa?'],
+  ha: ['Hè nóng lắm, nhớ mang bình nước riêng nha.', 'Phượng nở rồi, mùa hè của CLB bắt đầu!', 'Đi biển nhớ mang rác về, đừng để lại cho sóng nha.'],
+  thu: ['Thu sang, lá vàng rơi, deadline cũng nhẹ dần nha.', 'Trời thu mát, đi nhặt rác dạo một vòng không?'],
+  dong: ['Trời lạnh rồi, nhớ mặc ấm nha.', 'Một ly trà nóng cho ngày đông của bạn.'],
+  tet: ['Chúc mừng năm mới! An khang thịnh vượng, vạn sự như ý.', 'Năm mới nhiều sức khoẻ, deadline nhẹ nhàng, điểm cao vút.', 'Đi chợ Tết nhớ mang túi vải, bớt túi ni lông nha.'],
+  phunu: ['Chúc các bạn nữ luôn xinh đẹp, vui vẻ và rạng rỡ!', 'Hôm nay bạn đã nói lời cảm ơn với người phụ nữ nào chưa?'],
+  traidat: ['Mỗi ngày đều là Ngày Trái Đất.', 'Tắt đèn một giờ, Trái Đất thêm một chút bình yên.', 'Hôm nay mình làm một việc nhỏ cho môi trường nha.'],
+  quockhanh: ['Chúc mừng ngày lễ lớn của đất nước! Nghỉ lễ vui vẻ nha.', 'Đi chơi lễ nhớ bỏ rác đúng chỗ nha.'],
+  trungthu: ['Trung thu vui vẻ! Rước đèn phá cỗ thôi.', 'Bánh nướng hay bánh dẻo, bạn chọn phe nào?'],
+  halloween: ['Boo! Deadline hay ma đáng sợ hơn?', 'Trick or treat? Làm xong task rồi mới có kẹo nha.'],
+  nhagiao: ['Tri ân thầy cô nhân ngày 20/11.', 'Hôm nay nhắn một lời cảm ơn tới thầy cô nhé.'],
+  giangsinh: ['Giáng sinh an lành! Merry Christmas!', 'Ông già Noel năm nay đi xe đạp cho đỡ khói nè.']
+};
+var LA_CHU_DE = {
+  xuan: ['#f7a8c4', '#8cc152', '#f48fb1', '#a7d36b', '#e8749b'], ha: ['#e8352a', '#4f9a2a', '#f05a3a', '#8cc152', '#e8352a'],
+  thu: ['#d9822b', '#c0392b', '#e0a526', '#b5651d', '#d9822b'], dong: ['#9fc2e4', '#7aa3c8', '#c5dbef', '#5f88ad', '#9fc2e4'],
+  tet: ['#ffcc1f', '#d8231c', '#f7a8c4', '#e5a50a', '#d8231c'], phunu: ['#e0457b', '#f28cb1', '#c0457f', '#f7a8c4', '#e0457b'],
+  traidat: ['#4caf50', '#2f86d6', '#7cc35a', '#2e8b57', '#5cb85c'], quockhanh: ['#da251d', '#ffde00', '#da251d', '#ffc400', '#da251d'], trungthu: ['#ff8a1e', '#ffd23f', '#ff5a36', '#ffb347', '#ff8a1e'],
+  halloween: ['#ff9f43', '#7b2cbf', '#e8741c', '#9d4edd', '#ff9f43'], nhagiao: ['#5b8fd8', '#f48fb1', '#ffd54f', '#3f6fb5', '#ce93d8'],
+  giangsinh: ['#1f7a3e', '#e53935', '#2e8b57', '#ffca28', '#e53935']
+};
+var MAU_LA_GOC = null;
+function apMauLa() {
+  if (typeof MAU_LA === 'undefined') return;
+  if (!MAU_LA_GOC) MAU_LA_GOC = MAU_LA.slice();
+  var m = LA_CHU_DE[CHU_DE] || MAU_LA_GOC;
+  MAU_LA.length = 0; m.forEach(function (x) { MAU_LA.push(x); });
+}
+
+/** Hình đại diện trên thẻ chọn giao diện. */
+var HINH_THE = {
+  xuan: function () { return HINH.hoa('#f7a8c4', '#d6336c'); }, ha: function () { return HINH.hoa('#e8352a', '#ffd23f'); }, thu: function () { return HINH.phong('#fff1d6'); },
+  dong: function () { return '<span style="color:#ffffff;display:block;width:100%;height:100%">' + HINH.tuyet().replace(' class="tt-tuyet"', '') + '</span>'; },
+  tet: function () { return HINH.den(); }, phunu: function () { return HINH.tim('#ffffff'); }, traidat: function () { return HINH.traiDat(); }, quockhanh: function () { return HINH.co(); },
+  trungthu: function () { return HINH.denSao(); }, halloween: function () { return HINH.bi(); }, nhagiao: function () { return HINH.sach(); }, giangsinh: function () { return HINH.thong(); }
+};
+function hinhThe(ma) { return HINH_THE[ma] ? HINH_THE[ma]() : HINH.la('#ffffff'); }
+/** Đổi giao diện ngay trên trang đang mở (sau khi BOD chọn). */
+function apChuDe(ma) {
+  CHU_DE = timChuDe(ma) ? ma : '';
+  if (CHU_DE) document.documentElement.setAttribute('data-chude', CHU_DE); else document.documentElement.removeAttribute('data-chude');
+  vietMauChuDe();
+  apMauLa();
+  veHatRoi();
+  if (typeof apGiaoDien === 'function') apGiaoDien();
+  else if (chuDeToi()) document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+}
+document.addEventListener('DOMContentLoaded', function () { apMauLa(); veHatRoi(); });
+/* Xoay ngang điện thoại hoặc kéo cửa sổ qua lại cỡ điện thoại thì vẽ lại cho đúng số hạt. */
+var hepCu = window.innerWidth < 700;
+window.addEventListener('resize', function () { var hep = window.innerWidth < 700; if (hep !== hepCu) { hepCu = hep; veHatRoi(); } });
+</script>

@@ -1161,6 +1161,18 @@ function chuanHoaDsGio_(v) {
   return kq.length ? kq.slice(0, 6) : [20];
 }
 
+/** Giao diện theo mùa và ngày lễ do BOD chọn (trống là giao diện xanh mặc định). Tên, màu, hình nằm ở ChuDe.html. */
+var CHU_DE = ['xuan', 'ha', 'thu', 'dong', 'tet', 'phunu', 'traidat', 'quockhanh', 'trungthu', 'halloween', 'nhagiao', 'giangsinh'];
+/** Giao diện luôn tối (bất kể người dùng chọn sáng hay tối). */
+var CHU_DE_TOI = ['halloween'];
+function chuDeHopLe_(ma) { ma = String(ma == null ? '' : ma).trim(); return CHU_DE.indexOf(ma) >= 0 ? ma : ''; }
+/** Thuộc tính gắn vào thẻ html khi trang được tạo, để giao diện hiện đúng ngay từ đầu, không bị nháy màu xanh. */
+function thuocTinhChuDe_(ma) {
+  ma = chuDeHopLe_(ma);
+  if (!ma) return '';
+  return ' data-chude="' + ma + '"' + (CHU_DE_TOI.indexOf(ma) >= 0 ? ' data-theme="dark"' : '');
+}
+
 /** Các cách nhận thông báo. */
 var CACH_THONG_BAO = ['zalo', 'app', 'mail'];
 /** Chuẩn hoá lựa chọn cách nhận thông báo (chuỗi "zalo,mail" hoặc mảng). Trống thì mặc định Zalo. */
@@ -1189,6 +1201,7 @@ if (typeof module !== 'undefined') {
     chiSoBaoCao: chiSoBaoCao_, taskBiTre: taskBiTre_, tongHopBaoCao: tongHopBaoCao_, chiaMoc: chiaMoc_, bieuDoBaoCao: bieuDoBaoCao_,
     timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, chuCot: chuCot_, xepTheoBan: xepTheoBan_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
     base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
-    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_
+    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_,
+    CHU_DE: CHU_DE, chuDeHopLe: chuDeHopLe_, thuocTinhChuDe: thuocTinhChuDe_
   };
 }

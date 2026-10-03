@@ -82,8 +82,9 @@ function xacNhan(b, chu) {
 /* ---------- Giao diện sáng / tối ---------- */
 var GIAO_DIEN = (function () { try { return localStorage.getItem('eco_giao_dien') || 'auto'; } catch (e) { return 'auto'; } })();
 function apGiaoDien() {
-  if (GIAO_DIEN === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', GIAO_DIEN);
-  var toi = GIAO_DIEN === 'dark' || (GIAO_DIEN === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  // Giao diện ngày lễ luôn tối (Halloween) thì tối bất kể lựa chọn của từng người.
+  var toi = chuDeToi() || GIAO_DIEN === 'dark' || (GIAO_DIEN === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', toi ? 'dark' : 'light');
   var bien = function (t) { try { return getComputedStyle(document.documentElement).getPropertyValue(t).trim(); } catch (e) { return ''; } };
   // Màu thanh trạng thái (trên) và màu thanh tab (dưới) để trang vỏ tô phần tai thỏ, thanh vuốt cho liền với app.
   // Màn đăng nhập và màn chờ nền xanh đậm thì phần dưới cũng xanh đậm, không để lộ vệt trắng.
@@ -91,7 +92,8 @@ function apGiaoDien() {
   var coThanhDuoi = !nenXanh && $('.bottom') && getComputedStyle($('.bottom')).display !== 'none';
   var xanh = bien('--brand-3') || (toi ? '#142a0b' : '#1d3a0e');
   var nen = bien('--bg') || (toi ? '#11160e' : '#f4f6f1');
-  guiVo({ eco: 'mau', mau: toi ? '#1b3410' : '#274e13', nen: nenXanh ? xanh : nen, chan: nenXanh ? xanh : coThanhDuoi ? (bien('--surface') || (toi ? '#192114' : '#ffffff')) : nen });
+  var dau = bien('--brand'); if (!/^#[0-9a-f]{6}$/i.test(dau)) dau = toi ? '#1b3410' : '#274e13';
+  guiVo({ eco: 'mau', mau: dau, nen: nenXanh ? xanh : nen, chan: nenXanh ? xanh : coThanhDuoi ? (bien('--surface') || (toi ? '#192114' : '#ffffff')) : nen });
   document.documentElement.classList.toggle('nen-xanh', nenXanh);
 }
 /** Đổi giao diện; nhớ trên máy và theo tài khoản (mở ở máy khác vẫn đúng giao diện đã chọn). */
