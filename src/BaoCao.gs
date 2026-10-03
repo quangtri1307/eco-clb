@@ -143,7 +143,26 @@ function taoFileLog(phien, yc) {
   try { file = DriveApp.getFileById(maMau).makeCopy(k.tenFile, thuMuc || DriveApp.getRootFolder()); }
   catch (e) { throw new Error('Không chép được file mẫu. Kiểm tra lại link file mẫu.'); }
   var ss = SpreadsheetApp.openById(file.getId());
-  var sh = ss.getSheets()[0];
+  var dangKy = timTab_(ss, 'Đăng ký log');
+  if (dangKy) dienMauToolCu_(ss, dangKy, xepTheoBan_(k.nguoi, tv), k.buoi);
+  else dienMauChung_(ss.getSheets()[0], k.nguoi, k.buoi);
+  SpreadsheetApp.flush();
+
+  var url = ss.getUrl();
+  themDong_('FileLog', [{ ThoiGian: new Date(), TenFile: k.tenFile, DuongDan: url, SoNguoi: k.nguoi.length, SoBuoi: k.buoi.length, NguoiTao: String(tk.HoVaTen) }]);
+  return { url: url, ten: k.tenFile };
+}
+
+/** Tìm tab theo tên, không phân biệt hoa thường và khoảng trắng thừa. */
+function timTab_(ss, ten) {
+  var can = String(ten).trim().toLowerCase();
+  var ds = ss.getSheets();
+  for (var i = 0; i < ds.length; i++) if (String(ds[i].getName()).trim().toLowerCase() === can) return ds[i];
+  return null;
+}
+
+/** Mẫu bất kỳ: tìm dòng tiêu đề có cột Họ và tên, điền người vào bên dưới, mỗi buổi một cột ô tích. */
+function dienMauChung_(sh, nguoi, buoi) {
   var v = sh.getDataRange().getValues();
   var td = timTieuDeMauLog_(v);
   if (!td) {
@@ -153,9 +172,9 @@ function taoFileLog(phien, yc) {
     sh.getRange(dongTrong + 1, 1, 1, 4).setValues([['STT', 'Họ và tên', 'Ban', 'Số điện thoại']]).setFontWeight('bold').setBackground('#274e13').setFontColor('#ffffff');
   }
   var dongDau = td.dong + 2; // dòng dữ liệu đầu tiên (đánh số từ 1)
-  var canDong = dongDau + k.nguoi.length - 1;
+  var canDong = dongDau + nguoi.length - 1;
   if (sh.getMaxRows() < canDong) sh.insertRowsAfter(sh.getMaxRows(), canDong - sh.getMaxRows());
-  var canCot = td.cotBuoi + k.buoi.length;
+  var canCot = td.cotBuoi + buoi.length;
   if (sh.getMaxColumns() < canCot) sh.insertColumnsAfter(sh.getMaxColumns(), canCot - sh.getMaxColumns());
 
   var ghiCot = function (c, giaTri, chu) {
@@ -164,20 +183,74 @@ function taoFileLog(phien, yc) {
     if (chu) o.setNumberFormat('@');
     o.setValues(giaTri.map(function (x) { return [x]; }));
   };
-  ghiCot(td.cot.stt, k.nguoi.map(function (_, i) { return i + 1; }));
-  ghiCot(td.cot.ten, k.nguoi.map(function (t) { return String(t.HoVaTen); }), true);
-  ghiCot(td.cot.ban, k.nguoi.map(function (t) { return String(t.Ban); }), true);
-  ghiCot(td.cot.sdt, k.nguoi.map(function (t) { return String(t.SoDienThoaiCaNhan || ''); }), true);
+  ghiCot(td.cot.stt, nguoi.map(function (_, i) { return i + 1; }));
+  ghiCot(td.cot.ten, nguoi.map(function (t) { return String(t.HoVaTen); }), true);
+  ghiCot(td.cot.ban, nguoi.map(function (t) { return String(t.Ban); }), true);
+  ghiCot(td.cot.sdt, nguoi.map(function (t) { return String(t.SoDienThoaiCaNhan || ''); }), true);
 
-  var oTieuDe = sh.getRange(td.dong + 1, td.cotBuoi + 1, 1, k.buoi.length);
+  var oTieuDe = sh.getRange(td.dong + 1, td.cotBuoi + 1, 1, buoi.length);
   if (td.cotBuoi > 0) sh.getRange(td.dong + 1, td.cotBuoi).copyTo(oTieuDe, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
-  oTieuDe.setValues([k.buoi]);
-  sh.getRange(dongDau, td.cotBuoi + 1, k.nguoi.length, k.buoi.length).insertCheckboxes();
-  SpreadsheetApp.flush();
+  oTieuDe.setValues([buoi]);
+  sh.getRange(dongDau, td.cotBuoi + 1, nguoi.length, buoi.length).insertCheckboxes();
+}
 
-  var url = ss.getUrl();
-  themDong_('FileLog', [{ ThoiGian: new Date(), TenFile: k.tenFile, DuongDan: url, SoNguoi: k.nguoi.length, SoBuoi: k.buoi.length, NguoiTao: String(tk.HoVaTen) }]);
-  return { url: url, ten: k.tenFile };
+/**
+ * Mẫu của tool tạo file log cũ (tab "Đăng ký log", tab "Kế hoạch" nếu có). Làm đúng như tool cũ:
+ * dòng 4 là tên buổi (cột E trở đi, nền lấy từ ô Ghi chú F4), dòng 3 đếm số người đăng ký,
+ * từ dòng 5 là Họ tên, Lớp, Ban, SĐT; cột Ban gộp ô theo ban và xoay chữ; khoá tab, chỉ chừa ô tích và Ghi chú.
+ */
+function dienMauToolCu_(ss, sh, xep, buoi) {
+  var nguoi = xep.nguoi, n = nguoi.length, soBuoi = buoi.length;
+  var nenGhiChu = sh.getRange('F4').getBackground();
+  if (soBuoi > 1) {
+    sh.insertColumnsAfter(5, soBuoi - 1);
+    var cotMau = sh.getRange(1, 5, sh.getMaxRows(), 1);
+    for (var c = 1; c < soBuoi; c++) cotMau.copyTo(sh.getRange(1, 5 + c, sh.getMaxRows(), 1));
+  }
+  var tongCot = 4 + soBuoi + 1, dongCuoi = 4 + n;
+  if (sh.getMaxRows() < dongCuoi) sh.insertRowsAfter(sh.getMaxRows(), dongCuoi - sh.getMaxRows());
+
+  sh.getRange(5, 1, n, 4).setValues(nguoi.map(function (t) {
+    return [String(t.HoVaTen), String(t.Lop || ''), String(t.Ban || ''), "'" + String(t.SoDienThoaiCaNhan || '')];
+  }));
+  sh.getRange(5, 1, n, 1).setHorizontalAlignment('left');
+  sh.getRange(5, 2, n, 3).setHorizontalAlignment('center');
+  sh.getRange(5, 5, n, soBuoi).insertCheckboxes().setHorizontalAlignment('center');
+  xep.nhomBan.forEach(function (g) {
+    var o = sh.getRange(5 + g.dau, 3, g.so, 1);
+    if (g.so > 1) o.merge();
+    o.setTextRotation(90).setVerticalAlignment('middle').setHorizontalAlignment('center');
+  });
+
+  var kieuTieuDe = function (o) { return o.setBackground(nenGhiChu).setFontColor('#000000').setFontWeight('bold').setHorizontalAlignment('center').setVerticalAlignment('middle'); };
+  kieuTieuDe(sh.getRange(4, 5, 1, soBuoi).setValues([buoi]));
+  kieuTieuDe(sh.getRange(4, tongCot).setValue('Ghi chú'));
+  sh.getRange(3, 5, 1, soBuoi).setFormulas([buoi.map(function (_, i) { var c = chuCot_(5 + i); return '=COUNTIF(' + c + '5:' + c + dongCuoi + ', TRUE)'; })])
+    .setBackground('#ffffff').setFontWeight('normal').setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+  sh.getRange(1, 1, 1, tongCot).merge();
+  sh.getRange(2, 1, 1, tongCot).merge();
+  for (var cot = 1; cot <= 4; cot++) sh.getRange(3, cot, 2, 1).merge();
+  sh.getRange(3, tongCot, 2, 1).merge();
+  sh.getRange(3, 1, n + 2, tongCot).setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  sh.protect().setDescription('Khóa chỉnh sửa Tab Đăng ký log')
+    .setUnprotectedRanges([sh.getRange(5, 5, n, soBuoi), sh.getRange(5, tongCot, n, 1)]);
+
+  var keHoach = timTab_(ss, 'Kế hoạch');
+  if (!keHoach) return;
+  if (soBuoi > 1) {
+    keHoach.insertColumnsAfter(2, soBuoi - 1);
+    var cotMau2 = keHoach.getRange(1, 2, keHoach.getMaxRows(), 1);
+    for (var c2 = 1; c2 < soBuoi; c2++) cotMau2.copyTo(keHoach.getRange(1, 2 + c2, keHoach.getMaxRows(), 1));
+  }
+  var tongCot2 = 1 + soBuoi, tenTab = sh.getName().replace(/'/g, "''");
+  keHoach.getRange(3, 2, 1, soBuoi).setFormulas([buoi.map(function (_, i) { return "='" + tenTab + "'!" + chuCot_(5 + i) + '3'; })])
+    .setBackground('#ffffff').setFontWeight('normal').setHorizontalAlignment('center').setVerticalAlignment('middle');
+  kieuTieuDe(keHoach.getRange(4, 2, 1, soBuoi).setValues([buoi]));
+  keHoach.getRange(1, 1, 1, tongCot2).merge();
+  keHoach.getRange(2, 1, 1, tongCot2).merge();
+  keHoach.getRange(3, 1, 2, 1).merge();
+  keHoach.getRange(3, 1, 5, tongCot2).setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
 }
 
 function luuCaiDatLog(phien, cd) {
