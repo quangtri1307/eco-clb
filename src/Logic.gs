@@ -48,7 +48,7 @@ var BANG = {
  * thì giữ lại hồ sơ đầy đủ kèm ngày rời; ai quay lại CLB thì bỏ khỏi Thành viên cũ. So theo họ tên (không phân biệt hoa thường).
  * Trả về { ds: các dòng Thành viên cũ mới, soMoiRoi }.
  */
-function capNhatThanhVienCu(cu, moi, daRoi, bayGio) {
+function capNhatThanhVienCu_(cu, moi, daRoi, bayGio) {
   var k = function (t) { return String(t.HoVaTen || '').trim().toLowerCase(); };
   var conLai = {};
   moi.forEach(function (t) { conLai[k(t)] = true; });
@@ -72,7 +72,7 @@ var KIEU_TAI = {
 };
 
 /** Bỏ dấu tiếng Việt. */
-function boDau(s) {
+function boDau_(s) {
   return String(s == null ? '' : s)
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -81,12 +81,12 @@ function boDau(s) {
 }
 
 /** Đưa tên cột về dạng so sánh được: bỏ dấu, chữ thường, bỏ khoảng trắng và ký tự lạ. */
-function chuanHoaTenCot(s) {
-  return boDau(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+function chuanHoaTenCot_(s) {
+  return boDau_(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 /** Gộp ban theo chữ đầu: "PR CAP" -> "PR", "BOD" -> "BOD". */
-function nhomBan(ban) {
+function nhomBan_(ban) {
   var s = String(ban == null ? '' : ban).trim().toUpperCase();
   return s.split(/\s+/)[0] || '';
 }
@@ -96,26 +96,26 @@ function nhomBan(ban) {
  * @param {Array<Array>} values toàn bộ dữ liệu của tab nguồn
  * @return {{dongTieuDe:number, viTri:Object, thieu:Array<string>}}
  */
-function nhanDienCot(values) {
+function nhanDienCot_(values) {
   var nhan = {};
-  COT_THANH_VIEN.forEach(function (c) { nhan[chuanHoaTenCot(c[1])] = c[0]; });
+  COT_THANH_VIEN.forEach(function (c) { nhan[chuanHoaTenCot_(c[1])] = c[0]; });
   var gioiHan = Math.min(values.length, 10);
   for (var r = 0; r < gioiHan; r++) {
     var viTri = {};
     values[r].forEach(function (o, i) {
-      var khoa = nhan[chuanHoaTenCot(o)];
+      var khoa = nhan[chuanHoaTenCot_(o)];
       if (khoa && viTri[khoa] === undefined) viTri[khoa] = i;
     });
     if (viTri.HoVaTen !== undefined) {
       var thieu = COT_BAT_BUOC.filter(function (k) { return viTri[k] === undefined; })
-        .map(function (k) { return tenHienThiCot(k); });
+        .map(function (k) { return tenHienThiCot_(k); });
       return { dongTieuDe: r, viTri: viTri, thieu: thieu };
     }
   }
-  return { dongTieuDe: -1, viTri: {}, thieu: COT_BAT_BUOC.map(tenHienThiCot) };
+  return { dongTieuDe: -1, viTri: {}, thieu: COT_BAT_BUOC.map(tenHienThiCot_) };
 }
 
-function tenHienThiCot(khoa) {
+function tenHienThiCot_(khoa) {
   for (var i = 0; i < COT_THANH_VIEN.length; i++) if (COT_THANH_VIEN[i][0] === khoa) return COT_THANH_VIEN[i][1];
   return khoa;
 }
@@ -125,8 +125,8 @@ function tenHienThiCot(khoa) {
  * Bỏ dòng trống tên, báo lỗi nếu trùng tên.
  * @return {{thanhVien:Array<Object>, loi:Array<string>}}
  */
-function docDanhSachThanhVien(values) {
-  var nd = nhanDienCot(values);
+function docDanhSachThanhVien_(values) {
+  var nd = nhanDienCot_(values);
   if (nd.thieu.length) {
     return { thanhVien: [], loi: ['Không tìm thấy cột: ' + nd.thieu.join(', ') + '. Kiểm tra lai tên cột trên sheet nguồn.'] };
   }
@@ -158,7 +158,7 @@ function docDanhSachThanhVien(values) {
 }
 
 /** Tên nhiệm kỳ theo năm học: từ tháng 8 trở đi tính là năm học mới. */
-function tenNhiemKy(ngay) {
+function tenNhiemKy_(ngay) {
   var y = ngay.getFullYear();
   return ngay.getMonth() >= 7 ? y + '-' + (y + 1) : (y - 1) + '-' + y;
 }
@@ -168,30 +168,30 @@ function tenNhiemKy(ngay) {
  * @param {?{NhiemKy:string, HocKy:number}} kyHienTai
  * @return {?{NhiemKy:string, HocKy:number}} kỳ mới, hoặc null nếu kiểu tải không mở kỳ mới
  */
-function tinhKyMoi(kyHienTai, kieu, ngay) {
-  if (kieu === KIEU_TAI.DOT1) return { NhiemKy: tenNhiemKy(ngay), HocKy: 1 };
+function tinhKyMoi_(kyHienTai, kieu, ngay) {
+  if (kieu === KIEU_TAI.DOT1) return { NhiemKy: tenNhiemKy_(ngay), HocKy: 1 };
   if (kieu === KIEU_TAI.DOT2) {
-    return { NhiemKy: kyHienTai ? String(kyHienTai.NhiemKy) : tenNhiemKy(ngay), HocKy: 2 };
+    return { NhiemKy: kyHienTai ? String(kyHienTai.NhiemKy) : tenNhiemKy_(ngay), HocKy: 2 };
   }
   return null;
 }
 
 /** Biến các dòng của một tab (có dòng tiêu đề) thành danh sách đối tượng. */
 /** Chuyển một bảng thành chữ để cất vào bộ nhớ tạm, và đổi ngược lại. Ô ngày giờ vẫn giữ là ngày giờ. */
-function maHoaBang(ds) {
+function maHoaBang_(ds) {
   return JSON.stringify(ds.map(function (o) {
     var x = {};
     Object.keys(o).forEach(function (k) { var v = o[k]; x[k] = Object.prototype.toString.call(v) === '[object Date]' ? { $ngay: v.getTime() } : v; });
     return x;
   }));
 }
-function giaiMaBang(chuoi) {
+function giaiMaBang_(chuoi) {
   return JSON.parse(chuoi, function (k, v) {
     return v && typeof v === 'object' && typeof v.$ngay === 'number' && Object.keys(v).length === 1 ? new Date(v.$ngay) : v;
   });
 }
 
-function dongThanhDoiTuong(values) {
+function dongThanhDoiTuong_(values) {
   if (!values || values.length < 2) return [];
   var tieuDe = values[0];
   return values.slice(1).filter(function (d) {
@@ -203,7 +203,7 @@ function dongThanhDoiTuong(values) {
   });
 }
 
-function cungKy(dong, nhiemKy, hocKy) {
+function cungKy_(dong, nhiemKy, hocKy) {
   return String(dong.NhiemKy) === String(nhiemKy) && Number(dong.HocKy) === Number(hocKy);
 }
 
@@ -214,20 +214,20 @@ function cungKy(dong, nhiemKy, hocKy) {
  * @param {?Object} ky kỳ hiện tại
  * @param {Array<Object>} luuTru các dòng LuuTruThanhVien
  */
-function tongHopBangDiem(thanhVien, lichSu, ky, luuTru) {
+function tongHopBangDiem_(thanhVien, lichSu, ky, luuTru) {
   if (!ky) return [];
   var tong = {};
   var tongHk1 = {};
   lichSu.forEach(function (d) {
     var ten = String(d.HoVaTen).toLowerCase();
     var diem = Number(d.Diem) || 0;
-    if (cungKy(d, ky.NhiemKy, ky.HocKy)) tong[ten] = (tong[ten] || 0) + diem;
-    if (Number(ky.HocKy) === 2 && cungKy(d, ky.NhiemKy, 1)) tongHk1[ten] = (tongHk1[ten] || 0) + diem;
+    if (cungKy_(d, ky.NhiemKy, ky.HocKy)) tong[ten] = (tong[ten] || 0) + diem;
+    if (Number(ky.HocKy) === 2 && cungKy_(d, ky.NhiemKy, 1)) tongHk1[ten] = (tongHk1[ten] || 0) + diem;
   });
   var coHk1 = {};
   if (Number(ky.HocKy) === 2) {
     luuTru.forEach(function (d) {
-      if (cungKy(d, ky.NhiemKy, 1)) coHk1[String(d.HoVaTen).toLowerCase()] = true;
+      if (cungKy_(d, ky.NhiemKy, 1)) coHk1[String(d.HoVaTen).toLowerCase()] = true;
     });
   }
   return thanhVien.map(function (tv) {
@@ -236,7 +236,7 @@ function tongHopBangDiem(thanhVien, lichSu, ky, luuTru) {
       ten: String(tv.HoVaTen),
       lop: String(tv.Lop || ''),
       ban: String(tv.Ban || ''),
-      nhom: nhomBan(tv.Ban),
+      nhom: nhomBan_(tv.Ban),
       diem: tong[ten] || 0,
       diemHk1: coHk1[ten] ? (tongHk1[ten] || 0) : null
     };
@@ -244,10 +244,10 @@ function tongHopBangDiem(thanhVien, lichSu, ky, luuTru) {
 }
 
 /** Lịch sử cộng điểm công khai của một người trong một học kỳ, mới nhất trước. */
-function lichSuCongKhai(lichSu, ten, nhiemKy, hocKy) {
+function lichSuCongKhai_(lichSu, ten, nhiemKy, hocKy) {
   var k = String(ten).toLowerCase();
   return lichSu.filter(function (d) {
-    return String(d.HoVaTen).toLowerCase() === k && cungKy(d, nhiemKy, hocKy);
+    return String(d.HoVaTen).toLowerCase() === k && cungKy_(d, nhiemKy, hocKy);
   }).map(function (d) {
     var t = d.ThoiGian instanceof Date ? d.ThoiGian : new Date(d.ThoiGian);
     return { thoiGian: t.getTime(), loai: String(d.LoaiHoatDong), ten: String(d.TenHoatDong || ''), diem: Number(d.Diem) || 0 };
@@ -255,12 +255,12 @@ function lichSuCongKhai(lichSu, ten, nhiemKy, hocKy) {
 }
 
 /** Chỉ giữ link bắt đầu bằng http:// hoặc https://. */
-function linkHopLe(s) {
+function linkHopLe_(s) {
   return /^https?:\/\/\S+$/i.test(String(s || '').trim());
 }
 
 /** Kiểm tra nội dung góp ý. Trả về chuỗi lỗi, hoặc '' nếu hợp lệ. */
-function kiemTraGopY(noiDung) {
+function kiemTraGopY_(noiDung) {
   var s = String(noiDung == null ? '' : noiDung).trim();
   if (!s) return 'Bạn chưa viết góp ý.';
   if (s.length > 2000) return 'Góp ý dài quá 2000 ký tự, bạn rút gọn giúp nhé.';
@@ -268,14 +268,14 @@ function kiemTraGopY(noiDung) {
 }
 
 /** Người thuộc BOD không tham gia cộng điểm và không có trong báo cáo. */
-function khongPhaiBod(tv) {
-  return nhomBan(tv.Ban !== undefined ? tv.Ban : tv.ban) !== 'BOD';
+function khongPhaiBod_(tv) {
+  return nhomBan_(tv.Ban !== undefined ? tv.Ban : tv.ban) !== 'BOD';
 }
 
 /** Danh sách tài khoản BOD cần có theo danh sách thành viên mới (Ban = BOD, có email). */
-function taiKhoanBodCanCo(thanhVien) {
+function taiKhoanBodCanCo_(thanhVien) {
   return thanhVien.filter(function (tv) {
-    return nhomBan(tv.Ban) === 'BOD' && tv.Email;
+    return nhomBan_(tv.Ban) === 'BOD' && tv.Email;
   }).map(function (tv) { return { Email: tv.Email, HoVaTen: tv.HoVaTen }; });
 }
 
@@ -288,12 +288,12 @@ var QUYEN = {
   UCV: ['mail', 'hopthu']
 };
 
-function coQuyen(vaiTro, chucNang) {
+function coQuyen_(vaiTro, chucNang) {
   return (QUYEN[vaiTro] || []).indexOf(chucNang) >= 0;
 }
 
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
-function kiemTraMatKhauMoi(mk) {
+function kiemTraMatKhauMoi_(mk) {
   var s = String(mk == null ? '' : mk);
   if (s.length < 6) return 'Mật khẩu cần ít nhất 6 ký tự.';
   if (s.length > 100) return 'Mật khẩu dài quá.';
@@ -305,7 +305,7 @@ function kiemTraMatKhauMoi(mk) {
  * Điểm lấy theo loại hoạt động tại lúc cộng; người được cộng phải có trong danh sách thành viên.
  * @return {{dong:Array<Object>, loi:string}}
  */
-function taoDongCongDiem(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio) {
+function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio) {
   if (!ky) return { dong: [], loi: 'Chưa có học kỳ nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.' };
   var loai = null;
   loaiHoatDong.forEach(function (l) { if (String(l.TenLoai) === String(yeuCau.loai)) loai = l; });
@@ -332,7 +332,7 @@ function taoDongCongDiem(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio)
 }
 
 /** Kiểm tra danh sách loại hoạt động do BOD sửa. */
-function chuanHoaLoaiHoatDong(ds) {
+function chuanHoaLoaiHoatDong_(ds) {
   var kq = [];
   var daCo = {};
   for (var i = 0; i < (ds || []).length; i++) {
@@ -350,13 +350,13 @@ function chuanHoaLoaiHoatDong(ds) {
 }
 
 /** Kiểm tra danh sách link ghim do BOD sửa. */
-function chuanHoaGhim(ds) {
+function chuanHoaGhim_(ds) {
   var kq = [];
   for (var i = 0; i < (ds || []).length; i++) {
     var tieuDe = String(ds[i].tieuDe == null ? '' : ds[i].tieuDe).trim();
     var link = String(ds[i].link == null ? '' : ds[i].link).trim();
     if (!tieuDe && !link) continue;
-    if (!linkHopLe(link)) return { ds: [], loi: 'Link "' + (tieuDe || link) + '" phải bắt đầu bằng http:// hoặc https://' };
+    if (!linkHopLe_(link)) return { ds: [], loi: 'Link "' + (tieuDe || link) + '" phải bắt đầu bằng http:// hoặc https://' };
     kq.push({ TieuDe: tieuDe || link, DuongDan: link });
   }
   return { ds: kq, loi: '' };
@@ -368,7 +368,7 @@ function chuanHoaGhim(ds) {
 var TRANG_THAI_TASK = { GIAO: 'Đã giao', SAP: 'Sắp đến hạn', TRE: 'Trễ hạn', XONG: 'Đã xong', HUY: 'Đã huỷ' };
 
 /** Ngày dạng yyyy-mm-dd có thật hay không. */
-function ngayHopLe(s) {
+function ngayHopLe_(s) {
   var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
   if (!m) return false;
   var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
@@ -376,28 +376,28 @@ function ngayHopLe(s) {
 }
 
 /** Số ngày từ ngày "tu" đến ngày "den" (cả hai dạng yyyy-mm-dd). */
-function soNgayGiua(tu, den) {
+function soNgayGiua_(tu, den) {
   var a = String(tu).split('-'), b = String(den).split('-');
   return Math.round((Date.UTC(+b[0], +b[1] - 1, +b[2]) - Date.UTC(+a[0], +a[1] - 1, +a[2])) / 864e5);
 }
 
 /** yyyy-mm-dd → dd/mm/yyyy */
-function hienNgay(s) {
+function hienNgay_(s) {
   var p = String(s).split('-');
   return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(s);
 }
 
-function trangThaiTask(trangThaiLuu, hanChot, homNay, soNgaySapDenHan) {
+function trangThaiTask_(trangThaiLuu, hanChot, homNay, soNgaySapDenHan) {
   if (trangThaiLuu === TRANG_THAI_TASK.XONG || trangThaiLuu === TRANG_THAI_TASK.HUY) return trangThaiLuu;
-  if (!ngayHopLe(hanChot)) return TRANG_THAI_TASK.GIAO;
-  var conLai = soNgayGiua(homNay, hanChot);
+  if (!ngayHopLe_(hanChot)) return TRANG_THAI_TASK.GIAO;
+  var conLai = soNgayGiua_(homNay, hanChot);
   if (conLai < 0) return TRANG_THAI_TASK.TRE;
   if (conLai <= soNgaySapDenHan) return TRANG_THAI_TASK.SAP;
   return TRANG_THAI_TASK.GIAO;
 }
 
 /** Kiểm tra nội dung task. Trả về { loi, ten, moTa, hanChot, nguoi[] } với tên người đã chuẩn theo danh sách. */
-function kiemTraTask(yeuCau, thanhVien) {
+function kiemTraTask_(yeuCau, thanhVien) {
   yeuCau = yeuCau || {};
   var ten = String(yeuCau.ten || '').replace(/\s+/g, ' ').trim();
   var moTa = String(yeuCau.moTa || '').trim();
@@ -405,7 +405,7 @@ function kiemTraTask(yeuCau, thanhVien) {
   if (!ten) return { loi: 'Bạn chưa nhập tên task.' };
   if (ten.length > 200) return { loi: 'Tên task dài quá 200 ký tự.' };
   if (moTa.length > 2000) return { loi: 'Mô tả dài quá 2000 ký tự.' };
-  if (!ngayHopLe(hanChot)) return { loi: 'Hạn chót chưa đúng.' };
+  if (!ngayHopLe_(hanChot)) return { loi: 'Hạn chót chưa đúng.' };
   var theoTen = {};
   thanhVien.forEach(function (tv) { theoTen[String(tv.HoVaTen).toLowerCase()] = String(tv.HoVaTen); });
   var nguoi = [], daCo = {};
@@ -420,8 +420,8 @@ function kiemTraTask(yeuCau, thanhVien) {
 }
 
 /** Tạo các dòng task, mỗi người phụ trách một dòng. BOD tạo là "Giao task", ban nhân sự tạo là "Nhập task". */
-function taoDongTask(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio) {
-  var k = kiemTraTask(yeuCau, thanhVien);
+function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio) {
+  var k = kiemTraTask_(yeuCau, thanhVien);
   if (k.loi) return { dong: [], loi: k.loi };
   return {
     loi: '',
@@ -442,19 +442,19 @@ var NHAC_TRE = { MOI_NGAY: 'Mỗi ngày', MOT_LAN: 'Chỉ một lần', KHONG: '
  * Chọn task cần nhắc hôm nay. ds: [{ ten, nguoi, hanChot, trangThai }] (trangThai đã tính).
  * caiDat: { nhacSapDenHan: true/false, nhacTre: một giá trị của NHAC_TRE }.
  */
-function chonTaskCanNhac(ds, homNay, caiDat) {
+function chonTaskCanNhac_(ds, homNay, caiDat) {
   return ds.filter(function (t) {
     if (t.trangThai === TRANG_THAI_TASK.SAP) return !!caiDat.nhacSapDenHan;
     if (t.trangThai !== TRANG_THAI_TASK.TRE) return false;
     if (caiDat.nhacTre === NHAC_TRE.MOI_NGAY) return true;
-    if (caiDat.nhacTre === NHAC_TRE.MOT_LAN) return soNgayGiua(t.hanChot, homNay) === 1;
+    if (caiDat.nhacTre === NHAC_TRE.MOT_LAN) return soNgayGiua_(t.hanChot, homNay) === 1;
     return false;
   });
 }
 
 /** Mô tả hạn của một task, ví dụ "trễ 2 ngày", "hạn hôm nay", "còn 1 ngày". */
-function moTaHan(hanChot, homNay) {
-  var d = soNgayGiua(homNay, hanChot);
+function moTaHan_(hanChot, homNay) {
+  var d = soNgayGiua_(homNay, hanChot);
   if (d < 0) return 'trễ ' + (-d) + ' ngày';
   if (d === 0) return 'hạn hôm nay';
   return 'còn ' + d + ' ngày';
@@ -464,19 +464,19 @@ function moTaHan(hanChot, homNay) {
  * Soạn tin nhắc. laNhanSu = true: tin cho ban nhân sự, có tên người phụ trách để nhắc lại qua Messenger.
  * Trả về '' nếu không có gì cần nhắc.
  */
-function soanTinNhac(tenNguoiNhan, ds, homNay, laNhanSu) {
+function soanTinNhac_(tenNguoiNhan, ds, homNay, laNhanSu) {
   if (!ds.length) return '';
   var sx = ds.slice().sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : 0; });
   var dau = laNhanSu
     ? 'ECODesk nhắc việc. Chào ' + tenNguoiNhan + ', nhờ bạn nhắc các bạn sau qua Messenger:'
     : 'ECODesk nhắc việc. Chào ' + tenNguoiNhan + ', bạn có ' + ds.length + ' task cần chú ý:';
   return dau + '\n' + sx.map(function (t) {
-    return '• ' + (laNhanSu ? t.nguoi + ': ' : '') + t.ten + ' (hạn ' + hienNgay(t.hanChot) + ', ' + moTaHan(t.hanChot, homNay) + ')';
+    return '• ' + (laNhanSu ? t.nguoi + ': ' : '') + t.ten + ' (hạn ' + hienNgay_(t.hanChot) + ', ' + moTaHan_(t.hanChot, homNay) + ')';
   }).join('\n');
 }
 
 /** Chia tin dài thành nhiều tin, mỗi tin không quá "toiDa" ký tự, ưu tiên cắt ở chỗ xuống dòng. */
-function chiaTin(tin, toiDa) {
+function chiaTin_(tin, toiDa) {
   var kq = [], cur = '';
   String(tin).split('\n').forEach(function (dong) {
     while (dong.length > toiDa) {
@@ -492,7 +492,7 @@ function chiaTin(tin, toiDa) {
 }
 
 /** Tìm mã kết nối trong tin nhắn người dùng gửi bot. Trả về mã khớp hoặc ''. */
-function timMaTrongTin(tin, dsMa) {
+function timMaTrongTin_(tin, dsMa) {
   var chu = String(tin || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ');
   var tu = chu.split(/\s+/);
   for (var i = 0; i < dsMa.length; i++) {
@@ -511,18 +511,18 @@ var THAO_TAC_MAIL = {
 };
 var TRANG_THAI_VIEC = { NHAP: 'Nháp', CHO: 'Chờ duyệt', DUYET: 'Đã duyệt', SUA: 'Cần sửa lại', TU_CHOI: 'Từ chối', LOI: 'Lỗi khi thực hiện' };
 
-function emailHopLe(e) {
+function emailHopLe_(e) {
   return /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]+$/.test(String(e || '').trim());
 }
 
 /** Tách chuỗi nhiều email (phẩy, chấm phẩy, xuống dòng, khoảng trắng). Trả về { ds, sai }. Bỏ trùng. */
-function tachEmail(chuoi) {
+function tachEmail_(chuoi) {
   var ds = [], sai = [], daCo = {};
   String(chuoi || '').split(/[\s,;]+/).forEach(function (x) {
     var m = /<([^>]+)>/.exec(x);
     var e = (m ? m[1] : x).trim().replace(/^mailto:/i, '');
     if (!e) return;
-    if (!emailHopLe(e)) { sai.push(e); return; }
+    if (!emailHopLe_(e)) { sai.push(e); return; }
     var k = e.toLowerCase();
     if (!daCo[k]) { daCo[k] = true; ds.push(e); }
   });
@@ -530,18 +530,18 @@ function tachEmail(chuoi) {
 }
 
 /** Kiểm tra một việc mail của UCV. Trả về '' nếu hợp lệ. */
-function kiemTraViecMail(v) {
+function kiemTraViecMail_(v) {
   v = v || {};
   var tt = v.thaoTac;
   var hopLe = Object.keys(THAO_TAC_MAIL).some(function (k) { return THAO_TAC_MAIL[k] === tt; });
   if (!hopLe) return 'Thao tác không hợp lệ.';
   if (tt !== THAO_TAC_MAIL.SOAN && !v.maThu) return 'Thiếu thư cần thao tác.';
   if (tt === THAO_TAC_MAIL.SOAN || tt === THAO_TAC_MAIL.CHUYEN_TIEP) {
-    var den = tachEmail(v.den);
+    var den = tachEmail_(v.den);
     if (den.sai.length) return 'Email chưa đúng: ' + den.sai.join(', ');
     if (!den.ds.length) return 'Bạn chưa nhập người nhận.';
   }
-  var cc = tachEmail(v.cc), bcc = tachEmail(v.bcc);
+  var cc = tachEmail_(v.cc), bcc = tachEmail_(v.bcc);
   if (cc.sai.length || bcc.sai.length) return 'Email chưa đúng: ' + cc.sai.concat(bcc.sai).join(', ');
   if (tt === THAO_TAC_MAIL.SOAN && !String(v.tieuDe || '').trim()) return 'Bạn chưa nhập tiêu đề.';
   if ((tt === THAO_TAC_MAIL.SOAN || tt === THAO_TAC_MAIL.TRA_LOI || tt === THAO_TAC_MAIL.TRA_LOI_TAT_CA) && !String(v.noiDung || '').trim()) return 'Bạn chưa nhập nội dung.';
@@ -552,7 +552,7 @@ function kiemTraViecMail(v) {
 }
 
 /** Các chỗ {TenCot} có trong thư mẫu, theo thứ tự xuất hiện, không trùng. */
-function timChoTrong(chu) {
+function timChoTrong_(chu) {
   var ds = [], re = /\{([^{}\n]{1,60})\}/g, m;
   while ((m = re.exec(String(chu || '')))) if (ds.indexOf(m[1]) < 0) ds.push(m[1]);
   return ds;
@@ -562,12 +562,12 @@ function timChoTrong(chu) {
  * Thay {TenCot} bằng giá trị của người nhận. So khớp tên cột không phân biệt hoa thường, dấu và khoảng trắng.
  * Trả về { chu, thieu[] } với thieu là các chỗ không có cột tương ứng (giữ nguyên trong thư).
  */
-function thayTheMau(chu, duLieu) {
+function thayTheMau_(chu, duLieu) {
   var theoKhoa = {};
-  Object.keys(duLieu || {}).forEach(function (k) { theoKhoa[chuanHoaTenCot(k)] = duLieu[k]; });
+  Object.keys(duLieu || {}).forEach(function (k) { theoKhoa[chuanHoaTenCot_(k)] = duLieu[k]; });
   var thieu = [];
   var kq = String(chu || '').replace(/\{([^{}\n]{1,60})\}/g, function (toan, ten) {
-    var k = chuanHoaTenCot(ten);
+    var k = chuanHoaTenCot_(ten);
     if (Object.prototype.hasOwnProperty.call(theoKhoa, k)) return String(theoKhoa[k] == null ? '' : theoKhoa[k]);
     if (thieu.indexOf(ten) < 0) thieu.push(ten);
     return toan;
@@ -576,14 +576,14 @@ function thayTheMau(chu, duLieu) {
 }
 
 /** Đổi thư chữ thường sang HTML đơn giản (giữ xuống dòng, link bấm được). */
-function chuSangHtml(chu) {
+function chuSangHtml_(chu) {
   var e = String(chu || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   e = e.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
   return '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">' + e.replace(/\r?\n/g, '<br>') + '</div>';
 }
 
 /** Bỏ thẻ HTML, lấy chữ thường (dùng làm bản chữ của thư HTML và kiểm tra thư trống). */
-function htmlSangChu(html) {
+function htmlSangChu_(html) {
   return String(html || '')
     .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, '\n')
@@ -596,7 +596,7 @@ function htmlSangChu(html) {
  * Lọc HTML do người dùng soạn trước khi lưu và gửi: bỏ thẻ chạy được, thuộc tính on…, link javascript:.
  * Giao diện đã lọc một lần; đây là lớp chặn thứ hai ở máy chủ.
  */
-function lamSachHtml(html) {
+function lamSachHtml_(html) {
   return String(html || '')
     .replace(/<(script|style|iframe|object|embed|form|textarea|select|button|meta|link|base|frame|frameset|applet|noscript)\b[\s\S]*?(<\/\1\s*>|$)/gi, '')
     .replace(/<\/?(script|style|iframe|object|embed|form|input|textarea|select|button|meta|link|base|frame|frameset|applet|noscript)\b[^>]*>/gi, '')
@@ -605,7 +605,7 @@ function lamSachHtml(html) {
 }
 
 /** Đổi giá trị thành chữ an toàn để chèn vào HTML. */
-function escHtmlChu(s) {
+function escHtmlChu_(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
@@ -614,21 +614,21 @@ function escHtmlChu(s) {
  * Thay {TenCot} ở tiêu đề và nội dung (giá trị chèn vào HTML được escape).
  * Trả về { ds[{email, tieuDe, html, chu}], loi }.
  */
-function chuanBiGuiTuNhap(mau, nguoiNhan, gioiHan) {
+function chuanBiGuiTuNhap_(mau, nguoiNhan, gioiHan) {
   mau = mau || {};
   if (!String(mau.tieuDe || '').trim()) return { ds: [], loi: 'Thư nháp chưa có tiêu đề. Mở Gmail, thêm tiêu đề cho thư nháp rồi thử lại.' };
-  if (!htmlSangChu(mau.html) && !/<img/i.test(String(mau.html || ''))) return { ds: [], loi: 'Thư nháp chưa có nội dung.' };
+  if (!htmlSangChu_(mau.html) && !/<img/i.test(String(mau.html || ''))) return { ds: [], loi: 'Thư nháp chưa có nội dung.' };
   var ds = [], daCo = {}, thieu = [], sai = [];
   (nguoiNhan || []).forEach(function (n) {
     var e = String(n.email || '').trim();
-    if (!emailHopLe(e)) { sai.push(e || '(trống)'); return; }
+    if (!emailHopLe_(e)) { sai.push(e || '(trống)'); return; }
     if (daCo[e.toLowerCase()]) return;
     daCo[e.toLowerCase()] = true;
     var d = n.duLieu || {}, dHtml = {};
-    Object.keys(d).forEach(function (k) { dHtml[k] = escHtmlChu(d[k]); });
-    var a = thayTheMau(mau.tieuDe, d), b = thayTheMau(mau.html, dHtml);
+    Object.keys(d).forEach(function (k) { dHtml[k] = escHtmlChu_(d[k]); });
+    var a = thayTheMau_(mau.tieuDe, d), b = thayTheMau_(mau.html, dHtml);
     a.thieu.concat(b.thieu).forEach(function (t) { if (thieu.indexOf(t) < 0) thieu.push(t); });
-    ds.push({ email: e, tieuDe: a.chu, html: b.chu, chu: htmlSangChu(b.chu) });
+    ds.push({ email: e, tieuDe: a.chu, html: b.chu, chu: htmlSangChu_(b.chu) });
   });
   if (sai.length) return { ds: [], loi: 'Có ' + sai.length + ' email chưa đúng: ' + sai.slice(0, 5).join(', ') + (sai.length > 5 ? '…' : '') };
   if (thieu.length) return { ds: [], loi: 'Không tìm thấy thông tin cho: ' + thieu.map(function (t) { return '{' + t + '}'; }).join(', ') + '. Sửa thư nháp hoặc chọn nguồn có cột tương ứng.' };
@@ -641,7 +641,7 @@ function chuanBiGuiTuNhap(mau, nguoiNhan, gioiHan) {
  * Đọc bảng từ một sheet bất kỳ (dòng tiêu đề đầu tiên có chữ). Trả về { cot[], dong[{...}], cotEmail }.
  * cotEmail là cột đoán là email (tên có chữ "email"/"mail", hoặc cột có nhiều email nhất).
  */
-function docBangNgoai(giaTri) {
+function docBangNgoai_(giaTri) {
   var v = giaTri || [];
   var h = 0;
   while (h < v.length && h < 10 && !v[h].some(function (c) { return String(c).trim(); })) h++;
@@ -654,11 +654,11 @@ function docBangNgoai(giaTri) {
     cot.forEach(function (c, i) { o[c] = v[r][i] instanceof Date ? v[r][i] : String(v[r][i] == null ? '' : v[r][i]).trim(); });
     dong.push(o);
   }
-  var cotEmail = cot.filter(function (c) { return /e-?mail|mail/.test(boDau(c).toLowerCase()); })[0] || '';
+  var cotEmail = cot.filter(function (c) { return /e-?mail|mail/.test(boDau_(c).toLowerCase()); })[0] || '';
   if (!cotEmail) {
     var tot = 0;
     cot.forEach(function (c) {
-      var n = dong.filter(function (d) { return emailHopLe(d[c]); }).length;
+      var n = dong.filter(function (d) { return emailHopLe_(d[c]); }).length;
       if (n > tot) { tot = n; cotEmail = c; }
     });
   }
@@ -669,17 +669,17 @@ function docBangNgoai(giaTri) {
  * Chuẩn bị danh sách gửi hàng loạt. nguoiNhan: [{ email, duLieu{} }].
  * Trả về { ds[{email, tieuDe, noiDung}], loi } — báo lỗi nếu email sai, thiếu cột, hay vượt giới hạn.
  */
-function chuanBiGuiHangLoat(tieuDe, noiDung, nguoiNhan, gioiHan) {
+function chuanBiGuiHangLoat_(tieuDe, noiDung, nguoiNhan, gioiHan) {
   if (!String(tieuDe || '').trim()) return { ds: [], loi: 'Thư chưa có tiêu đề.' };
   if (!String(noiDung || '').trim()) return { ds: [], loi: 'Thư chưa có nội dung.' };
   var ds = [], daCo = {}, thieu = [], sai = [];
   (nguoiNhan || []).forEach(function (n) {
     var e = String(n.email || '').trim();
-    if (!emailHopLe(e)) { sai.push(e || '(trống)'); return; }
+    if (!emailHopLe_(e)) { sai.push(e || '(trống)'); return; }
     if (daCo[e.toLowerCase()]) return;
     daCo[e.toLowerCase()] = true;
     var d = n.duLieu || {};
-    var a = thayTheMau(tieuDe, d), b = thayTheMau(noiDung, d);
+    var a = thayTheMau_(tieuDe, d), b = thayTheMau_(noiDung, d);
     a.thieu.concat(b.thieu).forEach(function (t) { if (thieu.indexOf(t) < 0) thieu.push(t); });
     ds.push({ email: e, tieuDe: a.chu, noiDung: b.chu });
   });
@@ -692,9 +692,9 @@ function chuanBiGuiHangLoat(tieuDe, noiDung, nguoiNhan, gioiHan) {
 
 /* ===================== Báo cáo ===================== */
 
-function laSeeding(loai) { return boDau(loai).toLowerCase().indexOf('seeding') >= 0; }
+function laSeeding_(loai) { return boDau_(loai).toLowerCase().indexOf('seeding') >= 0; }
 
-function tenHoatDongChuan(t) {
+function tenHoatDongChuan_(t) {
   var x = String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
   return x || '(không ghi)';
 }
@@ -703,12 +703,12 @@ function tenHoatDongChuan(t) {
  * Danh sách chỉ số của báo cáo: điểm, số lần mỗi loại hoạt động (Seeding tách theo tên hoạt động), task xong, task trễ hạn.
  * Trả về [{ khoa, ten }].
  */
-function chiSoBaoCao(loaiHoatDong, lichSu) {
+function chiSoBaoCao_(loaiHoatDong, lichSu) {
   var ds = [{ khoa: 'diem', ten: 'Điểm' }];
   loaiHoatDong.forEach(function (l) {
-    if (!laSeeding(l)) { ds.push({ khoa: 'loai:' + l, ten: l }); return; }
+    if (!laSeeding_(l)) { ds.push({ khoa: 'loai:' + l, ten: l }); return; }
     var ten = [];
-    lichSu.forEach(function (d) { if (d.loai === l) { var t = tenHoatDongChuan(d.tenHoatDong); if (ten.indexOf(t) < 0) ten.push(t); } });
+    lichSu.forEach(function (d) { if (d.loai === l) { var t = tenHoatDongChuan_(d.tenHoatDong); if (ten.indexOf(t) < 0) ten.push(t); } });
     ten.sort();
     if (!ten.length) ds.push({ khoa: 'loai:' + l, ten: l });
     ten.forEach(function (t) { ds.push({ khoa: 'loai:' + l + ':' + t, ten: l + ' (' + t + ')' }); });
@@ -718,13 +718,13 @@ function chiSoBaoCao(loaiHoatDong, lichSu) {
   return ds;
 }
 
-function khoaChiSo(d) {
-  return laSeeding(d.loai) ? 'loai:' + d.loai + ':' + tenHoatDongChuan(d.tenHoatDong) : 'loai:' + d.loai;
+function khoaChiSo_(d) {
+  return laSeeding_(d.loai) ? 'loai:' + d.loai + ':' + tenHoatDongChuan_(d.tenHoatDong) : 'loai:' + d.loai;
 }
 
 /** Task có bị trễ hạn không (đã xong sau hạn, hoặc chưa xong mà quá hạn). */
-function taskBiTre(t, homNay) {
-  if (t.trangThaiLuu === TRANG_THAI_TASK.HUY || !ngayHopLe(t.hanChot)) return false;
+function taskBiTre_(t, homNay) {
+  if (t.trangThaiLuu === TRANG_THAI_TASK.HUY || !ngayHopLe_(t.hanChot)) return false;
   if (t.trangThaiLuu === TRANG_THAI_TASK.XONG) return !!t.ngayXong && t.ngayXong > t.hanChot;
   return homNay > t.hanChot;
 }
@@ -736,7 +736,7 @@ function taskBiTre(t, homNay) {
  * cheDo: 'thanhvien' | 'ban' | 'clb'.
  * Trả về { dong: [{ ten, ban, so: {khoa: số} }] }.
  */
-function tongHopBaoCao(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
+function tongHopBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
   var cuaAi = {};
   thanhVien.forEach(function (t) { cuaAi[t.ten] = t; });
   var nhom = function (ten) {
@@ -760,21 +760,21 @@ function tongHopBaoCao(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
     if (k === null) return;
     var d = dongCua(k);
     cong(d, 'diem', Number(x.diem) || 0);
-    cong(d, khoaChiSo(x), 1);
+    cong(d, khoaChiSo_(x), 1);
   });
   task.forEach(function (t) {
     var k = nhom(t.nguoi);
     if (k === null) return;
     var d = dongCua(k);
     if (t.trangThaiLuu === TRANG_THAI_TASK.XONG && t.ngayXong && t.ngayXong >= tu && t.ngayXong <= den) cong(d, 'taskXong', 1);
-    if (t.hanChot >= tu && t.hanChot <= den && taskBiTre(t, homNay)) cong(d, 'taskTre', 1);
+    if (t.hanChot >= tu && t.hanChot <= den && taskBiTre_(t, homNay)) cong(d, 'taskTre', 1);
   });
   return { dong: thuTu.map(function (k) { return bang[k]; }) };
 }
 
 /** Chia khoảng ngày thành các mốc: theo ngày (≤ 31 ngày), theo tuần (≤ 120 ngày), còn lại theo tháng. */
-function chiaMoc(tu, den) {
-  var soNgay = soNgayGiua(tu, den) + 1;
+function chiaMoc_(tu, den) {
+  var soNgay = soNgayGiua_(tu, den) + 1;
   var kieu = soNgay <= 31 ? 'ngay' : soNgay <= 120 ? 'tuan' : 'thang';
   var moc = [];
   var p = tu.split('-');
@@ -798,11 +798,11 @@ function chiaMoc(tu, den) {
 }
 
 /** Số liệu theo từng mốc cho biểu đồ: { moc[], chuoi: { tenDong: [ {khoa: số} theo mốc ] } }. */
-function bieuDoBaoCao(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
-  var c = chiaMoc(tu, den);
+function bieuDoBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
+  var c = chiaMoc_(tu, den);
   var chuoi = {};
   c.moc.forEach(function (m, i) {
-    tongHopBaoCao(lichSu, task, thanhVien, m.tu, m.den, cheDo, homNay).dong.forEach(function (d) {
+    tongHopBaoCao_(lichSu, task, thanhVien, m.tu, m.den, cheDo, homNay).dong.forEach(function (d) {
       if (!chuoi[d.ten]) chuoi[d.ten] = c.moc.map(function () { return {}; });
       chuoi[d.ten][i] = d.so;
     });
@@ -816,12 +816,12 @@ function bieuDoBaoCao(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
  * Tìm dòng tiêu đề trong sheet mẫu: dòng đầu (trong 15 dòng) có ô Họ và tên.
  * Trả về { dong, cot: { stt, ten, ban, sdt }, cotBuoi } (vị trí tính từ 0; cotBuoi là cột trống đầu tiên sau tiêu đề), hoặc null.
  */
-function timTieuDeMauLog(values) {
+function timTieuDeMauLog_(values) {
   var TEN = ['hovaten', 'hoten', 'ten', 'tenthanhvien'], BAN = ['ban'], SDT = ['sodienthoai', 'sdt', 'sodienthoaicanhan', 'dienthoai'], STT = ['stt', 'sothutu'];
   for (var r = 0; r < Math.min(values.length, 15); r++) {
     var cot = {}, cuoi = -1;
     values[r].forEach(function (o, i) {
-      var k = chuanHoaTenCot(o);
+      var k = chuanHoaTenCot_(o);
       if (k) cuoi = i;
       if (TEN.indexOf(k) >= 0 && cot.ten === undefined) cot.ten = i;
       else if (BAN.indexOf(k) >= 0 && cot.ban === undefined) cot.ban = i;
@@ -834,7 +834,7 @@ function timTieuDeMauLog(values) {
 }
 
 /** Kiểm tra yêu cầu tạo file log. Trả về { loi, tenFile, nguoi[], buoi[] }. */
-function kiemTraFileLog(yc, thanhVien) {
+function kiemTraFileLog_(yc, thanhVien) {
   yc = yc || {};
   if (!yc.coMau) return { loi: 'Chưa có file mẫu. Dán link file mẫu rồi mới tạo được file đăng ký log.' };
   var tenFile = String(yc.tenFile || '').trim();
@@ -856,7 +856,7 @@ function kiemTraFileLog(yc, thanhVien) {
 /* ===================== Đăng nhập Google ===================== */
 
 /** Kiểm tra thông tin Google trả về cho một ID token. Trả về '' nếu hợp lệ. */
-function kiemTraTokenGoogle(info, clientId, bayGioGiay) {
+function kiemTraTokenGoogle_(info, clientId, bayGioGiay) {
   if (!info || !info.email) return 'Không xác nhận được tài khoản Google. Bạn thử lại nhé.';
   if (String(info.aud) !== String(clientId)) return 'Mã đăng nhập không phải của ECODesk.';
   if (['accounts.google.com', 'https://accounts.google.com'].indexOf(String(info.iss)) < 0) return 'Mã đăng nhập không phải do Google cấp.';
@@ -916,7 +916,7 @@ function byteSangSo_(b) {
   return BigInt('0x' + (h || '0'));
 }
 /** Chuỗi base64url (không có dấu =) từ mảng byte. */
-function base64Url(b) {
+function base64Url_(b) {
   var A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', s = '';
   for (var i = 0; i < b.length; i += 3) {
     var n = ((b[i] & 255) << 16) | (((b[i + 1] || 0) & 255) << 8) | ((b[i + 2] || 0) & 255);
@@ -925,7 +925,7 @@ function base64Url(b) {
   return s;
 }
 /** Từ khoá riêng (32 byte) ra khoá công khai dạng 65 byte (04 || X || Y). */
-function khoaCongP256(khoaRieng) {
+function khoaCongP256_(khoaRieng) {
   var c = p256_(), d = byteSangSo_(khoaRieng);
   if (d <= c.O || d >= c.n) throw new Error('Khoá riêng không hợp lệ.');
   var Q = nhanDiemP256_(d, c.G);
@@ -935,7 +935,7 @@ function khoaCongP256(khoaRieng) {
  * Ký ECDSA P-256 theo RFC 6979 (số k sinh từ khoá và nội dung, không cần số ngẫu nhiên).
  * bam: 32 byte SHA-256 của nội dung; hmac(khoa, duLieu) trả về 32 byte HMAC-SHA256. Trả về 64 byte r || s.
  */
-function kyP256(bam, khoaRieng, hmac) {
+function kyP256_(bam, khoaRieng, hmac) {
   var c = p256_(), d = byteSangSo_(khoaRieng), z = byteSangSo_(bam);
   var x = soSangByte_(d, 32), h1 = soSangByte_(modP256_(z, c.n), 32);
   var V = [], K = [], i;
@@ -1014,7 +1014,7 @@ function nhanGf128_(X, Y) {
   return Z;
 }
 /** AES-128-GCM: trả về bản mã nối thẻ xác thực 16 byte. Nonce 12 byte, không có dữ liệu kèm (AAD). */
-function maHoaAesGcm(khoa, nonce, duLieu) {
+function maHoaAesGcm_(khoa, nonce, duLieu) {
   var w = moRongKhoaAes_(khoa), H = maHoaKhoiAes_(w, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   var dem = function (n) { return nonce.slice(0, 12).concat([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]); };
   var ra = [], g = [], i, j;
@@ -1038,10 +1038,10 @@ function chuSangByte_(s) { var b = []; for (var i = 0; i < s.length; i++) b.push
  * Thân tin Web Push đã mã hoá (RFC 8291). duLieu: byte nội dung; khoaMay: 65 byte p256dh của máy; auth: 16 byte;
  * rieng: 32 byte khoá tạm của máy chủ; salt: 16 byte ngẫu nhiên; hmac(khoa, duLieu) như kyP256.
  */
-function maHoaThongBaoDay(duLieu, khoaMay, auth, rieng, salt, hmac) {
+function maHoaThongBaoDay_(duLieu, khoaMay, auth, rieng, salt, hmac) {
   var c = p256_();
   if (khoaMay.length !== 65 || khoaMay[0] !== 4 || auth.length !== 16) throw new Error('Khoá của máy không hợp lệ.');
-  var cong = khoaCongP256(rieng);
+  var cong = khoaCongP256_(rieng);
   var diem = nhanDiemP256_(byteSangSo_(rieng), [byteSangSo_(khoaMay.slice(1, 33)), byteSangSo_(khoaMay.slice(33, 65))]);
   if (!diem) throw new Error('Khoá của máy không hợp lệ.');
   var chung = soSangByte_(diem[0], 32);
@@ -1049,28 +1049,28 @@ function maHoaThongBaoDay(duLieu, khoaMay, auth, rieng, salt, hmac) {
   var prk = hmac(salt, ikm);
   var cek = hmac(prk, chuSangByte_('Content-Encoding: aes128gcm').concat([0, 1])).slice(0, 16);
   var nonce = hmac(prk, chuSangByte_('Content-Encoding: nonce').concat([0, 1])).slice(0, 12);
-  var ma = maHoaAesGcm(cek, nonce, duLieu.concat([2]));
+  var ma = maHoaAesGcm_(cek, nonce, duLieu.concat([2]));
   return salt.slice(0, 16).concat([0, 0, 16, 0, 65], cong, ma);
 }
 /** Phần gốc (https://máy-chủ) của địa chỉ nhận thông báo đẩy; '' nếu không phải https. */
-function gocDiaChi(url) {
+function gocDiaChi_(url) {
   var m = /^https:\/\/[^\/?#]+/i.exec(String(url || ''));
   return m ? m[0] : '';
 }
 
 /** Chỉ gửi tới máy chủ nhận thông báo đẩy của Google, Apple, Mozilla, Microsoft. */
-function diaChiDayHopLe(url) {
-  var g = gocDiaChi(url).toLowerCase();
+function diaChiDayHopLe_(url) {
+  var g = gocDiaChi_(url).toLowerCase();
   return !!g && String(url).length < 1000 && /^https:\/\/([a-z0-9-]+\.)*(fcm\.googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/.test(g);
 }
 
 /** Loại hoạt động BOD cộng tay được không (ô trống là có). */
-function loaiCongTay(l) {
+function loaiCongTay_(l) {
   return String(l.CongTay == null ? '' : l.CongTay).trim().toLowerCase() !== 'khong';
 }
 
 /** Các giờ nhắc mỗi ngày: "8, 20" hoặc 20 hoặc [8, 20]. Trống thì 20 giờ. Tối đa 6 giờ. */
-function chuanHoaDsGio(v) {
+function chuanHoaDsGio_(v) {
   var ds = (Array.isArray(v) ? v : String(v == null ? '' : v).split(/[,;\s]+/)).map(function (x) { return String(x).trim() === '' ? NaN : Number(x); });
   var kq = [];
   ds.forEach(function (g) { g = Math.round(g); if (g >= 0 && g <= 23 && kq.indexOf(g) < 0) kq.push(g); });
@@ -1081,7 +1081,7 @@ function chuanHoaDsGio(v) {
 /** Các cách nhận thông báo. */
 var CACH_THONG_BAO = ['zalo', 'app', 'mail'];
 /** Chuẩn hoá lựa chọn cách nhận thông báo (chuỗi "zalo,mail" hoặc mảng). Trống thì mặc định Zalo. */
-function chuanHoaCachNhan(giaTri) {
+function chuanHoaCachNhan_(giaTri) {
   var ds = Array.isArray(giaTri) ? giaTri : String(giaTri || '').split(/[,\s]+/);
   var kq = CACH_THONG_BAO.filter(function (c) { return ds.indexOf(c) >= 0; });
   return kq.length ? kq : ['zalo'];
@@ -1090,22 +1090,22 @@ function chuanHoaCachNhan(giaTri) {
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
-    boDau: boDau, chuanHoaTenCot: chuanHoaTenCot, nhomBan: nhomBan, nhanDienCot: nhanDienCot,
-    docDanhSachThanhVien: docDanhSachThanhVien, capNhatThanhVienCu: capNhatThanhVienCu, tenNhiemKy: tenNhiemKy, tinhKyMoi: tinhKyMoi,
-    dongThanhDoiTuong: dongThanhDoiTuong, maHoaBang: maHoaBang, giaiMaBang: giaiMaBang, tongHopBangDiem: tongHopBangDiem, lichSuCongKhai: lichSuCongKhai,
-    linkHopLe: linkHopLe, kiemTraGopY: kiemTraGopY, taiKhoanBodCanCo: taiKhoanBodCanCo, khongPhaiBod: khongPhaiBod,
-    htmlSangChu: htmlSangChu, lamSachHtml: lamSachHtml, chuanBiGuiTuNhap: chuanBiGuiTuNhap,
-    coQuyen: coQuyen, kiemTraMatKhauMoi: kiemTraMatKhauMoi, taoDongCongDiem: taoDongCongDiem,
-    chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong, chuanHoaGhim: chuanHoaGhim,
-    TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe, soNgayGiua: soNgayGiua, hienNgay: hienNgay,
-    trangThaiTask: trangThaiTask, kiemTraTask: kiemTraTask, taoDongTask: taoDongTask, chonTaskCanNhac: chonTaskCanNhac,
-    moTaHan: moTaHan, soanTinNhac: soanTinNhac, chiaTin: chiaTin, timMaTrongTin: timMaTrongTin,
-    THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe, tachEmail: tachEmail,
-    kiemTraViecMail: kiemTraViecMail, timChoTrong: timChoTrong, thayTheMau: thayTheMau, chuSangHtml: chuSangHtml,
-    docBangNgoai: docBangNgoai, chuanBiGuiHangLoat: chuanBiGuiHangLoat,
-    chiSoBaoCao: chiSoBaoCao, taskBiTre: taskBiTre, tongHopBaoCao: tongHopBaoCao, chiaMoc: chiaMoc, bieuDoBaoCao: bieuDoBaoCao,
-    timTieuDeMauLog: timTieuDeMauLog, kiemTraFileLog: kiemTraFileLog, kiemTraTokenGoogle: kiemTraTokenGoogle,
-    base64Url: base64Url, khoaCongP256: khoaCongP256, kyP256: kyP256, maHoaAesGcm: maHoaAesGcm, maHoaThongBaoDay: maHoaThongBaoDay, gocDiaChi: gocDiaChi, diaChiDayHopLe: diaChiDayHopLe,
-    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan, loaiCongTay: loaiCongTay, chuanHoaDsGio: chuanHoaDsGio
+    boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, nhanDienCot: nhanDienCot_,
+    docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
+    dongThanhDoiTuong: dongThanhDoiTuong_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
+    linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
+    htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
+    coQuyen: coQuyen_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
+    chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
+    TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
+    trangThaiTask: trangThaiTask_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskCanNhac: chonTaskCanNhac_,
+    moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
+    THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,
+    kiemTraViecMail: kiemTraViecMail_, timChoTrong: timChoTrong_, thayTheMau: thayTheMau_, chuSangHtml: chuSangHtml_,
+    docBangNgoai: docBangNgoai_, chuanBiGuiHangLoat: chuanBiGuiHangLoat_,
+    chiSoBaoCao: chiSoBaoCao_, taskBiTre: taskBiTre_, tongHopBaoCao: tongHopBaoCao_, chiaMoc: chiaMoc_, bieuDoBaoCao: bieuDoBaoCao_,
+    timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
+    base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
+    CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_
   };
 }

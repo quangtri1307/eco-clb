@@ -12,7 +12,7 @@
 ## Ghi cùng lúc và tốc độ (`src/Code.gs`)
 
 - **Khoá ghi:** mọi chỗ ghi vào sheet chạy trong khoá chung (`voiKhoa_`, hoặc `layKhoa_`/`traKhoa_`). Hai người bấm lưu cùng lúc thì lần lượt từng người ghi, không ai ghi đè hay chen vào dòng của người kia. Việc đọc rồi sửa (tìm dòng rồi ghi, lọc bảng rồi ghi đè) phải nằm trọn trong một khoá. Gọi lồng nhau vẫn được. Chờ quá 30 giây thì báo "Đang có nhiều người lưu cùng lúc". Việc chạy lâu (gửi thư hẹn giờ, nhắc việc) chỉ khoá lúc ghi, không khoá lúc gửi.
-- **Nhớ tạm trên máy chủ:** `docBang` đọc mỗi bảng một lần trong một lần chạy. Bốn bảng ít đổi (`BANG_NHO_TAM`: CaiDat, TaiKhoan, ThanhVien, LoaiHoatDong) còn được nhớ 10 phút giữa các lần chạy. Ghi vào bảng nào (qua `bangDuLieu`) thì bản nhớ của bảng đó bị bỏ ngay; sửa tay trên sheet thì `onEdit` bỏ giúp. Trong khoá luôn đọc thẳng từ sheet.
+- **Nhớ tạm trên máy chủ:** `docBang_` đọc mỗi bảng một lần trong một lần chạy. Bốn bảng ít đổi (`BANG_NHO_TAM`: CaiDat, TaiKhoan, ThanhVien, LoaiHoatDong) còn được nhớ 10 phút giữa các lần chạy. Ghi vào bảng nào (qua `bangDuLieu_`) thì bản nhớ của bảng đó bị bỏ ngay; sửa tay trên sheet thì `onEdit` bỏ giúp. Trong khoá luôn đọc thẳng từ sheet.
 - **Mở app nhanh:** ECODesk hỏi máy chủ một lần (`moDesk`: người dùng + trang chào). Máy nhớ kết quả lần mở trước (`eco_lan_mo`) nên lần sau hiện ngay rồi mới cập nhật. Sau khi mở, app lấy sẵn dữ liệu các trang trên thanh dưới; dữ liệu đọc của vài trang (`DOC_NHANH`) được giữ 60 giây trên máy, và bị bỏ hết ngay khi người dùng lưu, sửa hay xoá bất cứ gì.
 
 ## Các tab dữ liệu
@@ -82,10 +82,10 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 ### Thông báo (`src/ThongBao.gs`)
 
-- Nhắc deadline gửi theo cách mỗi người chọn (ít nhất một): Zalo, app trên điện thoại, mail. BOD nhận task của mình và task mới được giao; ban nhân sự nhận task của thành viên để nhắc lại. `guiThongBao` gửi theo từng cách.
-- Các thông báo khác chỉ gửi qua mail (`guiMailThongBao`): góp ý mới và thư UCV chờ duyệt cho mọi BOD (bật/tắt ở Cài đặt > Báo qua mail cho BOD), kết quả duyệt thư cho UCV.
-- Thông báo tách hai trang (`src/DeskTrangChu.html`, `veTrangThongBao(goc, 'toi'|'khac')`): "Thông báo của tôi" (BOD mở trong Cài đặt > Cá nhân, HR mở từ Menu) để chọn cách nhận, kết nối Zalo, bật app, xem và gỡ thiết bị của mình, gửi thử; "Thông báo của BOD và HR" (chỉ BOD, Cài đặt > Nhắc deadline) để đổi cách nhận, gỡ thiết bị của người khác (`goThietBi`, `maMay`) và gửi thử (`guiThuThongBao`).
-- App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
+- Nhắc deadline gửi theo cách mỗi người chọn (ít nhất một): Zalo, app trên điện thoại, mail. BOD nhận task của mình và task mới được giao; ban nhân sự nhận task của thành viên để nhắc lại. `guiThongBao_` gửi theo từng cách.
+- Các thông báo khác chỉ gửi qua mail (`guiMailThongBao_`): góp ý mới và thư UCV chờ duyệt cho mọi BOD (bật/tắt ở Cài đặt > Báo qua mail cho BOD), kết quả duyệt thư cho UCV.
+- Thông báo tách hai trang (`src/DeskTrangChu.html`, `veTrangThongBao(goc, 'toi'|'khac')`): "Thông báo của tôi" (BOD mở trong Cài đặt > Cá nhân, HR mở từ Menu) để chọn cách nhận, kết nối Zalo, bật app, xem và gỡ thiết bị của mình, gửi thử; "Thông báo của BOD và HR" (chỉ BOD, Cài đặt > Nhắc deadline) để đổi cách nhận, gỡ thiết bị của người khác (`goThietBi`, `maMay_`) và gửi thử (`guiThuThongBao`).
+- App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256_` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
 - Bật app trên máy: ECODesk nhờ trang vỏ (`bat-thong-bao`) xin quyền và đăng ký, trang vỏ trả `dang-ky-thong-bao` để lưu vào ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
 
 ### Nhắc việc qua Zalo (`src/Zalo.gs`)
@@ -138,7 +138,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 | Ban nhân sự, UCV, mật khẩu | tab TaiKhoan |
 | Quyền xem hộp thư của UCV | CaiDat, khoá `UcvXemHopThu` |
 | Ai nhận thông báo bằng cách nào | tab TaiKhoan, cột `NhanThongBao` (sửa ở trang Thông báo) |
-| Danh bạ gửi hàng loạt | tab DanhBa; thành viên CLB có email luôn có sẵn (`danhBaThanhVien`), không cần nhập |
+| Danh bạ gửi hàng loạt | tab DanhBa; thành viên CLB có email luôn có sẵn (`danhBaThanhVien_`), không cần nhập |
 | Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |
 
 ## Trang vỏ (`pwa/`) và đăng nhập Google
@@ -162,5 +162,5 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 ## Giao diện ECODesk
 
 - Lưới ô (thống kê, loại hoạt động, ô tóm tắt, ô điều hướng, hàng ô nhập) chia đều bằng `chiaDeu` trong `DeskChung.html`: ít hàng nhất, số ô mỗi hàng chênh tối đa 1, ô giãn cho đầy hàng. Bề rộng tối thiểu mỗi ô là biến CSS `--o`, số cột tối đa là `--toida` (điện thoại tối đa 2).
-- Thẻ người dùng: BOD hiện chức vụ lấy từ cột ChucVu của danh sách thành viên (`chucVuCua`), vai trò khác hiện BOD/HR/UCV.
+- Thẻ người dùng: BOD hiện chức vụ lấy từ cột ChucVu của danh sách thành viên (`chucVuCua_`), vai trò khác hiện BOD/HR/UCV.
 - Cài đặt nhớ vị trí cuộn và nội dung ô tìm khi mở một mục rồi quay lại (`CUON_CAI_DAT`).

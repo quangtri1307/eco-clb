@@ -78,67 +78,67 @@ function mayChu() {
 test('bảng ít đổi được nhớ tạm giữa các lần chạy, ngày giờ giữ đúng kiểu', () => {
   const m = mayChu();
   const a = m.lanChay();
-  a.khoiTaoCoSoDuLieu();
+  a.khoiTaoCoSoDuLieu_();
   const ngay = new Date(2026, 9, 3, 8, 30);
-  a.themDong('TaiKhoan', [{ Email: 'a@x.vn', HoVaTen: 'A', VaiTro: 'BOD', NgayTao: ngay }]);
+  a.themDong_('TaiKhoan', [{ Email: 'a@x.vn', HoVaTen: 'A', VaiTro: 'BOD', NgayTao: ngay }]);
   const b = m.lanChay();
   const truoc = m.dem.docSheet;
-  assert.strictEqual(b.docBang('TaiKhoan')[0].Email, 'a@x.vn');
+  assert.strictEqual(b.docBang_('TaiKhoan')[0].Email, 'a@x.vn');
   const c = m.lanChay();
   const doc = m.dem.docSheet;
-  const tk = c.docBang('TaiKhoan')[0];
+  const tk = c.docBang_('TaiKhoan')[0];
   assert.strictEqual(m.dem.docSheet, doc, 'lần chạy sau lấy từ bộ nhớ tạm, không đọc sheet');
   assert.ok(doc > truoc);
   assert.ok(Object.prototype.toString.call(tk.NgayTao) === '[object Date]' && tk.NgayTao.getTime() === ngay.getTime());
   tk.HoVaTen = 'sửa trên bản sao';
-  assert.strictEqual(c.docBang('TaiKhoan')[0].HoVaTen, 'A', 'mỗi lần đọc là một bản riêng');
+  assert.strictEqual(c.docBang_('TaiKhoan')[0].HoVaTen, 'A', 'mỗi lần đọc là một bản riêng');
 });
 
 test('ghi vào bảng thì lần chạy khác thấy ngay dữ liệu mới', () => {
   const m = mayChu();
   const a = m.lanChay();
-  a.khoiTaoCoSoDuLieu();
-  a.datCaiDat('QuyChe', 'link-cu');
-  assert.strictEqual(m.lanChay().layCaiDat('QuyChe'), 'link-cu');
-  m.lanChay().datCaiDat('QuyChe', 'link-moi');
-  assert.strictEqual(m.lanChay().layCaiDat('QuyChe'), 'link-moi');
-  m.lanChay().ghiDeBang('LoaiHoatDong', [{ TenLoai: 'Staff', Diem: 5 }]);
-  assert.strictEqual(m.lanChay().docBang('LoaiHoatDong')[0].Diem, 5);
+  a.khoiTaoCoSoDuLieu_();
+  a.datCaiDat_('QuyChe', 'link-cu');
+  assert.strictEqual(m.lanChay().layCaiDat_('QuyChe'), 'link-cu');
+  m.lanChay().datCaiDat_('QuyChe', 'link-moi');
+  assert.strictEqual(m.lanChay().layCaiDat_('QuyChe'), 'link-moi');
+  m.lanChay().ghiDeBang_('LoaiHoatDong', [{ TenLoai: 'Staff', Diem: 5 }]);
+  assert.strictEqual(m.lanChay().docBang_('LoaiHoatDong')[0].Diem, 5);
 });
 
 test('bản đọc cũ cất vào sau khi người khác đã ghi thì không được dùng', () => {
   const m = mayChu();
-  m.lanChay().khoiTaoCoSoDuLieu();
-  m.lanChay().datCaiDat('X', 'cu');
+  m.lanChay().khoiTaoCoSoDuLieu_();
+  m.lanChay().datCaiDat_('X', 'cu');
   const r = m.lanChay();
   // r đọc phiên bản trước, rồi có người ghi chen vào, rồi r mới cất bản cũ.
   const pb = m.cache.get('phienban_CaiDat') || '0';
-  m.lanChay().datCaiDat('X', 'moi');
-  m.cache.set('bang_CaiDat', pb + '|' + r.maHoaBang([{ Khoa: 'X', GiaTri: 'cu' }]));
-  assert.strictEqual(m.lanChay().layCaiDat('X'), 'moi');
+  m.lanChay().datCaiDat_('X', 'moi');
+  m.cache.set('bang_CaiDat', pb + '|' + r.maHoaBang_([{ Khoa: 'X', GiaTri: 'cu' }]));
+  assert.strictEqual(m.lanChay().layCaiDat_('X'), 'moi');
 });
 
 test('sửa tay trên sheet (onEdit) thì bỏ bản nhớ tạm', () => {
   const m = mayChu();
   const a = m.lanChay();
-  a.khoiTaoCoSoDuLieu();
-  a.datCaiDat('X', 'cu');
-  m.lanChay().layCaiDat('X');
+  a.khoiTaoCoSoDuLieu_();
+  a.datCaiDat_('X', 'cu');
+  m.lanChay().layCaiDat_('X');
   m.tabs.CaiDat.o[1][1] = 'sua-tay';
   const b = m.lanChay();
   b.onEdit({ range: { getSheet: () => m.tabs.CaiDat } });
-  assert.strictEqual(m.lanChay().layCaiDat('X'), 'sua-tay');
+  assert.strictEqual(m.lanChay().layCaiDat_('X'), 'sua-tay');
 });
 
 test('khoá lồng nhau chỉ khoá một lần, ghi xong thì nhả và đẩy dữ liệu xuống sheet', () => {
   const m = mayChu();
   const a = m.lanChay();
-  a.khoiTaoCoSoDuLieu();
+  a.khoiTaoCoSoDuLieu_();
   const khoaTruoc = m.dem.khoa, flushTruoc = m.dem.flush;
   const kq = a.voiKhoa_(() => {
-    a.themDong('GopY', [{ NoiDung: '1' }]);
-    a.voiKhoa_(() => a.themDong('GopY', [{ NoiDung: '2' }]));
-    return a.docBang('GopY').length;
+    a.themDong_('GopY', [{ NoiDung: '1' }]);
+    a.voiKhoa_(() => a.themDong_('GopY', [{ NoiDung: '2' }]));
+    return a.docBang_('GopY').length;
   });
   assert.strictEqual(kq, 2);
   assert.strictEqual(m.dem.khoa - khoaTruoc, 1);
@@ -167,10 +167,10 @@ test('đang có người giữ khoá: báo bận, hoặc trả về false cho vi
 test('trong khoá luôn đọc thẳng từ sheet, không dùng bản nhớ tạm', () => {
   const m = mayChu();
   const a = m.lanChay();
-  a.khoiTaoCoSoDuLieu();
-  a.datCaiDat('X', 'cu');
+  a.khoiTaoCoSoDuLieu_();
+  a.datCaiDat_('X', 'cu');
   const b = m.lanChay();
-  b.layCaiDat('X'); // b đã nhớ bản cũ
-  m.lanChay().datCaiDat('X', 'moi'); // người khác ghi
-  assert.strictEqual(b.voiKhoa_(() => b.layCaiDat('X')), 'moi');
+  b.layCaiDat_('X'); // b đã nhớ bản cũ
+  m.lanChay().datCaiDat_('X', 'moi'); // người khác ghi
+  assert.strictEqual(b.voiKhoa_(() => b.layCaiDat_('X')), 'moi');
 });
