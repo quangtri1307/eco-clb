@@ -292,7 +292,7 @@ var SET = [
   ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
-    ['due', 'clock', 'Lịch nhắc deadline', function () { return 'Báo trước ' + (CD.sapDenHanNgay === 0 ? '0 ngày (đúng ngày hạn)' : CD.sapDenHanNgay + ' ngày') + ', nhắc lúc ' + CD.nhac.dsGio.map(function (g) { return p2(g) + ':00'; }).join(', '); }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
+    ['due', 'clock', 'Lịch nhắc deadline', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
     ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối']]],
   ['Mail', [['notify', 'mail', 'Thông báo qua mail cho BOD', function () { var ds = [CD.baoGopY ? 'góp ý mới' : '', CD.baoThuChoDuyet ? 'thư chờ duyệt' : ''].filter(String); return ds.length ? 'Gửi khi có ' + ds.join(' và ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv'],
     ['mailcfg', 'mail', 'Quyền gửi thư của UCV', function () { return CD.mail.cheDoUcv === 'rieng' ? 'UCV chỉ xem thư của mình' : 'UCV xem toàn bộ hộp thư'; }, 'mail tên người gửi UCV ucv xem hộp thư'],
@@ -349,6 +349,9 @@ function luuVa(nut, msg, ten, thamSo, xong) {
     return napCaiDat().then(function () { if (xong) xong(kq); });
   }).catch(function (err) { nut.disabled = false; thongBao(msg, 'loi', err.message); });
 }
+/** Tên mốc nhắc deadline, ví dụ "Trước hạn 2 ngày 19:00". Mốc 'T' là mỗi ngày khi trễ hạn. */
+function tenNgayNhac(n) { return n === 'T' ? 'Trễ hạn, mỗi ngày' : n < 0 ? 'Trước hạn ' + (-n) + ' ngày' : n === 0 ? 'Ngày hạn chót' : 'Trễ hạn ' + n + ' ngày'; }
+function tenMocNhac(m) { return tenNgayNhac(m.ngay) + ' ' + p2(m.gio) + ':' + p2(m.phut || 0); }
 /** Phần form cộng điểm seeding, nằm dưới bảng loại hoạt động (điểm mỗi lượt lấy từ bảng đó). */
 function formSeeding(box) {
   var chuan = function (x) { return boDau(x).replace(/[^a-z0-9]/g, ''); };
@@ -550,25 +553,32 @@ var SUB = {
   due: function () {
     var opts = [0, 1, 2, 3, 5, 7];
     if (opts.indexOf(CD.sapDenHanNgay) < 0) opts.push(CD.sapDenHanNgay);
-    var dsGio = CD.nhac.dsGio.slice();
-    var tre = ['Mỗi ngày', 'Chỉ một lần', 'Không nhắc'];
-    $('#subbody').innerHTML = '<form class="card form" id="duef"><p class="hint" style="margin:0">BOD được nhắc task của mình, HR được nhắc task của thành viên để nhắc lại qua Messenger. Mỗi người nhận theo cách đã chọn ở mục Nhắc deadline.</p>' +
-      '<label class="f">Task được coi là “sắp đến hạn” khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
-      '<div style="display:grid;gap:6px"><b style="font-size:13.5px">Giờ gửi nhắc mỗi ngày</b><span class="hint">Thêm nhiều giờ nếu muốn nhắc nhiều lần trong ngày (tối đa 6).</span><div class="row" id="dsgio"></div></div>' +
-      '<div class="grid2"><label class="f">Nhắc khi task sắp đến hạn<select id="zs"><option value="1"' + (CD.nhac.nhacSapDenHan ? ' selected' : '') + '>Có, mỗi ngày đến khi tới hạn</option><option value="0"' + (CD.nhac.nhacSapDenHan ? '' : ' selected') + '>Không</option></select></label>' +
-      '<label class="f">Nhắc khi task trễ hạn<select id="zl">' + tre.map(function (x) { return '<option' + (x === CD.nhac.nhacTre ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label></div>' +
+    var lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; });
+    var dsNgay = [-7, -5, -3, -2, -1, 0, 1, 2, 3, 5, 7, 'T'];
+    $('#subbody').innerHTML = '<form class="card form" id="duef"><p class="hint" style="margin:0">BOD được nhắc task của mình, HR được nhắc task của thành viên để nhắc lại các ban. Mỗi người nhận theo cách đã chọn ở mục Nhắc deadline.</p>' +
+      '<label class="f">Task hiện “sắp đến hạn” trong danh sách task khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
+      '<div style="display:grid;gap:6px"><b style="font-size:13.5px">Lịch nhắc</b><span class="hint">Mỗi mốc là một lần nhắc vào ngày và giờ đã chọn, cả trước hạn lẫn trễ hạn. Ví dụ: trước hạn 2 ngày lúc 19:00, ngày hạn chót lúc 06:00, trễ hạn 1 ngày lúc 19:00. Google gửi lệch vài phút quanh giờ đã chọn.</span><div id="dsmoc" style="display:grid;gap:8px"></div></div>' +
       '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
-    var chonGio = function (g, i) { var o = ''; for (var h = 0; h < 24; h++) o += '<option value="' + h + '"' + (h === g ? ' selected' : '') + '>' + p2(h) + ':00</option>'; return '<span class="gio-o"><select data-g="' + i + '" aria-label="Giờ nhắc ' + (i + 1) + '">' + o + '</select>' + (dsGio.length > 1 ? '<button type="button" class="ibtn" data-xg="' + i + '" aria-label="Bỏ giờ này">' + ic('x', 14) + '</button>' : '') + '</span>'; };
-    var veGio = function () {
-      $('#dsgio').innerHTML = dsGio.map(chonGio).join('') + (dsGio.length < 6 ? '<button type="button" class="btn ghost sm" id="themgio">' + ic('plus', 14) + 'Thêm giờ</button>' : '');
-      $$('#dsgio [data-g]').forEach(function (x) { x.onchange = function () { dsGio[Number(x.getAttribute('data-g'))] = Number(x.value); }; });
-      $$('#dsgio [data-xg]').forEach(function (x) { x.onclick = function () { dsGio.splice(Number(x.getAttribute('data-xg')), 1); veGio(); }; });
-      if ($('#themgio')) $('#themgio').onclick = function () { var g = (dsGio[dsGio.length - 1] + 4) % 24; while (dsGio.indexOf(g) >= 0) g = (g + 1) % 24; dsGio.push(g); veGio(); };
+    var chonMoc = function (m, i) {
+      var ng = dsNgay.indexOf(m.ngay) < 0 ? dsNgay.concat([m.ngay]) : dsNgay;
+      var o = ng.map(function (n) { return '<option value="' + n + '"' + (n === m.ngay ? ' selected' : '') + '>' + tenNgayNhac(n) + '</option>'; }).join('');
+      var g = '';
+      for (var h = 0; h < 24; h++) [0, 30].concat(h === m.gio && m.phut % 30 ? [m.phut] : []).forEach(function (p) { g += '<option value="' + (h * 60 + p) + '"' + (h === m.gio && p === m.phut ? ' selected' : '') + '>' + p2(h) + ':' + p2(p) + '</option>'; });
+      return '<div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 32px;gap:6px;align-items:center;max-width:520px"><select data-mn="' + i + '" aria-label="Ngày nhắc ' + (i + 1) + '" style="width:100%;min-width:0">' + o + '</select><select data-mg="' + i + '" aria-label="Giờ nhắc ' + (i + 1) + '" style="width:100%;min-width:0">' + g + '</select>' +
+        (lich.length > 1 ? '<button type="button" class="ibtn" data-xm="' + i + '" aria-label="Bỏ mốc này">' + ic('x', 14) + '</button>' : '<span></span>') + '</div>';
     };
-    veGio();
+    var veMoc = function () {
+      $('#dsmoc').innerHTML = lich.map(chonMoc).join('') + (lich.length < 10 ? '<div><button type="button" class="btn ghost sm" id="themmoc">' + ic('plus', 14) + 'Thêm mốc</button></div>' : '');
+      $$('#dsmoc [data-mn]').forEach(function (x) { x.onchange = function () { lich[Number(x.getAttribute('data-mn'))].ngay = x.value === 'T' ? 'T' : Number(x.value); }; });
+      $$('#dsmoc [data-mg]').forEach(function (x) { x.onchange = function () { var v = Number(x.value), m = lich[Number(x.getAttribute('data-mg'))]; m.gio = Math.floor(v / 60); m.phut = v % 60; }; });
+      $$('#dsmoc [data-xm]').forEach(function (x) { x.onclick = function () { lich.splice(Number(x.getAttribute('data-xm')), 1); veMoc(); }; });
+      if ($('#themmoc')) $('#themmoc').onclick = function () { var c = lich[lich.length - 1] || { ngay: 0, gio: 19, phut: 0 }; var bd = dsNgay.indexOf(c.ngay) + 1, n;
+        for (var k = 0; k < dsNgay.length && n === undefined; k++) { var x = dsNgay[(bd + k) % dsNgay.length]; if (!lich.some(function (m) { return m.ngay === x; })) n = x; } lich.push({ ngay: n === undefined ? c.ngay : n, gio: c.gio, phut: c.phut }); veMoc(); };
+    };
+    veMoc();
     $('#duef').onsubmit = function (e) {
       e.preventDefault();
-      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ sapDenHanNgay: Number($('#dd').value), dsGio: dsGio, nhacSapDenHan: $('#zs').value === '1', nhacTre: $('#zl').value }], function () { dsGio = CD.nhac.dsGio.slice(); veGio(); });
+      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ sapDenHanNgay: Number($('#dd').value), lich: lich }], function () { lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; }); veMoc(); });
     };
   },
   tbtoi: function () { veTrangThongBao($('#subbody'), 'toi'); },

@@ -88,12 +88,11 @@ var TEN_CACH = { zalo: 'Zalo', app: 'App trên điện thoại', mail: 'Mail' };
 function dongThongBao(tb) {
   return '<div class="nhanTB"><span>' + ic('bell', 15) + ' Nhận thông báo qua <b>' + tb.cach.map(function (c) { return esc(TEN_CACH[c]); }).join(', ') + '</b></span><button class="btn ghost sm" data-p="thongbao">Đổi</button></div>';
 }
-function chuGio(ds) { return ds.map(function (g) { return p2(g) + ':00'; }).join(', '); }
 function suKienCuaToi(tb) {
-  var g = chuGio(tb.suKien.dsGio);
-  if (tb.vaiTro === 'HR') return { cach: ['Mỗi ngày lúc ' + g + ': task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại qua Messenger.'], mail: [] };
+  var g = tb.suKien.lich.join('; ');
+  if (tb.vaiTro === 'HR') return { cach: ['Task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại các ban (' + g + ').'], mail: [] };
   return {
-    cach: ['Mỗi ngày lúc ' + g + ': task của bạn sắp đến hạn hoặc trễ hạn.', 'Khi có người giao task mới cho bạn.'],
+    cach: ['Task của bạn sắp đến hạn hoặc trễ hạn (' + g + ').', 'Khi có người giao task mới cho bạn.'],
     mail: [].concat(tb.suKien.thuChoDuyet ? ['UCV gửi thư chờ duyệt.'] : []).concat(tb.suKien.gopY ? ['Có góp ý mới từ ECOBoard.'] : [])
   };
 }

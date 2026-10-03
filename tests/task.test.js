@@ -43,18 +43,39 @@ test('kiemTraTask báo lỗi rõ ràng', () => {
   assert.match(L.kiemTraTask({ ten: 'x', hanChot: '2026-10-07', nguoi: ['Ai Đó'] }, TV).loi, /Ai Đó/);
 });
 
-test('chonTaskCanNhac theo cài đặt', () => {
+test('chonTaskTheoLich: mỗi mốc có ngày và giờ riêng', () => {
   const hom = '2026-10-05';
   const ds = [
-    { ten: 'sắp', hanChot: '2026-10-06', trangThai: T.SAP },
+    { ten: 'còn 2', hanChot: '2026-10-07', trangThai: T.GIAO },
+    { ten: 'hôm nay', hanChot: '2026-10-05', trangThai: T.SAP },
     { ten: 'trễ 1', hanChot: '2026-10-04', trangThai: T.TRE },
     { ten: 'trễ 3', hanChot: '2026-10-02', trangThai: T.TRE },
-    { ten: 'xong', hanChot: '2026-10-02', trangThai: T.XONG }
+    { ten: 'xong', hanChot: '2026-10-05', trangThai: T.XONG }
   ];
-  const ten = (cd) => L.chonTaskCanNhac(ds, hom, cd).map((t) => t.ten);
-  assert.deepStrictEqual(ten({ nhacSapDenHan: true, nhacTre: L.NHAC_TRE.MOI_NGAY }), ['sắp', 'trễ 1', 'trễ 3']);
-  assert.deepStrictEqual(ten({ nhacSapDenHan: false, nhacTre: L.NHAC_TRE.MOT_LAN }), ['trễ 1']);
-  assert.deepStrictEqual(ten({ nhacSapDenHan: true, nhacTre: L.NHAC_TRE.KHONG }), ['sắp']);
+  const lich = [{ ngay: -2, gio: 19, phut: 0 }, { ngay: 0, gio: 6, phut: 30 }, { ngay: 1, gio: 19, phut: 0 }];
+  const ten = (l, luc) => L.chonTaskTheoLich(ds, hom, l, luc).map((t) => t.ten);
+  assert.deepStrictEqual(ten(lich, 19 * 60), ['còn 2', 'trễ 1']);
+  assert.deepStrictEqual(ten(lich, 6 * 60 + 30), ['hôm nay']);
+  assert.deepStrictEqual(ten(lich, 8 * 60), []);
+  assert.deepStrictEqual(ten(lich, null), ['còn 2', 'hôm nay', 'trễ 1']);
+  assert.deepStrictEqual(ten([{ ngay: 'T', gio: 20, phut: 0 }], 20 * 60), ['trễ 1', 'trễ 3']);
+});
+
+test('chuanHoaLichNhac bỏ mốc sai và trùng, xếp theo ngày', () => {
+  const kq = L.chuanHoaLichNhac('[{"ngay":"T","gio":20},{"ngay":0,"gio":6,"phut":30},{"ngay":-2,"gio":19},{"ngay":-2,"gio":19},{"ngay":1,"gio":25},{"ngay":"","gio":8},{"ngay":0,"gio":7,"phut":10}]');
+  assert.deepStrictEqual(kq, [{ ngay: -2, gio: 19, phut: 0 }, { ngay: 0, gio: 6, phut: 30 }, { ngay: 'T', gio: 20, phut: 0 }]);
+  assert.strictEqual(L.chuanHoaLichNhac('không phải json'), null);
+  assert.strictEqual(L.chuanHoaLichNhac(null), null);
+  assert.deepStrictEqual(L.lucCuaLich(kq), [390, 1140, 1200]);
+  assert.strictEqual(L.moTaMocNhac(kq[1]), 'Ngày hạn chót lúc 06:30');
+  assert.strictEqual(L.moTaMocNhac(kq[2]), 'Trễ hạn, mỗi ngày lúc 20:00');
+});
+
+test('lichNhacTuCaiDatCu giữ nguyên cách nhắc cũ', () => {
+  const ten = (l) => l.map((m) => m.ngay + '@' + m.gio);
+  assert.deepStrictEqual(ten(L.lichNhacTuCaiDatCu(2, [20], true, L.NHAC_TRE.MOI_NGAY)), ['-2@20', '-1@20', '0@20', 'T@20']);
+  assert.deepStrictEqual(ten(L.lichNhacTuCaiDatCu(1, [7, 20], false, L.NHAC_TRE.MOT_LAN)), ['1@7', '1@20']);
+  assert.deepStrictEqual(ten(L.lichNhacTuCaiDatCu(2, [20], false, L.NHAC_TRE.KHONG)), ['0@20']);
 });
 
 test('soanTinNhac và chiaTin', () => {

@@ -200,7 +200,7 @@ function donThongBaoCu_() {
 
 /** Đảm bảo có lịch nhắc việc hằng ngày (dù chưa có bot Zalo). */
 function damBaoLichNhac_() {
-  if (!coLichNhac_()) caiLichNhac_(caiDatNhacZalo_().dsGio);
+  if (!coLichNhac_()) caiLichNhac_(caiDatNhacZalo_().dsLuc);
 }
 
 /* ---------- Sự kiện cần báo ---------- */
@@ -252,7 +252,7 @@ function layThongBaoCuaToi(phien) {
   return {
     email: String(tk.Email), vaiTro: String(tk.VaiTro), cach: toi.cach, soMay: toi.may.length, may: toi.may,
     zalo: trangThaiZaloCuaToi_(String(tk.HoVaTen)), khoaCong: khoaVapid_().cong,
-    suKien: { dsGio: caiDatNhacZalo_().dsGio, gopY: baoGopYQuaMail_(), thuChoDuyet: batSuKien_('BaoThuChoDuyet') }
+    suKien: { lich: caiDatNhacZalo_().lich.map(moTaMocNhac_), gopY: baoGopYQuaMail_(), thuChoDuyet: batSuKien_('BaoThuChoDuyet') }
   };
 }
 
