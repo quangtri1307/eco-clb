@@ -191,7 +191,7 @@ td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular
 
 /* ---------- Task ---------- */
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.toolbar input[type=search]{flex:1;min-width:200px;max-width:360px}
+.toolbar input[type=search]{flex:1;min-width:200px}
 .tasks{display:grid;gap:10px}
 .task{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--info);border-radius:12px;padding:13px 15px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;box-shadow:var(--shadow)}
 .task.st-sap{border-left-color:var(--warn)}.task.st-tre{border-left-color:var(--bad)}.task.st-xong{border-left-color:var(--ok);opacity:.8}.task.st-huy{border-left-color:var(--line-2);opacity:.7}
@@ -439,15 +439,24 @@ html.nen-xanh,html.nen-xanh body{background:var(--brand-3)}
   .seg button{flex-direction:column;justify-content:center;gap:3px;padding:7px 4px;white-space:normal;text-align:center;font-size:12.5px;line-height:1.25;position:relative;min-width:0}
   .seg button .badge{position:absolute;top:3px;right:4px;margin:0}
   .seg .n{font-size:12px}
-  .toms{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ngs .ng{padding:12px 15px}
   .folders{flex-wrap:wrap;overflow:visible}
   .log-grid{grid-template-columns:minmax(0,1fr)}
-  .types{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .types .type:last-child:nth-child(odd){grid-column:1/-1}
   .pk-tim{flex:1 1 100%;max-width:none}
   .members{grid-template-columns:minmax(0,1fr)}
   .toolbar input[type=search]{max-width:none;flex-basis:100%}
 }
 @media (min-width:861px){ .fab{display:none} }
+/* Thông báo của tôi: cột trái là cách nhận, cột phải là nội dung được nhắc và thiết bị. Của người khác: danh sách và gửi thử. */
+.tb-toi,.tb-khac{display:grid;gap:14px;align-items:start}
+.tb-toi>*,.tb-khac>*{min-width:0}
+@media (min-width:1000px){
+  .tb-toi{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .tb-toi>:nth-child(2){grid-column:1;grid-row:1/span 2}
+  .tb-toi>:nth-child(1),.tb-toi>:nth-child(3){grid-column:2}
+  .tb-khac{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+}
+/* Lưới chia đều (xem chiaDeu trong DeskChung): --o là bề rộng tối thiểu mỗi ô, --toida là số cột tối đa. */
+.kpis{--o:140px}.types{--o:150px}.toms{--o:170px}.src{--o:180px}.grid2{--o:240px}.tiles{--o:150px;--toida:4}
+@media (max-width:860px){ .kpis,.types,.toms,.src,.deu{--toida:2} .grid2{--toida:1} .tiles{--o:90px;--toida:3} }
 </style>

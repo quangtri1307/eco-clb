@@ -82,7 +82,15 @@ function doiMatKhau(phien, matKhauCu, matKhauMoi) {
 function thongTinNguoiDung(tk) {
   var vaiTro = String(tk.VaiTro);
   var gd = String(tk.GiaoDien || '');
-  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, gmail: vaiTro === 'BOD' ? linkGmail('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
+  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua(tk) : '', gmail: vaiTro === 'BOD' ? linkGmail('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
+}
+
+/** Chức vụ ghi trong danh sách thành viên (tìm theo email, rồi theo họ tên). */
+function chucVuCua(tk) {
+  var e = String(tk.Email).toLowerCase(), ten = String(tk.HoVaTen).toLowerCase();
+  var ds = docBang('ThanhVien');
+  var tv = ds.filter(function (t) { return String(t.Email).toLowerCase() === e; })[0] || ds.filter(function (t) { return String(t.HoVaTen).toLowerCase() === ten; })[0];
+  return tv ? String(tv.ChucVu || '').trim() : '';
 }
 
 function timTaiKhoan(email) {

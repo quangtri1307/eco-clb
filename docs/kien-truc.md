@@ -78,7 +78,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 - Nhắc deadline gửi theo cách mỗi người chọn (ít nhất một): Zalo, app trên điện thoại, mail. BOD nhận task của mình và task mới được giao; ban nhân sự nhận task của thành viên để nhắc lại. `guiThongBao` gửi theo từng cách.
 - Các thông báo khác chỉ gửi qua mail (`guiMailThongBao`): góp ý mới và thư UCV chờ duyệt cho mọi BOD (bật/tắt ở Cài đặt > Báo qua mail cho BOD), kết quả duyệt thư cho UCV.
-- Trang Nhắc deadline (`src/DeskTrangChu.html`): BOD mở trong Cài đặt > Nhắc deadline, ban nhân sự mở từ Menu. Ai cũng chọn cách nhận, kết nối Zalo, bật app, xem và gỡ máy của mình, gửi thử. BOD thấy thêm phần cho mọi người: đổi cách nhận, gỡ máy (`goThietBi`, nhận diện máy bằng `maMay`), gửi thử cho một người hoặc tất cả (`guiThuThongBao`).
+- Thông báo tách hai trang (`src/DeskTrangChu.html`, `veTrangThongBao(goc, 'toi'|'khac')`): "Thông báo của tôi" (BOD mở trong Cài đặt > Cá nhân, HR mở từ Menu) để chọn cách nhận, kết nối Zalo, bật app, xem và gỡ thiết bị của mình, gửi thử; "Thông báo của BOD và HR" (chỉ BOD, Cài đặt > Nhắc deadline) để đổi cách nhận, gỡ thiết bị của người khác (`goThietBi`, `maMay`) và gửi thử (`guiThuThongBao`).
 - App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
 - Bật app trên máy: ECODesk nhờ trang vỏ (`bat-thong-bao`) xin quyền và đăng ký, trang vỏ trả `dang-ky-thong-bao` để lưu vào ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
 
@@ -86,7 +86,7 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 - Gọi Zalo Bot API `https://bot-api.zapps.me/bot<mã bot>/<phương thức>` (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
 - Kết nối: mỗi tài khoản ECODesk có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
-- Giờ nhắc nằm cùng chỗ với số ngày sắp đến hạn (Cài đặt > Thời điểm nhắc deadline, `luuNhacViec`). Có thể chọn nhiều giờ (tối đa 6, CaiDat `ZaloGioNhac` dạng "8, 20"); mỗi giờ là một lịch chạy hằng ngày (`nhacViecHangNgay`); lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger; UCV không nhận nhắc việc.
+- Giờ nhắc nằm cùng chỗ với số ngày sắp đến hạn (Cài đặt > Lịch nhắc deadline, `luuNhacViec`). Có thể chọn nhiều giờ (tối đa 6, CaiDat `ZaloGioNhac` dạng "8, 20"); mỗi giờ là một lịch chạy hằng ngày (`nhacViecHangNgay`); lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger; UCV không nhận nhắc việc.
 - Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
 - Khi BOD được giao task mới, người đó được báo ngay theo các cách đã chọn.
 
@@ -152,3 +152,9 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 - Màn chờ dùng chung `cho()`: lá bị gió thổi bay kèm câu đùa (`CAU_CHO`).
 - ECOBoard luôn dùng giao diện sáng và không hiện BOD (BOD không tham gia cộng điểm).
 - Màn đăng nhập và màn chờ có nền xanh đậm; `apGiaoDien` báo trang vỏ tô phần dưới màn hình cùng màu để không lộ vệt trắng.
+
+## Giao diện ECODesk
+
+- Lưới ô (thống kê, loại hoạt động, ô tóm tắt, ô điều hướng, hàng ô nhập) chia đều bằng `chiaDeu` trong `DeskChung.html`: ít hàng nhất, số ô mỗi hàng chênh tối đa 1, ô giãn cho đầy hàng. Bề rộng tối thiểu mỗi ô là biến CSS `--o`, số cột tối đa là `--toida` (điện thoại tối đa 2).
+- Thẻ người dùng: BOD hiện chức vụ lấy từ cột ChucVu của danh sách thành viên (`chucVuCua`), vai trò khác hiện BOD/HR/UCV.
+- Cài đặt nhớ vị trí cuộn và nội dung ô tìm khi mở một mục rồi quay lại (`CUON_CAI_DAT`).
