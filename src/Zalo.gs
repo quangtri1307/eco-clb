@@ -204,13 +204,19 @@ function nhacViec_() {
   var laBod = {};
   nguoiNhan.forEach(function (n) { if (n.vaiTro === 'BOD') laBod[n.ten] = true; });
   var choNhanSu = canNhac.filter(function (t) { return !laBod[t.nguoi]; });
+  // HR đã phân ban chỉ được nhắc task của ban mình quản lý (mọi HR cùng ban đều nhận, để không ai bỏ sót).
+  var taiKhoan = docBang_('TaiKhoan'), nhomCua = {};
+  docBang_('ThanhVien').forEach(function (t) { nhomCua[String(t.HoVaTen)] = nhomBan_(t.Ban); });
+  var tkTheoEmail = {};
+  taiKhoan.forEach(function (t) { tkTheoEmail[String(t.Email).toLowerCase()] = t; });
+  var duocCua = function (n) { return boLocTaskHr_(tkTheoEmail[n.email.toLowerCase()] || { VaiTro: n.vaiTro, HoVaTen: n.ten }, taiKhoan, nhomCua); };
 
   var daGui = 0, loi = [];
   nguoiNhan.forEach(function (n) {
     if (n.vaiTro !== 'BOD' && n.vaiTro !== 'HR') return; // UCV không nhận nhắc việc
     var tin = n.vaiTro === 'BOD'
       ? soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false)
-      : soanTinNhac_(n.ten, choNhanSu, hom, true);
+      : soanTinNhac_(n.ten, choNhanSu.filter((function (duoc) { return function (t) { return duoc(t.nguoi); }; })(duocCua(n))), hom, true);
     if (!tin) return;
     try { if (guiThongBao_(n, 'Nhắc việc', tin)) daGui++; else loi.push(n.ten + ': chưa có cách nhận nào dùng được'); } catch (e) { loi.push(n.ten + ': ' + e.message); }
   });

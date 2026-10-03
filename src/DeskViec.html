@@ -56,7 +56,7 @@ VIEWS.task = function () {
     var hop = function (t, k) { return k === 'mo' ? laMo(t) : t.trangThai === k; };
     var dem = function (k) { return d.task.filter(function (t) { return hop(t, k); }).length; };
     var LOC = [['mo', 'Đang mở'], ['Sắp đến hạn', 'Sắp đến hạn'], ['Trễ hạn', 'Trễ hạn'], ['Đã xong', 'Đã xong'], ['Đã huỷ', 'Đã huỷ']];
-    $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">' + (NGUOI.vaiTro === 'HR' ? 'Task bạn tạo sẽ ghi là “nhập task”.' : 'Task BOD tạo ghi là “giao task”, task HR tạo ghi là “nhập task”.') + '</p></div><button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">' + (NGUOI.vaiTro === 'HR' ? 'Task bạn tạo sẽ ghi là “nhập task”.' + (d.banQuanLy && d.banQuanLy.length ? ' Bạn đang quản lý ban ' + esc(d.banQuanLy.join(', ')) + '.' : '') : 'Task BOD tạo ghi là “giao task”, task HR tạo ghi là “nhập task”.') + '</p></div><button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button></div>' +
       (d.thongBao ? '<div id="zbox">' + dongThongBao(d.thongBao) + '</div>' : '') +
       '<div class="toolbar"><div class="seg" id="tfil">' + LOC.map(function (x) { return '<button data-f="' + x[0] + '" aria-pressed="' + (x[0] === loc) + '">' + x[1] + ' <span class="n">' + dem(x[0]) + '</span></button>'; }).join('') + '</div>' +
       '<input type="search" id="tq" placeholder="Tìm theo tên task hoặc người phụ trách…" aria-label="Tìm task"></div>' +
@@ -286,7 +286,8 @@ VIEWS.gopy = function () {
 var CD = null;
 var SET = [
   ['Cá nhân', [['tbtoi', 'bell', 'Thông báo của tôi', function () { return 'Cách tôi nhận nhắc deadline và các thiết bị đã bật thông báo'; }, 'thông báo của tôi nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử'],
-    ['theme', 'sun', 'Giao diện sáng hoặc tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']]],
+    ['theme', 'sun', 'Giao diện sáng hoặc tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark'],
+    ['matkhau', 'key', 'Đổi mật khẩu', function () { return 'Mật khẩu đăng nhập ECODesk của bạn'; }, 'mật khẩu đổi password đăng nhập']]],
   ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', '); }, 'điểm loại hoạt động staff log'],
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
@@ -297,16 +298,23 @@ var SET = [
     ['sign', 'edit', 'Chữ ký thư', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature'],
     ['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['Làm log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
-  ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản'],
+  ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR và phân ban', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad'],
     ['ucv', 'users', 'Tài khoản UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' tài khoản'; }, 'UCV ucv tài khoản mail'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho BOD, HR và UCV'; }, 'mật khẩu tài khoản đặt lại'],
     ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'],
     ['loginbg', 'eye', 'Ảnh nền trang đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Đang dùng nền xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background']]]
 ];
+/** HR và UCV chỉ có phần Cá nhân (UCV không nhận nhắc deadline nên không có mục Thông báo của tôi). */
+function nhomCaiDat() {
+  if (NGUOI.vaiTro === 'BOD') return SET;
+  return [[SET[0][0], SET[0][1].filter(function (x) { return x[0] !== 'tbtoi' || NGUOI.vaiTro === 'HR'; })]];
+}
 var CUON_CAI_DAT = null;
 function napCaiDat() { return goiPhien('layCaiDatDesk').then(function (d) { CD = d; return d; }); }
 VIEWS.caidat = function () {
-  if (!CD) { dangTai(); napCaiDat().then(function () { if (page === 'caidat') VIEWS.caidat(); }).catch(loiTai); return; }
+  var SET = nhomCaiDat();
+  if (!CD && NGUOI.vaiTro === 'BOD') { dangTai(); napCaiDat().then(function () { if (page === 'caidat') VIEWS.caidat(); }).catch(loiTai); return; }
+  if (sub && !SET.some(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })) sub = null;
   if (sub) {
     var g = SET.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
     var it = g[1].filter(function (x) { return x[0] === sub; })[0];
@@ -316,8 +324,8 @@ VIEWS.caidat = function () {
     SUB[sub]();
     return;
   }
-  $('#main').innerHTML = '<div class="head"><div><h2>Cài đặt</h2><p class="lead">Mọi BOD đều sửa được. Không cần mở sheet hay sửa code.</p></div></div>' +
-    '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="sq" placeholder="Tìm trong cài đặt, ví dụ: mật khẩu, điểm, ghim…" aria-label="Tìm trong cài đặt"></div><div id="slists" style="display:grid;gap:14px"></div>';
+  $('#main').innerHTML = '<div class="head"><div><h2>Cài đặt</h2><p class="lead">' + (NGUOI.vaiTro === 'BOD' ? 'Mọi BOD đều sửa được. Không cần mở sheet hay sửa code.' : 'Cài đặt riêng của bạn.') + '</p></div></div>' +
+    '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="sq" placeholder="' + (NGUOI.vaiTro === 'BOD' ? 'Tìm trong cài đặt, ví dụ: mật khẩu, điểm, ghim…' : 'Tìm trong cài đặt…') + '" aria-label="Tìm trong cài đặt"></div><div id="slists" style="display:grid;gap:14px"></div>';
   var ve = function (q) {
     q = boDau(q || '');
     var html = SET.map(function (g) {
@@ -436,6 +444,17 @@ var SUB = {
     };
   },
   tbtoi: function () { veTrangThongBao($('#subbody'), 'toi'); },
+  matkhau: function () {
+    $('#subbody').innerHTML = '<form class="card form" id="pf" style="max-width:520px"><label class="f">Mật khẩu hiện tại<input type="password" id="p0" autocomplete="current-password"></label><label class="f">Mật khẩu mới <small>Ít nhất 6 ký tự</small><input type="password" id="p1" autocomplete="new-password"></label><label class="f">Nhập lại mật khẩu mới<input type="password" id="p2" autocomplete="new-password"></label>' +
+      '<div class="row"><button class="btn" id="pb">Đổi mật khẩu</button><span id="pm"></span></div>' + (NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Muốn đặt lại mật khẩu cho người khác, vào mục Đặt lại mật khẩu.</p>' : '<p class="hint" style="margin:0">Quên mật khẩu hiện tại thì nhờ một BOD đặt lại cho bạn.</p>') + '</form>';
+    $('#pf').onsubmit = function (e) {
+      e.preventDefault();
+      if ($('#p1').value !== $('#p2').value) { thongBao($('#pm'), 'loi', 'Hai lần nhập mật khẩu mới không khớp.'); return; }
+      $('#pb').disabled = true;
+      goiPhien('doiMatKhau', $('#p0').value, $('#p1').value).then(function () { $('#pb').disabled = false; $('#pf').reset(); thongBao($('#pm'), 'ok', 'Đã đổi mật khẩu'); })
+        .catch(function (err) { $('#pb').disabled = false; thongBao($('#pm'), 'loi', err.message); });
+    };
+  },
   tbkhac: function () { veTrangThongBao($('#subbody'), 'khac'); },
   zalo: function (baoSau) {
     $('#subbody').innerHTML = cho();
@@ -549,9 +568,25 @@ var SUB = {
     var hr = CD.taiKhoan.filter(function (t) { return t.vaiTro === vaiTro; });
     var daCo = {}; CD.taiKhoan.forEach(function (t) { daCo[t.email.toLowerCase()] = true; });
     var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()]; });
-    $('#subbody').innerHTML = '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t) { return '<div class="li"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span></div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
+    // HR được phân quản lý một số ban: chỉ thấy, thao tác và được nhắc deadline task của các ban đó.
+    var cacBan = [];
+    CD.thanhVien.forEach(function (t) { var n = String(t.ban).trim().split(/\s+/)[0].toUpperCase(); if (n && n !== 'BOD' && cacBan.indexOf(n) < 0) cacBan.push(n); });
+    var phanBan = function (t, i) {
+      if (vaiTro !== 'HR' || !cacBan.length) return '';
+      return '<div class="row" style="gap:10px;margin-top:6px;flex-wrap:wrap"><span class="hint">Quản lý ban:</span>' + cacBan.map(function (n) { return '<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" data-pb="' + i + '" value="' + esc(n) + '"' + (t.banQuanLy.indexOf(n) >= 0 ? ' checked' : '') + '>' + esc(n) + '</label>'; }).join('') +
+        '<button class="btn ghost sm" data-luupb="' + i + '">Lưu</button><span id="pbm' + i + '"></span></div>';
+    };
+    $('#subbody').innerHTML = (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>Phân ban cho từng HR: HR chỉ thấy, thao tác và được nhắc deadline task của các ban mình quản lý. Mọi HR cùng quản lý một ban đều được nhắc. Chưa phân ban thì HR thấy mọi task. Ban chưa có HR nào quản lý thì mọi HR đều thấy, để không task nào bị bỏ sót. BOD luôn thấy mọi task.</span></div>' : '') +
+      '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + phanBan(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
       '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau. Nếu CLB đã bật đăng nhập bằng Google, họ có thể đăng nhập bằng Google luôn.</small><input type="text" id="hp" autocomplete="off"></label><div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
+    $$('[data-luupb]').forEach(function (b) {
+      b.onclick = function () {
+        var i = b.getAttribute('data-luupb');
+        var ds = $$('[data-pb="' + i + '"]:checked').map(function (c) { return c.value; });
+        luuVa(b, $('#pbm' + i), 'luuBanQuanLy', [hr[Number(i)].email, ds]);
+      };
+    });
     $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
   },
   ucv: function () { SUB.hr('UCV'); },

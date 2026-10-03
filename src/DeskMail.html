@@ -435,7 +435,7 @@ function mailBOD(tabDau, them) {
   $('#main').className = 'main rong';
   $('#main').innerHTML = '<div class="head"><div><h2>Mail</h2><p class="lead">Soạn và sửa thư trong Gmail của CLB. Ở đây BOD duyệt thư UCV, gửi hàng loạt và hẹn giờ gửi từ thư nháp Gmail.</p></div>' +
     (NGUOI.gmail ? '<a class="btn ghost" href="' + esc(NGUOI.gmail) + '" target="_blank" rel="noopener">' + ic('ext', 16) + 'Mở Gmail CLB</a>' : '') + '</div>' +
-    '<div class="seg" id="mtab" style="justify-self:start">' + [['duyet', 'Duyệt thư', 'check'], ['nhap', 'Thư nháp', 'file'], ['hangloat', 'Gửi hàng loạt', 'send'], ['lich', 'Đã lên lịch', 'clock']].map(function (x) {
+    '<div class="seg" id="mtab" style="justify-self:start">' + [['duyet', 'Duyệt thư', 'check'], ['nhap', 'Thư nháp', 'file'], ['hangloat', 'Gửi hàng loạt', 'send'], ['lich', 'Lịch sử gửi', 'clock']].map(function (x) {
       return '<button data-t="' + x[0] + '" aria-pressed="' + (x[0] === tab) + '">' + ic(x[2], 16) + x[1] + (x[0] === 'duyet' ? '<span class="badge" id="dbadge"' + (soViecCho ? '' : ' hidden') + '>' + soViecCho + '</span>' : '') + '</button>';
     }).join('') + '</div><div id="mbody" style="display:grid;gap:14px;min-width:0"></div>';
   var di = function (t, x) { tab = t; $$('#mtab button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-t') === t); }); BOD_MAIL[t](x); };
@@ -536,7 +536,7 @@ BOD_MAIL.nhap = function () {
       $$('[data-dung]', $('#nl')).forEach(function (b) { b.onclick = function () { BOD_MAIL.di('hangloat', b.getAttribute('data-dung')); }; });
     };
     $('#mbody').innerHTML = '<div class="toolbar"><input type="search" id="nq" placeholder="Tìm thư nháp…" aria-label="Tìm thư nháp"><a class="btn" href="' + esc(d.linkMoi) + '" target="_blank" rel="noopener">' + ic('plus', 16) + 'Soạn thư nháp mới trong Gmail</a><a class="btn ghost" href="' + esc(d.linkNhap) + '" target="_blank" rel="noopener">' + ic('ext', 16) + 'Mở mục Thư nháp</a><button class="btn ghost" id="nr">' + ic('refresh', 16) + 'Tải lại</button></div>' +
-      '<div class="note info">' + ic('info') + '<span>Thư nháp được soạn, sửa và xoá trong Gmail của CLB. Viết <span class="ph">{HoVaTen}</span>, <span class="ph">{Ban}</span> hoặc tên một cột trong sheet ở chỗ muốn chèn thông tin riêng của từng người nhận. Soạn xong quay lại đây bấm Tải lại.</span></div>' +
+      '<div class="note info">' + ic('info') + '<span>Thư nháp được soạn, sửa và xoá trong Gmail của CLB. Viết <span class="ph">{Họ và tên}</span>, <span class="ph">{Ban}</span> hoặc đúng tên một cột trong sheet người nhận ở chỗ muốn chèn thông tin riêng của từng người. Tiêu đề thư cũng chèn được. Ô người nhận của thư nháp để trống, chọn người nhận ở bước Gửi hàng loạt. Soạn xong quay lại đây bấm Tải lại.</span></div>' +
       '<div class="drafts" id="nl"></div>' + (d.ds.length >= 60 ? '<p class="hint">Chỉ hiện 60 thư nháp gần nhất.</p>' : '');
     $('#nq').oninput = function () { tim = this.value; ve(); };
     $('#nr').onclick = BOD_MAIL.nhap;
@@ -549,11 +549,11 @@ function khoaCot(s) { return boDau(s).replace(/[^a-z0-9]/g, ''); }
 function thayMau(chu, d, laHtml) {
   var k = {}; Object.keys(d || {}).forEach(function (x) { k[khoaCot(x)] = d[x]; });
   var thieu = [];
-  var kq = String(chu || '').replace(/\{([^{}\n]{1,60})\}/g, function (toan, ten) { var c = khoaCot(ten); if (Object.prototype.hasOwnProperty.call(k, c)) { var g = String(k[c] == null ? '' : k[c]); return laHtml ? esc(g) : g; } if (thieu.indexOf(ten) < 0) thieu.push(ten); return toan; });
+  var kq = String(chu || '').replace(/\{\{([^{}\n]{1,60})\}\}|\{([^{}\n]{1,60})\}/g, function (toan, ten2, ten1) { var ten = (ten2 || ten1).trim(); var c = khoaCot(ten); if (Object.prototype.hasOwnProperty.call(k, c)) { var g = String(k[c] == null ? '' : k[c]); return laHtml ? esc(g) : g; } if (thieu.indexOf(ten) < 0) thieu.push(ten); return toan; });
   return { chu: kq, thieu: thieu };
 }
 BOD_MAIL.hangloat = function (maNhap) {
-  var W = { buoc: maNhap ? 2 : 1, ma: maNhap || '', nguon: 'tv', nguoiNhan: [], moTa: '', sheet: null, nguonDl: null, mau: null };
+  var W = { buoc: maNhap ? 2 : 1, ma: maNhap || '', nguon: 'db', nguoiNhan: [], moTa: '', sheet: null, nguonDl: null, mau: null };
   $('#mbody').innerHTML = cho();
   Promise.all([goiPhien('layNguonGui'), napNhap()]).then(function (kq) { W.nguonDl = kq[0]; ve(); })
     .catch(function (err) { $('#mbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
@@ -578,7 +578,7 @@ BOD_MAIL.hangloat = function (maNhap) {
     $('#w-1').onclick = function () { if (!W.ma) { thongBao($('#w-1m'), 'loi', 'Bạn chưa chọn thư nháp.'); return; } W.buoc = 2; ve(); };
   };
   var b2 = function () {
-    var NG = [['tv', 'users', 'Thành viên CLB', 'Lọc theo ban, chọn từng người'], ['db', 'addr', 'Danh bạ', 'CLB khác, đối tác (sửa trong Cài đặt)'], ['tay', 'edit', 'Nhập tay', 'Gõ hoặc dán email'], ['sheet', 'sheet', 'Từ Google Sheet', 'Dán link, chọn dòng, chọn cột email']];
+    var NG = [['db', 'addr', 'Danh bạ', 'Thành viên CLB theo ban, CLB khác, đối tác'], ['tay', 'edit', 'Nhập tay', 'Gõ hoặc dán email'], ['sheet', 'sheet', 'Từ Google Sheet', 'Dán link, chọn dòng, chọn cột email']];
     $('#wb').innerHTML = '<div class="card form"><div class="src">' + NG.map(function (x) { return '<button type="button" class="srcb" data-ng="' + x[0] + '" aria-pressed="' + (x[0] === W.nguon) + '"><b>' + ic(x[1], 16) + x[2] + '</b><span>' + x[3] + '</span></button>'; }).join('') + '</div><div id="w-src"></div>' +
       '<div class="row"><button class="btn" id="w-2">Tiếp: xem lại</button><span id="w-2m"></span></div></div>';
     $$('[data-ng]').forEach(function (b) { b.onclick = function () { W.nguon = b.getAttribute('data-ng'); b2(); }; });
@@ -590,32 +590,33 @@ BOD_MAIL.hangloat = function (maNhap) {
       W.nguoiNhan = kq.ds; W.moTa = kq.moTa; W.buoc = 3; ve();
     };
   };
-  var choTrongHint = function (cot) { var t = nhapChon(); return '<p class="hint" style="margin:0">Thông tin chèn được: ' + cot.map(function (c) { return '<span class="ph">{' + esc(c) + '}</span>'; }).join(' ') + (t && t.choTrong.length ? '<br>Thư nháp đang dùng: ' + t.choTrong.map(function (c) { return '<span class="ph">{' + esc(c) + '}</span>'; }).join(' ') : '') + '</p>'; };
+  var phs = function (ds) { return ds.map(function (c) { return '<span class="ph">{' + esc(c) + '}</span>'; }).join(' '); };
+  var choTrongHint = function (cot, them) { var t = nhapChon(); return '<p class="hint" style="margin:0">Thông tin chèn được: ' + phs(cot) + (them || '') + (t && t.choTrong.length ? '<br>Thư nháp đang dùng: ' + phs(t.choTrong) : '') + '</p>'; };
   var NGUON = {
-    tv: function () {
-      var tv = W.nguonDl.thanhVien.map(function (t) { return { ten: t.HoVaTen, ban: t.Ban + (t.Email ? '' : ' · chưa có email'), nhom: String(t.Ban).trim().split(/\s+/)[0].toUpperCase() }; });
-      $('#w-src').innerHTML = picker('wp', tv) + choTrongHint(W.nguonDl.cotThanhVien);
-      var chon = bindPicker('wp');
-      return function () {
-        var ten = chon(), thieu = [];
-        var ds = W.nguonDl.thanhVien.filter(function (t) { return ten.indexOf(t.HoVaTen) >= 0; }).filter(function (t) { if (!t.Email) { thieu.push(t.HoVaTen); return false; } return true; }).map(function (t) { return { email: t.Email, duLieu: t }; });
-        return { ds: ds, moTa: 'Thành viên CLB · ' + ds.length + ' người', loi: thieu.length ? 'Chưa có email: ' + thieu.join(', ') + '. Bỏ chọn những người này hoặc bổ sung email trên sheet thành viên.' : '' };
-      };
-    },
     db: function () {
-      var db = W.nguonDl.danhBa, nhom = [];
-      db.forEach(function (d) { if (nhom.indexOf(d.Nhom) < 0) nhom.push(d.Nhom); });
-      $('#w-src').innerHTML = db.length ? nhom.map(function (n) {
-        return '<div class="box"><label class="row" style="font-weight:600"><input type="checkbox" data-nhom="' + esc(n) + '">' + esc(n) + '</label>' + db.map(function (d, i) { return d.Nhom === n ? '<label class="row" style="padding-left:22px"><input type="checkbox" data-db="' + i + '" data-n="' + esc(n) + '">' + esc(d.Ten) + ' <span class="hint">' + esc(d.Email) + '</span></label>' : ''; }).join('') + '</div>';
-      }).join('') + choTrongHint(['Ten', 'Email', 'Nhom', 'GhiChu']) : '<p class="muted">Danh bạ trống. Thêm trong Cài đặt, Danh bạ.</p>';
+      // Một nguồn chung: thành viên CLB (lọc theo ban) và danh bạ khác. Thành viên có thêm các cột của danh sách thành viên.
+      var nd = W.nguonDl, khac = nd.danhBa, nhom = [];
+      khac.forEach(function (d) { if (nhom.indexOf(d.Nhom) < 0) nhom.push(d.Nhom); });
+      var tv = nd.thanhVien.map(function (t) { return { ten: t['Họ và tên'], ban: t['Ban'] + (t['Email'] ? '' : ' · chưa có email'), nhom: String(t['Ban']).trim().split(/\s+/)[0].toUpperCase() }; });
+      $('#w-src').innerHTML = '<b style="font-size:13px">Thành viên CLB</b>' + picker('wp', tv) +
+        (khac.length ? '<b style="font-size:13px">Danh bạ khác</b>' + nhom.map(function (n) {
+          return '<div class="box"><label class="row" style="font-weight:600"><input type="checkbox" data-nhom="' + esc(n) + '">' + esc(n) + '</label>' + khac.map(function (d, i) { return d.Nhom === n ? '<label class="row" style="padding-left:22px"><input type="checkbox" data-db="' + i + '" data-n="' + esc(n) + '">' + esc(d.Ten) + ' <span class="hint">' + esc(d.Email) + '</span></label>' : ''; }).join('') + '</div>';
+        }).join('') : '<p class="hint" style="margin:0">Danh bạ khác (CLB khác, đối tác) thêm trong Cài đặt, Danh bạ.</p>') +
+        choTrongHint(['Tên', 'Email'], '<br>Riêng thành viên CLB chèn được thêm: ' + phs(nd.cotThanhVien.filter(function (c) { return c !== 'Email'; })));
+      var chon = bindPicker('wp');
       $$('[data-nhom]').forEach(function (c) { c.onchange = function () { $$('[data-db]').forEach(function (x) { if (x.getAttribute('data-n') === c.getAttribute('data-nhom')) x.checked = c.checked; }); }; });
       return function () {
-        var ds = $$('[data-db]:checked').map(function (c) { var d = db[Number(c.getAttribute('data-db'))]; return { email: d.Email, duLieu: d }; });
-        return { ds: ds, moTa: 'Danh bạ · ' + ds.length + ' địa chỉ', loi: '' };
+        var ten = chon(), thieu = [];
+        var ds = nd.thanhVien.filter(function (t) { return ten.indexOf(t['Họ và tên']) >= 0; }).filter(function (t) { if (!t['Email']) { thieu.push(t['Họ và tên']); return false; } return true; })
+          .map(function (t) { var d = { 'Tên': t['Họ và tên'] }; Object.keys(t).forEach(function (k) { d[k] = t[k]; }); return { email: t['Email'], duLieu: d }; });
+        var soTv = ds.length;
+        ds = ds.concat($$('[data-db]:checked').map(function (c) { var d = khac[Number(c.getAttribute('data-db'))]; return { email: d.Email, duLieu: { 'Tên': d.Ten, 'Email': d.Email } }; }));
+        return { ds: ds, moTa: 'Danh bạ · ' + soTv + ' thành viên, ' + (ds.length - soTv) + ' địa chỉ khác', loi: thieu.length ? 'Chưa có email: ' + thieu.join(', ') + '. Bỏ chọn những người này hoặc bổ sung email trên sheet thành viên.' : '' };
       };
     },
     tay: function () {
-      $('#w-src').innerHTML = '<label class="f">Email người nhận <small>Mỗi dòng một email, hoặc cách nhau bằng dấu phẩy</small><textarea id="w-t" rows="6"></textarea></label>' + choTrongHint(['Email']);
+      $('#w-src').innerHTML = '<label class="f">Email người nhận <small>Mỗi dòng một email, hoặc cách nhau bằng dấu phẩy</small><textarea id="w-t" rows="6"></textarea></label>' +
+        choTrongHint(['Email'], '<br>Nhập tay chỉ có địa chỉ email, nên <span class="ph">{Email}</span> chính là email của từng người nhận. Muốn chèn tên hay thông tin khác, dùng Danh bạ hoặc Google Sheet.');
       return function () {
         var tach = String($('#w-t').value).split(/[\s,;]+/).filter(Boolean);
         var sai = tach.filter(function (e) { return !/^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]+$/.test(e); });
@@ -623,13 +624,18 @@ BOD_MAIL.hangloat = function (maNhap) {
       };
     },
     sheet: function () {
-      $('#w-src').innerHTML = '<div class="grid2"><label class="f">Link Google Sheet <small>Sheet phải chia sẻ cho tài khoản CLB</small><input type="url" id="w-l" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(W.sheet ? W.sheet.link : '') + '"></label><label class="f">Tab<select id="w-tab">' + (W.sheet ? W.sheet.tabs.map(function (t) { return '<option' + (t === W.sheet.tab ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') : '<option value="">Tab đầu tiên</option>') + '</select></label></div><div class="row"><button type="button" class="btn ghost sm" id="w-ld">Đọc sheet</button><span id="w-lm"></span></div><div id="w-sd" style="display:grid;gap:10px"></div>';
+      $('#w-src').innerHTML = '<div class="sheet-nguon"><label class="f">Link Google Sheet<input type="url" id="w-l" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + esc(W.sheet ? W.sheet.link : '') + '"></label><label class="f">Tab<select id="w-tab">' + (W.sheet ? W.sheet.tabs.map(function (t) { return '<option' + (t === W.sheet.tab ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') : '<option value="">Tab đầu tiên</option>') + '</select></label><button type="button" class="btn ghost" id="w-ld">' + ic('refresh', 15) + 'Đọc sheet</button></div>' +
+        '<p class="hint" style="margin:0">Sheet phải chia sẻ cho tài khoản CLB.</p><span id="w-lm"></span><div id="w-sd" style="display:grid;gap:10px"></div>';
       var veSheet = function () {
         var s = W.sheet;
         if (!s) return;
-        $('#w-sd').innerHTML = '<p class="hint" style="margin:0">' + esc(s.tenFile) + ' · ' + s.dong.length + ' dòng</p><label class="f" style="max-width:320px">Cột chứa email người nhận<select id="w-ce">' + s.cot.map(function (c) { return '<option' + (c === s.cotEmail ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
-          '<div class="tscroll" style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px"><table><thead><tr><th><input type="checkbox" id="w-all" checked aria-label="Chọn tất cả"></th>' + s.cot.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-          s.dong.map(function (d, i) { return '<tr><td><input type="checkbox" data-r="' + i + '" checked></td>' + s.cot.map(function (c) { return '<td>' + esc(d[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + choTrongHint(s.cot);
+        // Bảng chỉ hiện các cột ai cũng điền (thường là cột thông tin: tên, email, lớp…), cột câu trả lời dài lẻ tẻ thì ẩn bớt.
+        var hien = s.cot.filter(function (c) { return c === s.cotEmail || (s.dong.length && s.dong.every(function (d) { return String(d[c] == null ? '' : d[c]).trim(); })); });
+        if (!hien.length) hien = s.cot.slice();
+        var an = s.cot.length - hien.length;
+        $('#w-sd').innerHTML = '<p class="hint" style="margin:0">' + esc(s.tenFile) + ' · ' + s.dong.length + ' dòng' + (an ? ' · đang ẩn ' + an + ' cột không phải ai cũng điền' : '') + '. Rê chuột vào ô để xem đủ nội dung.</p><label class="f" style="max-width:320px">Cột chứa email người nhận<select id="w-ce">' + s.cot.map(function (c) { return '<option' + (c === s.cotEmail ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
+          '<div class="tscroll bang-gon" style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px"><table><thead><tr><th><input type="checkbox" id="w-all" checked aria-label="Chọn tất cả"></th>' + hien.map(function (c) { return '<th title="' + esc(c) + '">' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          s.dong.map(function (d, i) { return '<tr><td><input type="checkbox" data-r="' + i + '" checked></td>' + hien.map(function (c) { return '<td title="' + esc(d[c]) + '">' + esc(d[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + choTrongHint(s.cot);
         $('#w-all').onchange = function () { $$('[data-r]').forEach(function (x) { x.checked = $('#w-all').checked; }); };
       };
       $('#w-ld').onclick = function () {
@@ -659,12 +665,14 @@ BOD_MAIL.hangloat = function (maNhap) {
       var xem = W.nguoiNhan.slice(0, 3);
       var homNayStr = new Date(Date.now() + 3600e3 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       $('#wb').innerHTML = '<div class="card form"><div class="row"><span class="pill p-info">' + W.nguoiNhan.length + ' người nhận</span><span class="hint">' + esc(W.moTa) + ' · Hôm nay tài khoản CLB còn gửi được khoảng ' + W.nguonDl.conLai + ' thư.</span></div>' +
-        (thieu.length ? '<div class="note">' + ic('info') + '<span>Không tìm thấy thông tin cho: ' + thieu.map(function (x) { return '<span class="ph">{' + esc(x) + '}</span>'; }).join(' ') + '. Sửa thư nháp trong Gmail, hoặc chọn nguồn người nhận có cột tương ứng.</span></div>' : '') +
+        (thieu.length ? '<div class="note">' + ic('info') + '<span>Không tìm thấy thông tin cho: ' + phs(thieu) + '. Sửa thư nháp trong Gmail rồi bấm Tải lại thư, hoặc chọn nguồn người nhận có cột tương ứng.</span></div>'
+          : '<div class="note ok">' + ic('check') + '<span>' + (t.choTrong.length ? 'Đã kiểm tra: ' + phs(t.choTrong) + ' đều có thông tin cho cả ' + W.nguoiNhan.length + ' người nhận.' : 'Đã kiểm tra: thư không có chỗ chèn thông tin riêng, mọi người nhận cùng một nội dung.') + '</span></div>') +
         (t.dinhKem.length ? '<p class="hint" style="margin:0">Kèm ' + t.dinhKem.length + ' tệp: ' + t.dinhKem.map(esc).join(', ') + '</p>' : '') +
-        '<b style="font-size:13px">Xem trước ' + xem.length + ' thư đầu</b>' + xem.map(function (n) { return '<div class="box"><div class="hint">Tới: ' + esc(n.email) + '</div><b>' + esc(thayMau(t.tieuDe, n.duLieu).chu) + '</b>' + khungThu(thayMau(t.html, n.duLieu, true).chu) + '</div>'; }).join('') +
+        '<div class="row sb"><b style="font-size:13px">Xem trước ' + xem.length + ' thư đầu</b><div class="row" style="gap:6px"><a class="btn ghost sm" href="' + esc(t.link) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Sửa trong Gmail</a><button class="btn ghost sm" id="w-rl">' + ic('refresh', 14) + 'Tải lại thư</button></div></div>' + xem.map(function (n) { return '<div class="box"><div class="hint">Tới: ' + esc(n.email) + '</div><b>' + esc(thayMau(t.tieuDe, n.duLieu).chu) + '</b>' + khungThu(thayMau(t.html, n.duLieu, true).chu) + '</div>'; }).join('') +
         '<div class="seg" id="w-k" style="justify-self:start"><button data-k="ngay" aria-pressed="true">' + ic('send', 15) + 'Gửi ngay</button><button data-k="hen" aria-pressed="false">' + ic('clock', 15) + 'Hẹn giờ</button></div>' +
         '<div id="w-hl" hidden style="display:grid;gap:6px"><label class="f" style="max-width:280px">Gửi lúc<input type="datetime-local" id="w-h" value="' + homNayStr + '"></label><p class="hint" style="margin:0">Đến giờ hẹn ECODesk mới đọc thư nháp, nên vẫn sửa thư nháp trong Gmail được. Đừng xoá thư nháp này trước giờ gửi.</p></div>' +
         '<div class="row"><button class="btn" id="w-g"' + (thieu.length ? ' disabled' : '') + '>' + ic('send', 16) + 'Gửi ' + W.nguoiNhan.length + ' thư</button><span id="w-gm"></span></div></div>';
+      $('#w-rl').onclick = function () { W.mau = null; b3(); };
       var kieu = 'ngay';
       $('#w-k').onclick = function (e) { var b = e.target.closest('[data-k]'); if (!b) return; kieu = b.getAttribute('data-k'); $$('#w-k button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); $('#w-hl').hidden = kieu !== 'hen'; $('#w-g').innerHTML = ic(kieu === 'hen' ? 'clock' : 'send', 16) + (kieu === 'hen' ? 'Lên lịch gửi ' : 'Gửi ') + W.nguoiNhan.length + ' thư'; };
       $('#w-g').onclick = function () {
@@ -672,9 +680,9 @@ BOD_MAIL.hangloat = function (maNhap) {
         if (kieu === 'hen' && !hen) { thongBao($('#w-gm'), 'loi', 'Chọn giờ gửi.'); return; }
         $('#w-g').disabled = true; thongBao($('#w-gm'), 'cho', hen ? 'Đang lên lịch…' : 'Đang gửi, đừng đóng trang…');
         goiPhien('guiHangLoat', { maNhap: W.ma, nguoiNhan: W.nguoiNhan, moTaNguon: W.moTa, henGio: hen }).then(function (kq) {
-          $('#wb').innerHTML = '<div class="card"><span class="toast">' + (kq.henGio ? 'Đã lên lịch gửi ' + kq.soNguoi + ' thư' : 'Đã gửi ' + kq.daGui + ' thư') + '</span>' + (kq.loi && kq.loi.length ? '<p class="err">Lỗi: ' + esc(kq.loi.join('; ')) + '</p>' : '') + '<div class="row" style="margin-top:10px"><button class="btn ghost sm" id="w-moi">Gửi đợt khác</button>' + (kq.henGio ? '<button class="btn ghost sm" id="w-xl">Xem thư đã lên lịch</button>' : '') + '</div></div>';
+          $('#wb').innerHTML = '<div class="card"><span class="toast">' + (kq.henGio ? 'Đã lên lịch gửi ' + kq.soNguoi + ' thư' : 'Đã gửi ' + kq.daGui + ' thư') + '</span>' + (kq.loi && kq.loi.length ? '<p class="err">Lỗi: ' + esc(kq.loi.join('; ')) + '</p>' : '') + '<div class="row" style="margin-top:10px"><button class="btn ghost sm" id="w-moi">Gửi đợt khác</button>' + '<button class="btn ghost sm" id="w-xl">Xem lịch sử gửi</button>' + '</div></div>';
           $('#w-moi').onclick = function () { BOD_MAIL.hangloat(); };
-          if ($('#w-xl')) $('#w-xl').onclick = function () { BOD_MAIL.di('lich'); };
+          $('#w-xl').onclick = function () { BOD_MAIL.di('lich'); };
         }).catch(function (err) { $('#w-g').disabled = false; thongBao($('#w-gm'), 'loi', err.message); });
       };
     }).catch(function (err) { $('#wb').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
@@ -687,10 +695,10 @@ BOD_MAIL.lich = function () {
   goiPhien('layLichGui').then(function (ds) {
     $('#mbody').innerHTML = '<div class="card flush"><div class="lst">' +
       (ds.length ? ds.map(function (l, i) {
-        return '<div class="li" style="flex-wrap:wrap;align-items:flex-start"><div class="c" style="min-width:220px"><b class="t">' + esc(l.tieuDe) + '</b><span class="s">' + l.soNguoi + ' người · ' + esc(l.moTaNguon) + '</span><span class="s">' + esc(l.nguoiTao) + ' lên lịch lúc ' + ngayGio(l.thoiGianTao) + '</span>' + (l.ketQua ? '<span class="s" style="white-space:normal">' + esc(l.ketQua) + '</span>' : '') + '</div>' +
+        return '<div class="li" style="flex-wrap:wrap;align-items:flex-start"><div class="c" style="min-width:220px"><b class="t">' + esc(l.tieuDe) + '</b><span class="s">' + l.soNguoi + ' người · ' + esc(l.moTaNguon) + '</span><span class="s">' + esc(l.nguoiTao) + (l.thoiGianTao === l.thoiGianGui ? ' gửi lúc ' : ' lên lịch lúc ') + ngayGio(l.thoiGianTao) + '</span>' + (l.ketQua ? '<span class="s" style="white-space:normal">' + esc(l.ketQua) + '</span>' : '') + '</div>' +
           '<div style="display:grid;gap:6px;justify-items:end"><span class="pill ' + (TT[l.trangThai] || 'p-mute') + '">' + esc(l.trangThai) + '</span><span class="hint">' + ic('clock', 13) + ' ' + ngayDayDu(l.thoiGianGui) + '</span>' +
           (l.trangThai === 'Đã lên lịch' ? '<div class="row" style="gap:6px">' + (l.linkNhap ? '<a class="btn ghost sm" href="' + esc(l.linkNhap) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Sửa thư trong Gmail</a>' : '') + '<button class="btn ghost sm" data-ls="' + i + '">Đổi giờ</button><button class="btn ghost sm" data-lh="' + i + '">Huỷ</button></div>' : '') + '</div></div>';
-      }).join('') : rong(ic('clock') + 'Chưa có thư nào được lên lịch.')) + '</div></div><div id="lsua"></div><p class="hint">Thư hẹn giờ được gửi trong vòng 10 phút sau giờ hẹn, lấy nội dung mới nhất của thư nháp lúc gửi.</p>';
+      }).join('') : rong(ic('clock') + 'Chưa gửi hàng loạt hay hẹn giờ thư nào.')) + '</div></div><div id="lsua"></div><p class="hint">Gồm các đợt gửi hàng loạt và thư hẹn giờ từ ECODesk. Thư hẹn giờ được gửi trong vòng 10 phút sau giờ hẹn, lấy nội dung mới nhất của thư nháp lúc gửi.</p>';
     $$('[data-lh]').forEach(function (b) {
       b.onclick = function () {
         if (!xacNhan(b, 'Huỷ thật?')) return;

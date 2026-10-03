@@ -464,15 +464,15 @@ function mauTuNhap_(maNhap) {
 /** Dữ liệu cho bước chọn người nhận. */
 function layNguonGui(phien) {
   canDangNhap_(phien, 'duyetmail');
+  // Thông tin chèn được đặt tên đúng như tiêu đề cột của danh sách thành viên (có dấu, viết hoa), ví dụ {Họ và tên}.
   var tv = docThanhVien_().map(function (t) {
     var o = {};
-    COT_THANH_VIEN.forEach(function (c) { o[c[0]] = t[c[0]] instanceof Date ? Utilities.formatDate(t[c[0]], Session.getScriptTimeZone(), 'dd/MM/yyyy') : String(t[c[0]] == null ? '' : t[c[0]]); });
+    COT_THANH_VIEN.forEach(function (c) { o[c[1]] = t[c[0]] instanceof Date ? Utilities.formatDate(t[c[0]], Session.getScriptTimeZone(), 'dd/MM/yyyy') : String(t[c[0]] == null ? '' : t[c[0]]); });
     return o;
   });
   return {
-    thanhVien: tv, cotThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }),
-    danhBa: danhBaThanhVien_().map(function (d) { return { Nhom: d.nhom, Ten: d.ten, Email: d.email, GhiChu: d.ghiChu }; })
-      .concat(docBang_('DanhBa').map(function (d) { return { Nhom: String(d.Nhom || ''), Ten: String(d.Ten || ''), Email: String(d.Email || ''), GhiChu: String(d.GhiChu || '') }; })),
+    thanhVien: tv, cotThanhVien: COT_THANH_VIEN.map(function (c) { return c[1]; }),
+    danhBa: docBang_('DanhBa').map(function (d) { return { Nhom: String(d.Nhom || ''), Ten: String(d.Ten || ''), Email: String(d.Email || '') }; }),
     conLai: MailApp.getRemainingDailyQuota()
   };
 }
@@ -520,6 +520,16 @@ function guiHangLoat(phien, yc) {
   var kq = chuanBiGuiTuNhap_(mau, yc.nguoiNhan, MailApp.getRemainingDailyQuota());
   if (kq.loi) throw new Error(kq.loi);
   var gui = guiDanhSach_(kq.ds, mau);
+  // Ghi lại để xem trong mục Lịch sử gửi.
+  try {
+    var bayGio = new Date();
+    themDong_('LichGui', [{
+      ThoiGianTao: bayGio, ThoiGianGui: bayGio, TieuDe: mau.tieuDe, NoiDung: '', MaNhap: '',
+      NguoiNhan: JSON.stringify(kq.ds.map(function (t) { return { email: t.email }; })).slice(0, 45000),
+      MoTaNguon: String(yc.moTaNguon || '').slice(0, 200), NguoiTao: String(tk.HoVaTen), TrangThai: gui.loi.length && !gui.daGui ? 'Lỗi' : 'Đã gửi',
+      KetQua: 'Đã gửi ' + gui.daGui + '/' + kq.ds.length + ' thư' + (gui.loi.length ? '. Lỗi: ' + gui.loi.slice(0, 3).join('; ') : '')
+    }]);
+  } catch (e) { /* thư đã gửi xong, không ghi được lịch sử thì thôi */ }
   return { henGio: false, daGui: gui.daGui, loi: gui.loi };
 }
 

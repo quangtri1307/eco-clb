@@ -278,8 +278,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $(
 var TRANG_CHU = ['Tổng quan', [['home', 'Trang chủ', 'home']]];
 var NAV = {
   BOD: [TRANG_CHU, ['Công việc', [['diem', 'Cộng điểm', 'star'], ['task', 'Task', 'check']]], ['Liên lạc', [['mail', 'Mail', 'mail'], ['gopy', 'Góp ý', 'chat']]], ['Theo dõi', [['baocao', 'Báo cáo', 'chart'], ['log', 'Làm log', 'file']]], ['Hệ thống', [['caidat', 'Cài đặt', 'gear']]]],
-  HR: [TRANG_CHU, ['Công việc', [['task', 'Task', 'check']]]],
-  UCV: [TRANG_CHU, ['Liên lạc', [['mail', 'Mail', 'mail']]]]
+  HR: [TRANG_CHU, ['Công việc', [['task', 'Task', 'check']]], ['Hệ thống', [['caidat', 'Cài đặt', 'gear']]]],
+  UCV: [TRANG_CHU, ['Liên lạc', [['mail', 'Mail', 'mail']]], ['Hệ thống', [['caidat', 'Cài đặt', 'gear']]]]
 };
 var BOTTOM = { BOD: ['home', 'diem', 'task', 'mail'], HR: ['home', 'task'], UCV: ['home', 'mail'] };
 var VAI_TRO = { BOD: 'BOD', HR: 'HR', UCV: 'UCV' };
@@ -384,7 +384,6 @@ function viewMenu() {
     '<div class="sheet-sec">Chức năng</div><div class="mlist2">' + ds.map(function (x) { return '<button class="mi2" data-p="' + x[0] + '"><span class="ic">' + ic(x[2]) + '</span><span class="t">' + x[1] + '</span>' + huyHieu(x[0]) + ic('right', 16) + '</button>'; }).join('') + '</div>' +
     '<div class="sheet-sec">Giao diện</div>' + chonGiaoDien() +
     '<div class="sheet-sec">Tài khoản</div><div class="mlist2">' +
-    (NGUOI.vaiTro === 'HR' ? '<button class="mi2" data-p="thongbao"><span class="ic">' + ic('bell') + '</span><span class="t">Thông báo của tôi</span>' + ic('right', 16) + '</button>' : '') +
     '<button class="mi2" data-mk><span class="ic">' + ic('key') + '</span><span class="t">Đổi mật khẩu</span>' + ic('right', 16) + '</button>' +
     '<button class="mi2 bad" data-out><span class="ic">' + ic('out') + '</span><span class="t">Đăng xuất</span></button></div></div>';
   ganGiaoDien($('#main'));

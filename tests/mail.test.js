@@ -81,3 +81,11 @@ test('chuanBiGuiTuNhap thay chỗ trống, escape giá trị trong HTML', () => 
   assert.match(L.chuanBiGuiTuNhap({ tieuDe: 'x', html: '<div><br></div>' }, [], 10).loi, /nội dung/);
   assert.match(L.chuanBiGuiTuNhap({ tieuDe: 'x', html: 'y' }, [{ email: 'a@x.com' }, { email: 'b@x.com' }], 1).loi, /chỉ còn/);
 });
+
+test('chỗ chèn viết {Tên cột} hay {{Tên cột}}, có dấu hay không dấu đều khớp', () => {
+  const L2 = require('./load-logic');
+  assert.deepStrictEqual(L2.timChoTrong('Chào {{Họ và tên}} ban {Ban}, {{ Lớp }}'), ['Họ và tên', 'Ban', 'Lớp']);
+  const kq = L2.thayTheMau('Chào {{Họ và tên}} ({HoVaTen}) ban {Ban} {Lạ}', { 'Họ và tên': 'An', Ban: 'PG' });
+  assert.strictEqual(kq.chu, 'Chào An (An) ban PG {Lạ}');
+  assert.deepStrictEqual(kq.thieu, ['Lạ']);
+});

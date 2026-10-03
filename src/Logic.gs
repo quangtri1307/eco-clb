@@ -31,7 +31,7 @@ var BANG = {
   LoaiHoatDong: ['TenLoai', 'Diem', 'CongTay'],
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc'],
-  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien'],
+  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy'],
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
@@ -321,6 +321,31 @@ function coQuyen_(vaiTro, chucNang) {
   return (QUYEN[vaiTro] || []).indexOf(chucNang) >= 0;
 }
 
+/** Các ban một HR quản lý, lưu dạng "PG, AD" (theo nhóm: PR gồm PR CAP, PR DES, PR PHO). Trống là chưa phân ban. */
+function banQuanLy_(giaTri) {
+  var ds = [];
+  String(giaTri == null ? '' : giaTri).split(/[,;]/).forEach(function (s) { var n = nhomBan_(s); if (n && ds.indexOf(n) < 0) ds.push(n); });
+  return ds.sort(soSanhBan_);
+}
+
+/**
+ * Bộ lọc task cho một tài khoản: trả về hàm (tên người phụ trách) → được xem và thao tác hay không.
+ * BOD và HR chưa phân ban: mọi task. HR đã phân ban: task của chính mình, của các ban mình quản lý,
+ * và của ban (không phải BOD) chưa có HR nào quản lý, để không task nào bị bỏ sót.
+ * nhomCua: { họ tên: nhóm ban }.
+ */
+function boLocTaskHr_(tk, taiKhoan, nhomCua) {
+  var cuaToi = banQuanLy_(tk.BanQuanLy);
+  if (String(tk.VaiTro) !== 'HR' || !cuaToi.length) return function () { return true; };
+  var coHr = {};
+  (taiKhoan || []).forEach(function (t) { if (String(t.VaiTro) === 'HR') banQuanLy_(t.BanQuanLy).forEach(function (b) { coHr[b] = true; }); });
+  return function (ten) {
+    if (String(ten) === String(tk.HoVaTen)) return true;
+    var n = nhomCua[String(ten)] || '';
+    return cuaToi.indexOf(n) >= 0 || (n !== 'BOD' && !coHr[n]);
+  };
+}
+
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
 function kiemTraMatKhauMoi_(mk) {
   var s = String(mk == null ? '' : mk);
@@ -581,9 +606,11 @@ function kiemTraViecMail_(v) {
 }
 
 /** Các chỗ {TenCot} có trong thư mẫu, theo thứ tự xuất hiện, không trùng. */
+/** Chỗ chèn viết {Tên cột} hoặc {{Tên cột}} đều được. */
+var CHO_CHEN_ = /\{\{([^{}\n]{1,60})\}\}|\{([^{}\n]{1,60})\}/g;
 function timChoTrong_(chu) {
-  var ds = [], re = /\{([^{}\n]{1,60})\}/g, m;
-  while ((m = re.exec(String(chu || '')))) if (ds.indexOf(m[1]) < 0) ds.push(m[1]);
+  var ds = [], re = new RegExp(CHO_CHEN_.source, 'g'), m;
+  while ((m = re.exec(String(chu || '')))) { var ten = (m[1] || m[2]).trim(); if (ten && ds.indexOf(ten) < 0) ds.push(ten); }
   return ds;
 }
 
@@ -595,7 +622,8 @@ function thayTheMau_(chu, duLieu) {
   var theoKhoa = {};
   Object.keys(duLieu || {}).forEach(function (k) { theoKhoa[chuanHoaTenCot_(k)] = duLieu[k]; });
   var thieu = [];
-  var kq = String(chu || '').replace(/\{([^{}\n]{1,60})\}/g, function (toan, ten) {
+  var kq = String(chu || '').replace(new RegExp(CHO_CHEN_.source, 'g'), function (toan, ten2, ten1) {
+    var ten = (ten2 || ten1).trim();
     var k = chuanHoaTenCot_(ten);
     if (Object.prototype.hasOwnProperty.call(theoKhoa, k)) return String(theoKhoa[k] == null ? '' : theoKhoa[k]);
     if (thieu.indexOf(ten) < 0) thieu.push(ten);
@@ -1150,7 +1178,7 @@ if (typeof module !== 'undefined') {
     dongThanhDoiTuong: dongThanhDoiTuong_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
-    coQuyen: coQuyen_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
+    coQuyen: coQuyen_, banQuanLy: banQuanLy_, boLocTaskHr: boLocTaskHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
     trangThaiTask: trangThaiTask_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskCanNhac: chonTaskCanNhac_,
