@@ -61,10 +61,11 @@ function chuanBi() {
   a.themDong_('ThanhVien', [
     { HoVaTen: 'Nguyễn Văn An', Ban: 'PG', TenFacebook: 'An Nguyễn' },
     { HoVaTen: 'Trần Thị Bình', Ban: 'PR CAP', TenFacebook: 'Bình Trần' },
-    { HoVaTen: 'Phan Văn', Ban: 'BOD', TenFacebook: 'Văn Phan' }
+    { HoVaTen: 'Phan Văn', Ban: 'BOD', TenFacebook: 'Văn Phan' },
+    { HoVaTen: 'Lê Chưa Fb', Ban: 'HR', TenFacebook: '' }
   ]);
   a.themDong_('KyHoatDong', [{ NhiemKy: '2026-2027', HocKy: 1, BatDau: new Date(), KieuTaiLen: 'Sau tuyển đợt 1' }]);
-  a.ghiDeBang_('LoaiHoatDong', [{ TenLoai: 'Staff', Diem: 3, CongTay: 'co' }]);
+  a.ghiDeBang_('LoaiHoatDong', [{ TenLoai: 'Staff', Diem: 3, CongTay: 'co' }, { TenLoai: 'Seeding Reaction', Diem: 1, CongTay: 'khong' }, { TenLoai: 'Seeding Comment', Diem: 2, CongTay: 'khong' }]);
   const form = m.lanChay().SpreadsheetApp.getActiveSpreadsheet().insertSheet('Câu trả lời biểu mẫu 1');
   form.o.push(['Dấu thời gian', 'Họ và tên người nộp', 'Reaction', 'Comment']);
   form.o.push([new Date('2026-09-01'), 'Cũ', 'An Nguyễn', '']); // câu có từ trước khi bật
@@ -74,31 +75,30 @@ const nopForm = (m, form, dong) => { form.o.push(dong); m.lanChay().khiNopForm({
 const j = (x) => JSON.parse(JSON.stringify(x));
 const diem = (m) => j(m.lanChay().docBang_('LichSuDiem').map((d) => [d.HoVaTen, d.LoaiHoatDong, d.TenHoatDong, d.Diem]));
 
-test('bật form: tạo loại mới, bỏ qua câu cũ, cài lịch; nộp form thì cộng ngay, không cộng BOD', () => {
+test('bật form: bỏ qua câu cũ, cài lịch; nộp form thì cộng ngay, cộng cả BOD', () => {
   const { m, form } = chuanBi();
   const ds = m.lanChay().layFormSeeding('p');
   assert.strictEqual(ds.tabs.length, 1);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(ds.tabs[0].cot)), ['Reaction', 'Comment']);
+  assert.deepStrictEqual(j(ds.thieuFb), ['Lê Chưa Fb']);
   const kq = m.lanChay().luuFormSeeding('p', {
-    tab: ds.tabs[0].ma, anhXa: { Reaction: 'Seeding Reaction', Comment: 'Seeding Comment' },
-    loaiMoi: [{ ten: 'Seeding Reaction', diem: 1 }, { ten: 'Seeding Comment', diem: 2 }], congCu: false
+    tab: ds.tabs[0].ma, anhXa: { Reaction: 'Seeding Reaction', Comment: 'Seeding Comment', Khac: 'Không có loại này' }, congCu: false
   });
   assert.strictEqual(kq.soLuot, 0);
   assert.deepStrictEqual(j(m.triggers), ['khiNopForm']);
   assert.match(String(form.o[1][4]), /Bỏ qua/);
-  const loai = m.lanChay().docBang_('LoaiHoatDong');
-  assert.deepStrictEqual(j(loai.map((l) => [l.TenLoai, l.Diem, l.CongTay])), [['Staff', 3, 'co'], ['Seeding Reaction', 1, 'khong'], ['Seeding Comment', 2, 'khong']]);
+  assert.strictEqual(m.lanChay().docBang_('LoaiHoatDong').length, 3, 'không tự tạo loại mới');
 
   nopForm(m, form, [new Date(), 'Hà', 'An Nguyễn\nVăn Phan\nNgười lạ', 'Bình Trần']);
-  assert.deepStrictEqual(diem(m), [['Nguyễn Văn An', 'Seeding Reaction', 'Reaction', 1], ['Trần Thị Bình', 'Seeding Comment', 'Comment', 2]]);
-  assert.strictEqual(form.o[2][4], 'Đã cộng 2 lượt');
+  assert.deepStrictEqual(diem(m), [['Nguyễn Văn An', 'Seeding Reaction', 'Reaction', 1], ['Phan Văn', 'Seeding Reaction', 'Reaction', 1], ['Trần Thị Bình', 'Seeding Comment', 'Comment', 2]]);
+  assert.strictEqual(form.o[2][4], 'Đã cộng 3 lượt');
   const nk = m.lanChay().layFormSeeding('p').nhatKy;
   assert.strictEqual(nk[0].nguoiNop, 'Hà');
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(nk[0].khongKhop)), ['Văn Phan', 'Người lạ']);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(nk[0].khongKhop)), ['Người lạ']);
 
   // Chạy lại (quét tay hoặc lịch chạy lần nữa) thì không cộng hai lần.
   assert.strictEqual(m.lanChay().quetFormSeeding('p').soLuot, 0);
-  assert.strictEqual(diem(m).length, 2);
+  assert.strictEqual(diem(m).length, 3);
 });
 
 test('form khác trong cùng file thì không đụng tới; tắt thì gỡ lịch', () => {

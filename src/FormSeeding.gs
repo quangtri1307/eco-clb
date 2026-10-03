@@ -1,7 +1,8 @@
 /**
  * Form cộng điểm seeding: thành viên nộp Google Form, dán danh sách tên Facebook đã thả cảm xúc / bình luận.
- * Form được liên kết câu trả lời về chính file dữ liệu này (tab "Câu trả lời biểu mẫu …").
- * Mỗi lần có người nộp, app dò tên với cột Tên Facebook của thành viên đang trong danh sách (không gồm BOD) và cộng điểm.
+ * Form được liên kết câu trả lời về chính file dữ liệu này (tab tên gì cũng được, app nhận tab theo mã nên đổi tên vẫn chạy).
+ * Mỗi lần có người nộp, app dò tên với cột Tên Facebook của thành viên đang trong danh sách (gồm cả BOD) và cộng điểm.
+ * Điểm mỗi lượt lấy từ bảng Loại hoạt động và mức điểm, nên cấu hình form nằm chung trang đó.
  * Câu đã xử lý được đánh dấu ở cột "ECO đã cộng" trong tab đó, nên không bao giờ cộng hai lần.
  */
 
@@ -43,14 +44,13 @@ function layFormSeeding(phien) {
     tabs: cacTabForm_(),
     cauHinh: { tab: ch.tab ? String(ch.tab) : '', anhXa: ch.anhXa || {}, bat: !!(ch.tab && !ch.tat && coLichForm_()) },
     loai: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
-    nhatKy: docNhatKySeeding_()
+    nhatKy: docNhatKySeeding_(),
+    // Ai chưa có Tên Facebook thì form không cộng được cho người đó: hiện ra để BOD bổ sung.
+    thieuFb: docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen).trim() && !chuanTenFb_(t.TenFacebook); }).map(function (t) { return String(t.HoVaTen); })
   };
 }
 
-/**
- * Lưu và bật tự cộng. yc = { tab, anhXa: { cột: tên loại }, loaiMoi: [{ ten, diem }], congCu: true nếu cộng cả các câu đã có }.
- * Loại mới được tạo ở dạng chỉ hiển thị (BOD không cộng tay loại này).
- */
+/** Lưu và bật tự cộng. yc = { tab, anhXa: { cột: tên loại có sẵn }, congCu: true nếu cộng cả các câu đã có }. */
 function luuFormSeeding(phien, yc) {
   canDangNhap_(phien, 'caidat');
   yc = yc || {};
@@ -61,16 +61,6 @@ function luuFormSeeding(phien, yc) {
     var loai = docBang_('LoaiHoatDong');
     var coSan = {};
     loai.forEach(function (l) { coSan[String(l.TenLoai).toLowerCase()] = true; });
-    var moi = [];
-    (yc.loaiMoi || []).forEach(function (l) {
-      var ten = String(l.ten || '').trim(), diem = Number(l.diem);
-      if (!ten) throw new Error('Loại hoạt động mới chưa có tên.');
-      if (!isFinite(diem) || diem < 0) throw new Error('Điểm của "' + ten + '" phải là số không âm.');
-      if (coSan[ten.toLowerCase()]) return;
-      coSan[ten.toLowerCase()] = true;
-      moi.push({ TenLoai: ten, Diem: diem, CongTay: 'khong' });
-    });
-    themDong_('LoaiHoatDong', moi);
     var anhXa = {};
     cot.seeding.forEach(function (c) {
       var ten = String((yc.anhXa || {})[c.ten] || '').trim();
@@ -136,7 +126,7 @@ function xuLyFormSeeding_() {
     var c = cotDaCong_(sh);
     var v = sh.getDataRange().getValues();
     var cot = cotFormSeeding_(v[0]);
-    var tv = docBang_('ThanhVien').filter(khongPhaiBod_), loai = docBang_('LoaiHoatDong'), ky = layKyHienTai_(), nay = new Date();
+    var tv = docBang_('ThanhVien'), loai = docBang_('LoaiHoatDong'), ky = layKyHienTai_(), nay = new Date();
     var them = [], danhDau = [], nhat = [];
     for (var r = 1; r < v.length; r++) {
       if (String(v[r][c] == null ? '' : v[r][c]).trim()) continue;

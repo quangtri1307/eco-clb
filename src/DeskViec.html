@@ -289,8 +289,7 @@ var SET = [
     ['theme', 'sun', 'Giao diện sáng hoặc tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark'],
     ['matkhau', 'key', 'Đổi mật khẩu', function () { return 'Mật khẩu đăng nhập ECODesk của bạn'; }, 'mật khẩu đổi password đăng nhập']]],
   ['Giao diện hai app', [['chude', 'star', 'Giao diện theo mùa và ngày lễ', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí']]],
-  ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', '); }, 'điểm loại hoạt động staff log'],
-    ['seeding', 'chat', 'Form cộng điểm seeding', function () { return CD.formSeeding && CD.formSeeding.bat ? 'Đang tự cộng điểm khi có người nộp form' : 'Chưa bật'; }, 'seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
+  ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
     ['due', 'clock', 'Lịch nhắc deadline', function () { return 'Báo trước ' + (CD.sapDenHanNgay === 0 ? '0 ngày (đúng ngày hạn)' : CD.sapDenHanNgay + ' ngày') + ', nhắc lúc ' + CD.nhac.dsGio.map(function (g) { return p2(g) + ':00'; }).join(', '); }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
@@ -350,19 +349,104 @@ function luuVa(nut, msg, ten, thamSo, xong) {
     return napCaiDat().then(function () { if (xong) xong(kq); });
   }).catch(function (err) { nut.disabled = false; thongBao(msg, 'loi', err.message); });
 }
+/** Phần form cộng điểm seeding, nằm dưới bảng loại hoạt động (điểm mỗi lượt lấy từ bảng đó). */
+function formSeeding(box) {
+  var chuan = function (x) { return boDau(x).replace(/[^a-z0-9]/g, ''); };
+  var D = null, tabChon = '', tb = null;
+  var conMo = function () { return sub === 'types' && document.body.contains(box); };
+  var nap = function () {
+    box.innerHTML = '<div class="card">' + cho() + '</div>';
+    goiPhien('layFormSeeding').then(function (d) { D = d; if (conMo()) ve(); }).catch(function (err) { if (conMo()) box.innerHTML = '<div class="card"><p class="err">' + esc(err.message) + '</p></div>'; });
+  };
+  // Giống goiYLoaiSeeding_ ở máy chủ: loại có tên chứa tên cột, không có thì loại có chữ "seeding".
+  var goiY = function (cot) {
+    var c = chuan(cot);
+    var l = D.loai.filter(function (x) { return c && chuan(x.ten).indexOf(c) >= 0; })[0] || D.loai.filter(function (x) { return chuan(x.ten).indexOf('seeding') >= 0; })[0];
+    return l ? l.ten : '';
+  };
+  var ve = function () {
+    var ch = D.cauHinh;
+    if (!tabChon || !D.tabs.some(function (t) { return t.ma === tabChon; })) {
+      var goc = D.tabs.filter(function (t) { return t.ma === ch.tab; })[0] || D.tabs.filter(function (t) { return t.cot.some(function (c) { return /reaction|comment/i.test(c); }); })[0] || D.tabs[0];
+      tabChon = goc ? goc.ma : '';
+    }
+    var t = D.tabs.filter(function (x) { return x.ma === tabChon; })[0];
+    var tieuDe = '<div class="ctitle"><h3>' + ic('chat', 18) + ' Form cộng điểm seeding</h3>' + (ch.bat ? '<span class="pill" style="background:var(--ok-bg);color:var(--ok)">Đang bật</span>' : '<span class="hint">Chưa bật</span>') + '</div>';
+    var huongDan = '<details' + (ch.bat ? '' : ' open') + '><summary style="cursor:pointer;font-weight:600">Cách liên kết Google Form (làm một lần)</summary>' +
+      '<ol style="margin:8px 0 0;padding-left:20px;display:grid;gap:6px"><li>Mở Google Form seeding, vào tab <b>Câu trả lời</b>, bấm <b>Liên kết với Trang tính</b>, chọn <b>Chọn bảng tính hiện có</b> rồi chọn <b>file dữ liệu CLB</b> (file đang chứa danh sách thành viên).</li>' +
+      '<li>Google tự tạo một tab mới tên “Câu trả lời biểu mẫu 1”. Nên đổi tên tab cho dễ nhận, ví dụ <b>Form seeding</b>. Tên gì cũng được, đổi lại sau này app vẫn nhận ra.</li>' +
+      '<li>Quay lại đây bấm <b>Tải lại</b>, chọn loại điểm cho từng cột rồi bấm <b>Lưu và bật</b>. Từ đó mỗi lần có người nộp form, app tự cộng điểm.</li></ol>' +
+      '<p class="hint" style="margin:8px 0 0">Mỗi dòng trong ô Reaction, Comment là một tên Facebook. App so nguyên dòng với cột Tên Facebook trong danh sách thành viên hiện tại (gồm cả BOD), không phân biệt dấu và chữ hoa. Mỗi người được cộng một lần cho mỗi cột trong một lần nộp. Đừng xoá hay sửa cột “ECO đã cộng” trong tab câu trả lời: app dựa vào cột này để không cộng hai lần.</p></details>';
+    var nutLai = '<button class="btn ghost sm" id="sd-lai">' + ic('refresh', 14) + 'Tải lại</button>';
+    if (!t) {
+      box.innerHTML = '<div class="card form">' + tieuDe + huongDan + '<p class="hint" style="margin:0">Chưa thấy tab câu trả lời form nào trong file dữ liệu. Liên kết form theo hướng dẫn ở trên rồi bấm Tải lại.</p><div class="row">' + nutLai + '</div></div>';
+      $('#sd-lai').onclick = nap; return;
+    }
+    var moiLan = ch.tab !== t.ma;
+    var chonLoai = function (cot, i) {
+      var dang = moiLan ? goiY(cot) : (ch.anhXa[cot] || '');
+      if (!D.loai.some(function (l) { return l.ten === dang; })) dang = ''; // loại đã bị xoá khỏi bảng thì không cộng nữa
+      return '<label class="f">Mỗi tên trong cột “' + esc(cot) + '” được cộng<select data-sd="' + i + '">' +
+        D.loai.map(function (l) { return '<option value="' + esc(l.ten) + '"' + (l.ten === dang ? ' selected' : '') + '>' + esc(l.ten) + ' (' + l.diem + ' điểm)</option>'; }).join('') +
+        '<option value=""' + (dang === '' ? ' selected' : '') + '>Không cộng cột này</option></select></label>';
+    };
+    box.innerHTML = '<div class="card form">' + tieuDe + huongDan +
+      (D.tabs.length > 1 ? '<label class="f">Tab câu trả lời của form seeding<select id="sd-tab">' + D.tabs.map(function (x) { return '<option value="' + x.ma + '"' + (x.ma === t.ma ? ' selected' : '') + '>' + esc(x.ten) + ' (' + x.soCau + ' câu trả lời)</option>'; }).join('') + '</select></label>' : '<p class="hint" style="margin:0">Tab câu trả lời: <b>' + esc(t.ten) + '</b>, ' + t.soCau + ' câu trả lời.</p>') +
+      (t.cot.length ? '<div class="grid2">' + t.cot.map(chonLoai).join('') + '</div>' : '<p class="err" style="margin:0">Tab này không có cột danh sách tên nào.</p>') +
+      '<p class="hint" style="margin:0">Muốn Reaction và Comment có điểm khác nhau thì thêm hai dòng, ví dụ “Seeding Reaction” và “Seeding Comment”, vào bảng ở trên (bỏ chọn “BOD cộng”), bấm Lưu rồi chọn ở đây.</p>' +
+      (moiLan && t.soCau ? '<label class="row" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="sd-cu" style="margin-top:3px"><span>Cộng luôn cho ' + t.soCau + ' câu trả lời đã có trong tab<br><span class="hint">Để trống nếu các câu này đã được cộng điểm trước đây (ví dụ bằng tool cũ).</span></span></label>' : '') +
+      (D.thieuFb.length ? '<div class="note">' + ic('info') + '<span>' + D.thieuFb.length + ' thành viên chưa có Tên Facebook nên form không cộng được cho họ: ' + esc(D.thieuFb.slice(0, 12).join(', ')) + (D.thieuFb.length > 12 ? '…' : '') + '. Bổ sung Tên Facebook cho họ trong danh sách thành viên để những lần nộp sau được cộng.</span></div>' : '') +
+      '<div class="row"><button class="btn sm" id="sd-luu">' + (ch.bat && !moiLan ? 'Lưu' : 'Lưu và bật') + '</button>' +
+      (ch.bat && !moiLan && t.chuaCong ? '<button class="btn ghost sm" id="sd-quet">Cộng ' + t.chuaCong + ' câu chưa cộng</button>' : '') +
+      (ch.bat ? '<button class="btn ghost sm" id="sd-tat">Tắt</button>' : '') + nutLai + '<span id="sd-m"></span></div></div>' +
+      '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Các lần form cộng điểm gần đây</h3></div>' +
+      (D.nhatKy.length ? '<div>' + D.nhatKy.map(function (n, i) {
+        return '<div style="display:grid;gap:2px;padding:10px 0;' + (i ? 'border-top:1px solid var(--line)' : 'padding-top:0') + '"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + ' <span class="hint" style="font-weight:400">· ' + ngayGio(n.luc) + '</span></b>' +
+          '<span>' + (n.soLuot ? 'Cộng ' + n.soLuot + ' lượt: ' + esc(n.ten.join(', ')) : 'Không cộng cho ai') + '</span>' +
+          (n.soKhongKhop ? '<details><summary class="hint" style="cursor:pointer">' + n.soKhongKhop + ' tên không khớp thành viên nào (sai chính tả hoặc không phải thành viên)</summary><span class="hint">' + esc(n.khongKhop.join(', ')) + (n.soKhongKhop > n.khongKhop.length ? '…' : '') + '</span></details>' : '') + '</div>';
+      }).join('') + '</div>' : '<p class="hint" style="margin:0">Chưa có lần nào.</p>') + '</div>';
+    $('#sd-lai').onclick = nap;
+    if ($('#sd-tab')) $('#sd-tab').onchange = function () { tabChon = this.value; ve(); };
+    if (tb) { thongBao($('#sd-m'), tb[0], tb[1]); tb = null; }
+    $('#sd-luu').onclick = function () {
+      var anhXa = {};
+      t.cot.forEach(function (cot, i) { var v = $('[data-sd="' + i + '"]').value; if (v) anhXa[cot] = v; });
+      var nut = this; nut.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang lưu…');
+      goiPhien('luuFormSeeding', { tab: t.ma, anhXa: anhXa, congCu: !!($('#sd-cu') && $('#sd-cu').checked) }).then(function (kq) {
+        if (CD) CD.formSeeding = { bat: true };
+        tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã lưu và bật' + (kq.soLuot ? '. Vừa cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.' : '.')];
+        nap();
+      }).catch(function (err) { nut.disabled = false; thongBao($('#sd-m'), 'loi', err.message); });
+    };
+    if ($('#sd-quet')) $('#sd-quet').onclick = function () {
+      var nut = this; nut.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang cộng…');
+      goiPhien('quetFormSeeding').then(function (kq) { tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.']; nap(); })
+        .catch(function (err) { nut.disabled = false; thongBao($('#sd-m'), 'loi', err.message); });
+    };
+    if ($('#sd-tat')) $('#sd-tat').onclick = function () {
+      if (!xacNhan(this, 'Bấm lần nữa để tắt')) return;
+      goiPhien('tatFormSeeding').then(function () { if (CD) CD.formSeeding = { bat: false }; tb = ['ok', 'Đã tắt. Form vẫn nhận câu trả lời nhưng app không cộng điểm.']; nap(); })
+        .catch(function (err) { thongBao($('#sd-m'), 'loi', err.message); });
+    };
+  };
+  nap();
+}
 var SUB = {
   types: function () {
     var ds = CD.loai.map(function (l) { return { ten: l.ten, diem: l.diem, congTay: l.congTay !== false }; });
+    $('#subbody').innerHTML = '<div class="card" id="tybox"></div><div id="sdbox" style="display:grid;gap:inherit"></div>';
     var ve = function () {
-      $('#subbody').innerHTML = '<div class="card"><p class="hint" style="margin-top:0">Mọi loại đều hiện ở mục Quy chế trên ECOBoard. Bỏ chọn “BOD cộng” nếu loại đó chỉ để hiển thị (ví dụ được cộng tự động qua form), khi đó BOD sẽ không thấy nó trong trang Cộng điểm. Đổi số điểm chỉ áp dụng cho các lần cộng từ nay về sau.</p><div class="tscroll"><table><thead><tr><th>Loại hoạt động</th><th class="n">Điểm mỗi lần</th><th class="c">BOD cộng</th><th></th></tr></thead><tbody>' +
+      $('#tybox').innerHTML = '<div class="ctitle"><h3>' + ic('star', 18) + ' Loại hoạt động và mức điểm</h3></div><p class="hint" style="margin-top:0">Đây là số điểm thật được cộng mỗi lần, dù BOD cộng tay hay app tự cộng qua form seeding bên dưới. Mọi loại đều hiện ở mục Quy chế trên ECOBoard. Bỏ chọn “BOD cộng” nếu loại đó chỉ được cộng tự động qua form, khi đó BOD sẽ không thấy nó trong trang Cộng điểm. Đổi số điểm chỉ áp dụng cho các lần cộng từ nay về sau.</p><div class="tscroll"><table><thead><tr><th>Loại hoạt động</th><th class="n">Điểm mỗi lần</th><th class="c">BOD cộng</th><th></th></tr></thead><tbody>' +
         ds.map(function (l, i) { return '<tr><td><input type="text" id="ty' + i + '" value="' + esc(l.ten) + '" aria-label="Tên loại"></td><td style="width:110px"><input type="number" min="0" step="any" id="tp' + i + '" value="' + l.diem + '" aria-label="Điểm"></td><td class="c" style="width:80px;text-align:center"><input type="checkbox" id="tc' + i + '"' + (l.congTay ? ' checked' : '') + ' aria-label="BOD cộng tay loại này"></td><td style="width:44px"><button class="ibtn" data-x="' + i + '" aria-label="Xoá">' + ic('trash', 16) + '</button></td></tr>'; }).join('') +
-        '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="add">' + ic('plus', 14) + 'Thêm loại</button><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></div>';
+        '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="add">' + ic('plus', 14) + 'Thêm loại</button><button class="btn sm" id="save">Lưu</button><span id="m"></span></div>';
       var doc = function () { ds = ds.map(function (_, i) { return { ten: $('#ty' + i).value, diem: $('#tp' + i).value, congTay: $('#tc' + i).checked }; }); };
       $('#add').onclick = function () { doc(); ds.push({ ten: '', diem: 0, congTay: true }); ve(); $('#ty' + (ds.length - 1)).focus(); };
-      $$('[data-x]').forEach(function (b) { b.onclick = function () { doc(); ds.splice(Number(b.getAttribute('data-x')), 1); ve(); }; });
-      $('#save').onclick = function () { doc(); luuVa($('#save'), $('#m'), 'luuLoaiHoatDong', [ds]); };
+      $$('#tybox [data-x]').forEach(function (b) { b.onclick = function () { doc(); ds.splice(Number(b.getAttribute('data-x')), 1); ve(); }; });
+      // Lưu xong thì tải lại phần form seeding để danh sách loại trong đó khớp bảng mới.
+      $('#save').onclick = function () { doc(); luuVa($('#save'), $('#m'), 'luuLoaiHoatDong', [ds], function () { formSeeding($('#sdbox')); }); };
     };
     ve();
+    formSeeding($('#sdbox'));
   },
   pins: function () {
     var ds = CD.ghim.map(function (g) { return { tieuDe: g.tieuDe, link: g.link }; });
@@ -587,84 +671,6 @@ var SUB = {
       };
       ve();
     }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
-  },
-  seeding: function () {
-    var chuan = function (x) { return boDau(x).replace(/[^a-z0-9]/g, ''); };
-    var D = null, tabChon = '', tb = null;
-    var nap = function () {
-      $('#subbody').innerHTML = cho();
-      goiPhien('layFormSeeding').then(function (d) { D = d; if (sub === 'seeding') ve(); }).catch(function (err) { if (sub === 'seeding') $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
-    };
-    var goiY = function (cot) {
-      var c = chuan(cot), l = D.loai.filter(function (x) { return c && chuan(x.ten).indexOf(c) >= 0; })[0];
-      return l ? l.ten : '__moi__';
-    };
-    var ve = function () {
-      var ch = D.cauHinh;
-      if (!tabChon || !D.tabs.some(function (t) { return t.ma === tabChon; })) {
-        var goc = D.tabs.filter(function (t) { return t.ma === ch.tab; })[0] || D.tabs.filter(function (t) { return t.cot.some(function (c) { return /reaction|comment/i.test(c); }); })[0] || D.tabs[0];
-        tabChon = goc ? goc.ma : '';
-      }
-      var t = D.tabs.filter(function (x) { return x.ma === tabChon; })[0];
-      var huongDan = '<div class="card form"><div class="ctitle"><h3>' + ic('info', 18) + ' Cách liên kết form</h3></div>' +
-        '<ol style="margin:0;padding-left:20px;display:grid;gap:6px"><li>Mở Google Form seeding, vào tab <b>Câu trả lời</b>, bấm <b>Liên kết với Trang tính</b>, chọn <b>Chọn bảng tính hiện có</b> rồi chọn <b>file dữ liệu CLB</b> (file đang chứa danh sách thành viên). Chỉ làm một lần cho mỗi form.</li>' +
-        '<li>Quay lại đây bấm <b>Tải lại</b>, chọn loại điểm cho từng cột rồi bấm <b>Lưu và bật</b>.</li><li>Từ đó mỗi lần có người nộp form, app tự cộng điểm. Không cần làm gì thêm.</li></ol>' +
-        '<p class="hint" style="margin:0">Mỗi dòng trong ô Reaction, Comment là một tên Facebook. App so nguyên dòng với cột Tên Facebook trong danh sách thành viên, không phân biệt dấu và chữ hoa. Chỉ cộng cho thành viên đang trong danh sách (không cộng BOD), mỗi người một lần cho mỗi cột trong một lần nộp. Đừng xoá hay sửa cột “ECO đã cộng” trong tab câu trả lời: app dựa vào cột này để không cộng hai lần.</p>' +
-        '<div class="row"><button class="btn ghost sm" id="sd-lai">' + ic('refresh', 14) + 'Tải lại</button></div></div>';
-      if (!t) { $('#subbody').innerHTML = huongDan + '<div class="card"><p class="hint" style="margin:0">Chưa thấy tab câu trả lời form nào trong file dữ liệu. Liên kết form theo hướng dẫn ở trên rồi bấm Tải lại.</p></div>'; $('#sd-lai').onclick = nap; return; }
-      var moiLan = ch.tab !== t.ma;
-      var chonLoai = function (cot, i) {
-        var dang = moiLan ? goiY(cot) : (ch.anhXa[cot] || '');
-        return '<div class="grid2" style="align-items:end"><label class="f">Cột “' + esc(cot) + '” được cộng điểm loại<select data-sd="' + i + '">' +
-          D.loai.map(function (l) { return '<option value="' + esc(l.ten) + '"' + (l.ten === dang ? ' selected' : '') + '>' + esc(l.ten) + ' (' + l.diem + ' điểm)</option>'; }).join('') +
-          '<option value="__moi__"' + (dang === '__moi__' ? ' selected' : '') + '>Tạo loại mới…</option><option value=""' + (dang === '' ? ' selected' : '') + '>Không cộng cột này</option></select></label>' +
-          '<div class="row" data-moi="' + i + '"' + (dang === '__moi__' ? '' : ' hidden') + ' style="flex-wrap:nowrap"><label class="f" style="flex:1">Tên loại mới<input type="text" data-ten="' + i + '" value="' + esc('Seeding ' + cot) + '"></label>' +
-          '<label class="f" style="width:110px">Điểm mỗi lần<input type="number" min="0" step="any" data-diem="' + i + '" value="' + (/comment|binh luan/.test(boDau(cot)) ? 2 : 1) + '"></label></div></div>';
-      };
-      $('#subbody').innerHTML = huongDan +
-        '<div class="card form">' + (ch.bat ? '<span class="toast" style="justify-self:start">Đang bật: mỗi lần có người nộp form, app tự cộng điểm</span>' : '<span class="hint">Chưa bật tự cộng điểm.</span>') +
-        (D.tabs.length > 1 ? '<label class="f">Tab câu trả lời của form seeding<select id="sd-tab">' + D.tabs.map(function (x) { return '<option value="' + x.ma + '"' + (x.ma === t.ma ? ' selected' : '') + '>' + esc(x.ten) + ' (' + x.soCau + ' câu trả lời)</option>'; }).join('') + '</select></label>' : '<p class="hint" style="margin:0">Tab câu trả lời: <b>' + esc(t.ten) + '</b>, ' + t.soCau + ' câu trả lời.</p>') +
-        (t.cot.length ? t.cot.map(chonLoai).join('') : '<p class="err" style="margin:0">Tab này không có cột danh sách tên nào.</p>') +
-        (moiLan && t.soCau ? '<label class="row" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="sd-cu" style="margin-top:3px"><span>Cộng luôn cho ' + t.soCau + ' câu trả lời đã có trong tab<br><span class="hint">Để trống nếu các câu này đã được cộng điểm trước đây (ví dụ bằng tool cũ).</span></span></label>' : '') +
-        '<div class="row"><button class="btn sm" id="sd-luu">' + (ch.bat && !moiLan ? 'Lưu' : 'Lưu và bật') + '</button>' +
-        (ch.bat && !moiLan && t.chuaCong ? '<button class="btn ghost sm" id="sd-quet">Cộng ' + t.chuaCong + ' câu chưa cộng</button>' : '') +
-        (ch.bat ? '<button class="btn ghost sm" id="sd-tat">Tắt</button>' : '') + '<span id="m"></span></div></div>' +
-        '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Các lần cộng gần đây</h3></div>' +
-        (D.nhatKy.length ? '<div>' + D.nhatKy.map(function (n, i) {
-          return '<div style="display:grid;gap:2px;padding:10px 0;' + (i ? 'border-top:1px solid var(--line)' : 'padding-top:0') + '"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + ' <span class="hint" style="font-weight:400">· ' + ngayGio(n.luc) + '</span></b>' +
-            '<span>' + (n.soLuot ? 'Cộng ' + n.soLuot + ' lượt: ' + esc(n.ten.join(', ')) : 'Không cộng cho ai') + '</span>' +
-            (n.soKhongKhop ? '<details><summary class="hint" style="cursor:pointer">' + n.soKhongKhop + ' tên không khớp thành viên nào</summary><span class="hint">' + esc(n.khongKhop.join(', ')) + (n.soKhongKhop > n.khongKhop.length ? '…' : '') + '</span></details>' : '') + '</div>';
-        }).join('') + '</div>' : '<p class="hint" style="margin:0">Chưa có lần nào.</p>') + '</div>';
-      $('#sd-lai').onclick = nap;
-      if ($('#sd-tab')) $('#sd-tab').onchange = function () { tabChon = this.value; ve(); };
-      $$('#subbody [data-sd]').forEach(function (x) { x.onchange = function () { $('[data-moi="' + x.getAttribute('data-sd') + '"]').hidden = x.value !== '__moi__'; }; });
-      if (tb) { thongBao($('#m'), tb[0], tb[1]); tb = null; }
-      $('#sd-luu').onclick = function () {
-        var anhXa = {}, loaiMoi = [];
-        t.cot.forEach(function (cot, i) {
-          var v = $('[data-sd="' + i + '"]').value;
-          if (v === '__moi__') { var ten = $('[data-ten="' + i + '"]').value.trim(); loaiMoi.push({ ten: ten, diem: $('[data-diem="' + i + '"]').value }); anhXa[cot] = ten; }
-          else if (v) anhXa[cot] = v;
-        });
-        var nut = this; nut.disabled = true; thongBao($('#m'), 'cho', 'Đang lưu…');
-        goiPhien('luuFormSeeding', { tab: t.ma, anhXa: anhXa, loaiMoi: loaiMoi, congCu: !!($('#sd-cu') && $('#sd-cu').checked) }).then(function (kq) {
-          if (CD) CD.formSeeding = { bat: true };
-          tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã lưu và bật' + (kq.soLuot ? '. Vừa cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.' : '.')];
-          nap();
-        }).catch(function (err) { nut.disabled = false; thongBao($('#m'), 'loi', err.message); });
-      };
-      if ($('#sd-quet')) $('#sd-quet').onclick = function () {
-        var nut = this; nut.disabled = true; thongBao($('#m'), 'cho', 'Đang cộng…');
-        goiPhien('quetFormSeeding').then(function (kq) { tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.']; nap(); })
-          .catch(function (err) { nut.disabled = false; thongBao($('#m'), 'loi', err.message); });
-      };
-      if ($('#sd-tat')) $('#sd-tat').onclick = function () {
-        if (!xacNhan(this, 'Bấm lần nữa để tắt')) return;
-        goiPhien('tatFormSeeding').then(function () { if (CD) CD.formSeeding = { bat: false }; tb = ['ok', 'Đã tắt. Form vẫn nhận câu trả lời nhưng app không cộng điểm.']; nap(); })
-          .catch(function (err) { thongBao($('#m'), 'loi', err.message); });
-      };
-    };
-    nap();
   },
   logcfg: function () {
     $('#subbody').innerHTML = '<form class="card form" id="lc"><label class="f">Link Google Sheet mẫu <small>Bắt buộc. File đăng ký log được chép từ mẫu này. Dùng file mẫu của tool tạo file log cũ (có tab Đăng ký log, có thể có tab Kế hoạch): app điền giống hệt tool cũ. Mẫu khác cần một dòng tiêu đề có cột Họ và tên; các cột buổi được thêm ngay sau cột tiêu đề cuối cùng.</small><input type="url" id="lc-m" value="' + esc(CD.log.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +

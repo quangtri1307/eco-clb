@@ -22,7 +22,8 @@ test('nhận diện cột của tab câu trả lời', () => {
 
 test('gợi ý loại hoạt động theo tên cột', () => {
   assert.strictEqual(L.goiYLoaiSeeding('Reaction', LOAI), 'Seeding Reaction');
-  assert.strictEqual(L.goiYLoaiSeeding('Share', LOAI), '');
+  assert.strictEqual(L.goiYLoaiSeeding('Share', LOAI), 'Seeding Reaction', 'không có loại trùng tên cột thì lấy loại có chữ seeding');
+  assert.strictEqual(L.goiYLoaiSeeding('Share', [{ TenLoai: 'Staff', Diem: 3 }]), '');
 });
 
 test('so tên Facebook không phân biệt dấu, hoa thường, biểu tượng, khoảng trắng', () => {

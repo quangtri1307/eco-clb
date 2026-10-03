@@ -1189,17 +1189,18 @@ function cotFormSeeding_(tieuDe) {
   return kq;
 }
 
-/** Loại hoạt động gợi ý cho một cột: loại có tên chứa tên cột (ví dụ "Seeding Reaction" cho cột Reaction). */
+/** Loại hoạt động gợi ý cho một cột: loại có tên chứa tên cột (ví dụ "Seeding Reaction" cho cột Reaction), không có thì loại có chữ "seeding". */
 function goiYLoaiSeeding_(tenCot, loaiHoatDong) {
-  var c = chuanHoaTenCot_(tenCot);
-  for (var i = 0; i < loaiHoatDong.length; i++) if (c && chuanHoaTenCot_(loaiHoatDong[i].TenLoai).indexOf(c) >= 0) return String(loaiHoatDong[i].TenLoai);
+  var c = chuanHoaTenCot_(tenCot), i;
+  for (i = 0; i < loaiHoatDong.length; i++) if (c && chuanHoaTenCot_(loaiHoatDong[i].TenLoai).indexOf(c) >= 0) return String(loaiHoatDong[i].TenLoai);
+  for (i = 0; i < loaiHoatDong.length; i++) if (chuanHoaTenCot_(loaiHoatDong[i].TenLoai).indexOf('seeding') >= 0) return String(loaiHoatDong[i].TenLoai);
   return '';
 }
 
 /**
  * Một câu trả lời form thành các dòng cộng điểm. Mỗi dòng trong ô Reaction/Comment là một tên Facebook,
  * khớp nguyên dòng với cột Tên Facebook của thành viên (không phân biệt dấu, hoa thường, ký tự lạ).
- * anhXa: { tên cột: tên loại hoạt động }. thanhVien: chỉ những người được cộng (đang trong danh sách, không phải BOD).
+ * anhXa: { tên cột: tên loại hoạt động }. thanhVien: những người được cộng (danh sách thành viên hiện tại, gồm cả BOD).
  * Trả về { dong, khongKhop (tên không khớp ai), nguoiNop, loi }.
  */
 function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGio) {

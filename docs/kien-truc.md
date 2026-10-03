@@ -195,8 +195,9 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 
 ## Form cộng điểm seeding
 
-- Google Form seeding được liên kết câu trả lời về chính file dữ liệu (Van bấm một lần trong Form). Tab câu trả lời có cột Dấu thời gian, Họ và tên người nộp, Reaction, Comment.
-- BOD bật trong Cài đặt, "Form cộng điểm seeding": chọn tab và loại hoạt động cho từng cột (có thể tạo loại mới, ví dụ Seeding Reaction 1 điểm, Seeding Comment 2 điểm). Lưu ở CaiDat `FormSeeding`.
-- Bật thì app cài lịch `khiNopForm` (onFormSubmit của file dữ liệu). Mỗi dòng trong ô là một tên Facebook, khớp nguyên dòng với cột Tên Facebook của tab ThanhVien (bỏ dấu, chữ thường, bỏ ký tự lạ), không cộng BOD.
+- Google Form seeding được liên kết câu trả lời về chính file dữ liệu (Van bấm một lần trong Form). Tab câu trả lời có cột Dấu thời gian, Họ và tên người nộp, Reaction, Comment. Tên tab tuỳ ý: app nhận tab theo mã (sheetId), đổi tên không sao.
+- BOD bật trong Cài đặt, trang "Loại hoạt động và mức điểm" (phần dưới bảng loại): chọn tab và loại hoạt động có sẵn cho từng cột. Điểm mỗi lượt lấy từ bảng LoaiHoatDong. Muốn Reaction và Comment khác điểm thì thêm hai loại riêng (ví dụ Seeding Reaction, Seeding Comment). Lưu ở CaiDat `FormSeeding`.
+- Bật thì app cài lịch `khiNopForm` (onFormSubmit của file dữ liệu). Mỗi dòng trong ô là một tên Facebook, khớp nguyên dòng với cột Tên Facebook của tab ThanhVien (bỏ dấu, chữ thường, bỏ ký tự lạ), gồm cả BOD. Trang cài đặt liệt kê thành viên chưa có Tên Facebook.
 - Câu đã xử lý được ghi ở cột "ECO đã cộng" trong tab câu trả lời, nên không cộng hai lần. Lần đầu bật, các câu có sẵn được đánh dấu bỏ qua, trừ khi BOD chọn cộng luôn.
 - 15 lần cộng gần nhất (kèm tên không khớp) lưu ở CaiDat `FormSeedingNhatKy`.
+- Lịch nhắc việc hằng ngày (`nhacViec_`) cũng chạy `xuLyFormSeeding_` để cộng bù nếu Google lỡ gọi `khiNopForm`.
