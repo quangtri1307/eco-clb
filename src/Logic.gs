@@ -853,6 +853,43 @@ function kiemTraFileLog_(yc, thanhVien) {
   return { loi: '', tenFile: tenFile.slice(0, 150), nguoi: nguoi, buoi: buoi };
 }
 
+/* Mẫu file log của tool cũ (tab "Đăng ký log" và "Kế hoạch"): các hàm phụ không đụng tới Google. */
+
+/** Số thứ tự cột thành chữ: 1 → A, 5 → E, 27 → AA. */
+function chuCot_(so) {
+  var chu = '';
+  while (so > 0) { var du = (so - 1) % 26; chu = String.fromCharCode(65 + du) + chu; so = (so - du - 1) / 26; }
+  return chu;
+}
+
+/** "2026-2027" → "2627" (đuôi tên file log như tool cũ). Không đọc được thì trả về ''. */
+function duoiNhiemKy_(nhiemKy) {
+  var m = String(nhiemKy || '').match(/(\d{4})\D+(\d{4})/);
+  return m ? m[1].slice(2) + m[2].slice(2) : '';
+}
+
+/** Tên file mặc định như tool cũ: "[ECO] ĐĂNG KÝ LÀM LOG <TÊN ĐỢT> 2627". */
+function tenFileLogMacDinh_(tenDot, duoi) {
+  return ['[ECO] ĐĂNG KÝ LÀM LOG', String(tenDot || '').trim().toUpperCase(), duoi || ''].filter(String).join(' ');
+}
+
+/**
+ * Xếp người theo ban như tool cũ; cùng ban thì giữ thứ tự trong danh sách thành viên.
+ * Trả về { nguoi[], nhomBan[{dau, so}] } — dau là vị trí (từ 0) của người đầu tiên mỗi nhóm ban liền nhau.
+ */
+function xepTheoBan_(nguoi, thuTu) {
+  var viTri = {};
+  (thuTu || []).forEach(function (t, i) { viTri[String(t.HoVaTen)] = i; });
+  var ds = nguoi.map(function (t, i) { return { t: t, i: viTri[String(t.HoVaTen)] !== undefined ? viTri[String(t.HoVaTen)] : 1e6 + i }; });
+  ds.sort(function (a, b) { return String(a.t.Ban).trim().localeCompare(String(b.t.Ban).trim()) || a.i - b.i; });
+  var kq = ds.map(function (x) { return x.t; }), nhom = [];
+  kq.forEach(function (t, i) {
+    if (i && String(t.Ban).trim() === String(kq[i - 1].Ban).trim()) nhom[nhom.length - 1].so++;
+    else nhom.push({ dau: i, so: 1 });
+  });
+  return { nguoi: kq, nhomBan: nhom };
+}
+
 /* ===================== Đăng nhập Google ===================== */
 
 /** Kiểm tra thông tin Google trả về cho một ID token. Trả về '' nếu hợp lệ. */
@@ -1104,7 +1141,7 @@ if (typeof module !== 'undefined') {
     kiemTraViecMail: kiemTraViecMail_, timChoTrong: timChoTrong_, thayTheMau: thayTheMau_, chuSangHtml: chuSangHtml_,
     docBangNgoai: docBangNgoai_, chuanBiGuiHangLoat: chuanBiGuiHangLoat_,
     chiSoBaoCao: chiSoBaoCao_, taskBiTre: taskBiTre_, tongHopBaoCao: tongHopBaoCao_, chiaMoc: chiaMoc_, bieuDoBaoCao: bieuDoBaoCao_,
-    timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
+    timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, chuCot: chuCot_, duoiNhiemKy: duoiNhiemKy_, tenFileLogMacDinh: tenFileLogMacDinh_, xepTheoBan: xepTheoBan_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
     base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_
   };

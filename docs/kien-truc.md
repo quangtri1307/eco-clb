@@ -119,7 +119,8 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 ### File đăng ký log
 
 - Cài đặt có link Google Sheet mẫu (`LinkMauLog`) và thư mục Drive để lưu (`LinkThuMucLog`).
-- Tạo file: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Chưa có file mẫu thì không cho tạo.
+- Tạo file từ mẫu của tool cũ (có tab "Đăng ký log"): làm giống hệt tool cũ. Người được chọn xếp theo ban, từ dòng 5 ghi Họ tên, Lớp, Ban, SĐT (cột A–D); mỗi buổi một cột ô tích từ cột E (chép định dạng cột E), tên buổi ở dòng 4 (nền lấy từ ô Ghi chú F4), dòng 3 đếm số người tích; cột Ghi chú ở cuối; cột Ban gộp ô theo ban và xoay chữ; kẻ khung; khoá tab, chỉ chừa ô tích và Ghi chú. Tab "Kế hoạch" (nếu có) thêm cột buổi, dòng 3 lấy số đếm từ tab Đăng ký log. Tên file gợi ý: "[ECO] ĐĂNG KÝ LÀM LOG <TÊN ĐỢT> 2627", đuôi lấy từ nhiệm kỳ hiện tại.
+- Tạo file từ mẫu khác: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Chưa có file mẫu thì không cho tạo.
 
 ### Cài đặt
 

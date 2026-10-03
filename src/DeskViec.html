@@ -224,19 +224,22 @@ VIEWS.log = function () {
   goiPhien('layDuLieuLog').then(function (d) {
     if (page !== 'log') return;
     var buoi = ['Buổi 1'];
-    var hom = new Date();
+    var tenTuDong = function (dot) { return ['[ECO] ĐĂNG KÝ LÀM LOG', String(dot || '').trim().toUpperCase(), d.duoi || ''].filter(String).join(' '); };
     var coMau = !!d.linkMau;
-    $('#main').innerHTML = '<div class="head"><div><h2>Làm log</h2><p class="lead">Chép file mẫu thành một Google Sheet mới, điền tên, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi.</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Làm log</h2><p class="lead">Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi.</p></div></div>' +
       '<div class="card"><div class="ctitle"><h3>File mẫu</h3>' + (coMau ? '<a class="btn ghost sm" href="' + esc(d.linkMau) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Mở file mẫu</a>' : '') + '</div>' +
       (coMau ? '' : '<div class="note" style="margin-bottom:12px">' + ic('info') + '<span>Chưa có file mẫu nên chưa tạo được file đăng ký. Dán link Google Sheet mẫu của CLB vào ô bên dưới rồi bấm Lưu.</span></div>') +
-      '<form class="form" id="mauf"><div class="grid2"><label class="f">Link Google Sheet mẫu <small>Mẫu cần một dòng tiêu đề có cột Họ và tên</small><input type="url" id="lm" value="' + esc(d.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
+      '<form class="form" id="mauf"><div class="grid2"><label class="f">Link Google Sheet mẫu <small>Dùng file mẫu của tool cũ (có tab Đăng ký log). Mẫu khác cần một dòng tiêu đề có cột Họ và tên</small><input type="url" id="lm" value="' + esc(d.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
       '<label class="f">Thư mục lưu file <small>Không bắt buộc. Bỏ trống thì lưu ở Drive của tài khoản CLB</small><input type="url" id="lt" value="' + esc(d.linkThuMuc) + '" placeholder="https://drive.google.com/drive/folders/…"></label></div>' +
       '<div class="row"><button class="btn ' + (coMau ? 'ghost ' : '') + 'sm" id="lmb">Lưu</button><span id="lmm"></span></div></form></div>' +
-      '<form class="card form" id="lf3"' + (coMau ? '' : ' style="opacity:.55;pointer-events:none" aria-disabled="true"') + '><h3 style="margin:0">Thông tin file</h3><label class="f">Tên file<input type="text" id="lg-t" maxlength="150" value="Đăng ký log tháng ' + p2(hom.getMonth() + 1) + '/' + hom.getFullYear() + '"></label>' +
+      '<form class="card form" id="lf3"' + (coMau ? '' : ' style="opacity:.55;pointer-events:none" aria-disabled="true"') + '><h3 style="margin:0">Thông tin file</h3><div class="grid2"><label class="f">Tên đợt làm log<input type="text" id="lg-d" maxlength="80" placeholder="Ví dụ: ODAY"></label><label class="f">Tên file<input type="text" id="lg-t" maxlength="150" value="' + esc(tenTuDong('')) + '"></label></div>' +
       '<div class="log-grid"><div>' + picker('lp', d.thanhVien, true) + '</div><div class="form"><b style="font-size:13px">Các buổi</b><div id="lb" style="display:grid;gap:8px"></div><div><button type="button" class="btn ghost sm" id="lb-add">' + ic('plus', 14) + 'Thêm buổi</button></div></div></div>' +
       '<div class="sticky-foot row"><button class="btn" id="lg-b"' + (coMau ? '' : ' disabled') + '>' + ic('file', 16) + 'Tạo file</button><span id="lg-m"></span></div></form>' +
       '<div class="card flush"><div style="padding:16px 18px 4px"><h3>File đã tạo gần đây</h3></div><div class="lst">' + (d.ganDay.length ? d.ganDay.map(function (f) { return '<div class="li"><div class="c"><a class="t" style="font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.ten) + '</a><span class="s">' + f.soNguoi + ' người · ' + f.soBuoi + ' buổi · ' + esc(f.nguoiTao) + ' · ' + ngayDayDu(f.thoiGian) + '</span></div></div>'; }).join('') : rong('Chưa có file nào.')) + '</div></div>';
     var layChon = bindPicker('lp');
+    var tenDaSua = false;
+    $('#lg-t').oninput = function () { tenDaSua = true; };
+    $('#lg-d').oninput = function () { if (!tenDaSua) $('#lg-t').value = tenTuDong($('#lg-d').value); };
     $('#mauf').onsubmit = function (e) {
       e.preventDefault();
       $('#lmb').disabled = true; thongBao($('#lmm'), 'cho', 'Đang kiểm tra link…');
@@ -540,7 +543,7 @@ var SUB = {
     }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   },
   logcfg: function () {
-    $('#subbody').innerHTML = '<form class="card form" id="lc"><label class="f">Link Google Sheet mẫu <small>Bắt buộc. File đăng ký log được chép từ mẫu này. Mẫu cần một dòng tiêu đề có cột Họ và tên (có thể thêm STT, Ban, Số điện thoại); các cột buổi được thêm ngay sau cột tiêu đề cuối cùng.</small><input type="url" id="lc-m" value="' + esc(CD.log.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
+    $('#subbody').innerHTML = '<form class="card form" id="lc"><label class="f">Link Google Sheet mẫu <small>Bắt buộc. File đăng ký log được chép từ mẫu này. Dùng file mẫu của tool tạo file log cũ (có tab Đăng ký log, có thể có tab Kế hoạch): app điền giống hệt tool cũ. Mẫu khác cần một dòng tiêu đề có cột Họ và tên; các cột buổi được thêm ngay sau cột tiêu đề cuối cùng.</small><input type="url" id="lc-m" value="' + esc(CD.log.linkMau) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
       '<label class="f">Link thư mục Google Drive để lưu file <small>Bỏ trống thì lưu ở thư mục gốc Drive của tài khoản CLB</small><input type="url" id="lc-f" value="' + esc(CD.log.linkThuMuc) + '" placeholder="https://drive.google.com/drive/folders/…"></label>' +
       '<div class="row"><button class="btn sm" id="lc-b">Lưu</button><span id="m"></span></div></form>';
     $('#lc').onsubmit = function (e) { e.preventDefault(); luuVa($('#lc-b'), $('#m'), 'luuCaiDatLog', [{ linkMau: $('#lc-m').value, linkThuMuc: $('#lc-f').value }]); };
