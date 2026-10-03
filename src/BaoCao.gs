@@ -4,26 +4,26 @@
 
 /* ===================== Báo cáo ===================== */
 
-function ngayCuaThoiGian(v) {
+function ngayCuaThoiGian_(v) {
   if (!v) return '';
   var d = v instanceof Date ? v : new Date(v);
   if (isNaN(d.getTime())) return '';
   return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }
 
-function truMotNgay(ngay) {
+function truMotNgay_(ngay) {
   var p = ngay.split('-');
   return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - 1)).toISOString().slice(0, 10);
 }
 
 /** Các mốc thời gian chọn nhanh: học kỳ, nhiệm kỳ (từ tab KyHoatDong) và các tháng. */
 function layThongTinBaoCao(phien) {
-  canDangNhap(phien, 'baocao');
-  var hom = homNay();
-  var ky = docBang('KyHoatDong').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian(k.BatDau) }; })
+  canDangNhap_(phien, 'baocao');
+  var hom = homNay_();
+  var ky = docBang_('KyHoatDong').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian_(k.BatDau) }; })
     .filter(function (k) { return k.tu; }).sort(function (a, b) { return a.tu < b.tu ? -1 : 1; });
   var hocKy = ky.map(function (k, i) {
-    return { ten: 'Học kỳ ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay(ky[i + 1].tu) : hom };
+    return { ten: 'Học kỳ ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
   }).reverse();
   var nhiemKy = [];
   hocKy.slice().reverse().forEach(function (h, i) {
@@ -34,48 +34,48 @@ function layThongTinBaoCao(phien) {
   return { homNay: hom, hocKy: hocKy, nhiemKy: nhiemKy.reverse(), batDau: ky.length ? ky[0].tu : hom };
 }
 
-function duLieuBaoCao() {
+function duLieuBaoCao_() {
   return {
-    lichSu: docBang('LichSuDiem').map(function (d) {
-      return { ngay: ngayCuaThoiGian(d.ThoiGian), ten: String(d.HoVaTen), loai: String(d.LoaiHoatDong), tenHoatDong: String(d.TenHoatDong || ''), diem: Number(d.Diem) || 0 };
+    lichSu: docBang_('LichSuDiem').map(function (d) {
+      return { ngay: ngayCuaThoiGian_(d.ThoiGian), ten: String(d.HoVaTen), loai: String(d.LoaiHoatDong), tenHoatDong: String(d.TenHoatDong || ''), diem: Number(d.Diem) || 0 };
     }),
-    task: docBang('Task').map(function (t) {
-      return { nguoi: String(t.NguoiPhuTrach), hanChot: ngayChuoi(t.HanChot), trangThaiLuu: String(t.TrangThai || TRANG_THAI_TASK.GIAO), ngayXong: ngayCuaThoiGian(t.ThoiGianXong) };
+    task: docBang_('Task').map(function (t) {
+      return { nguoi: String(t.NguoiPhuTrach), hanChot: ngayChuoi_(t.HanChot), trangThaiLuu: String(t.TrangThai || TRANG_THAI_TASK.GIAO), ngayXong: ngayCuaThoiGian_(t.ThoiGianXong) };
     }),
-    thanhVien: docBang('ThanhVien').filter(khongPhaiBod).map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan(t.Ban) }; }),
-    loai: docBang('LoaiHoatDong').map(function (l) { return String(l.TenLoai); })
+    thanhVien: docBang_('ThanhVien').filter(khongPhaiBod_).map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban) }; }),
+    loai: docBang_('LoaiHoatDong').map(function (l) { return String(l.TenLoai); })
   };
 }
 
-function kiemTraKhoang(tu, den) {
-  if (!ngayHopLe(tu) || !ngayHopLe(den)) throw new Error('Khoảng thời gian chưa đúng.');
+function kiemTraKhoang_(tu, den) {
+  if (!ngayHopLe_(tu) || !ngayHopLe_(den)) throw new Error('Khoảng thời gian chưa đúng.');
   if (tu > den) throw new Error('Ngày bắt đầu phải trước ngày kết thúc.');
-  if (soNgayGiua(tu, den) > 366 * 3) throw new Error('Khoảng thời gian dài quá 3 năm.');
+  if (soNgayGiua_(tu, den) > 366 * 3) throw new Error('Khoảng thời gian dài quá 3 năm.');
 }
 
-function tinhBaoCao(tu, den, cheDo) {
-  kiemTraKhoang(tu, den);
+function tinhBaoCao_(tu, den, cheDo) {
+  kiemTraKhoang_(tu, den);
   cheDo = ['thanhvien', 'ban', 'clb'].indexOf(cheDo) >= 0 ? cheDo : 'thanhvien';
-  var d = duLieuBaoCao(), hom = homNay();
+  var d = duLieuBaoCao_(), hom = homNay_();
   var lichSuKhoang = d.lichSu.filter(function (x) { return x.ngay >= tu && x.ngay <= den; });
   return {
-    chiSo: chiSoBaoCao(d.loai, lichSuKhoang),
-    bang: tongHopBaoCao(d.lichSu, d.task, d.thanhVien, tu, den, cheDo, hom).dong,
-    bieuDo: bieuDoBaoCao(lichSuKhoang, d.task, d.thanhVien, tu, den, cheDo, hom)
+    chiSo: chiSoBaoCao_(d.loai, lichSuKhoang),
+    bang: tongHopBaoCao_(d.lichSu, d.task, d.thanhVien, tu, den, cheDo, hom).dong,
+    bieuDo: bieuDoBaoCao_(lichSuKhoang, d.task, d.thanhVien, tu, den, cheDo, hom)
   };
 }
 
 function layBaoCao(phien, tu, den, cheDo) {
-  canDangNhap(phien, 'baocao');
-  return tinhBaoCao(tu, den, cheDo);
+  canDangNhap_(phien, 'baocao');
+  return tinhBaoCao_(tu, den, cheDo);
 }
 
 /** Xuất báo cáo ra file Excel (.xlsx). Trả về { ten, base64 } để trình duyệt tải về. */
 function xuatExcelBaoCao(phien, tu, den, cheDo) {
-  canDangNhap(phien, 'baocao');
-  var kq = tinhBaoCao(tu, den, cheDo);
+  canDangNhap_(phien, 'baocao');
+  var kq = tinhBaoCao_(tu, den, cheDo);
   var tenCheDo = { thanhvien: 'thành viên', ban: 'ban', clb: 'cả CLB' }[cheDo] || 'thành viên';
-  var ten = 'Báo cáo ' + tenCheDo + ' ' + hienNgay(tu) + ' - ' + hienNgay(den);
+  var ten = 'Báo cáo ' + tenCheDo + ' ' + hienNgay_(tu) + ' - ' + hienNgay_(den);
   var ss = SpreadsheetApp.create(ten);
   try {
     var sh = ss.getSheets()[0].setName('Tổng hợp');
@@ -92,7 +92,7 @@ function xuatExcelBaoCao(phien, tu, den, cheDo) {
     var dau2 = ['Từ ngày', 'Đến ngày'];
     var cot2 = [];
     chuoi.forEach(function (c) { kq.chiSo.forEach(function (s) { dau2.push((cheDo === 'clb' ? '' : c + ' · ') + s.ten); cot2.push([c, s.khoa]); }); });
-    var dong2 = kq.bieuDo.moc.map(function (m, i) { return [hienNgay(m.tu), hienNgay(m.den)].concat(cot2.map(function (x) { return kq.bieuDo.chuoi[x[0]][i][x[1]] || 0; })); });
+    var dong2 = kq.bieuDo.moc.map(function (m, i) { return [hienNgay_(m.tu), hienNgay_(m.den)].concat(cot2.map(function (x) { return kq.bieuDo.chuoi[x[0]][i][x[1]] || 0; })); });
     sh2.getRange(1, 1, 1, dau2.length).setValues([dau2]).setFontWeight('bold').setBackground('#274e13').setFontColor('#ffffff');
     if (dong2.length) sh2.getRange(2, 1, dong2.length, dau2.length).setValues(dong2);
     sh2.setFrozenRows(1);
@@ -110,7 +110,7 @@ function xuatExcelBaoCao(phien, tu, den, cheDo) {
 
 /* ===================== File đăng ký log ===================== */
 
-function maTuLink(link) {
+function maTuLink_(link) {
   var s = String(link || '').trim();
   var m = /\/d\/([a-zA-Z0-9_-]{20,})/.exec(s) || /\/folders\/([a-zA-Z0-9_-]{20,})/.exec(s) || /[?&]id=([a-zA-Z0-9_-]{20,})/.exec(s);
   if (m) return m[1];
@@ -118,11 +118,11 @@ function maTuLink(link) {
 }
 
 function layDuLieuLog(phien) {
-  canDangNhap(phien, 'log');
+  canDangNhap_(phien, 'log');
   return {
-    thanhVien: docBang('ThanhVien').map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
-    linkMau: String(layCaiDat('LinkMauLog') || ''), linkThuMuc: String(layCaiDat('LinkThuMucLog') || ''),
-    ganDay: docBang('FileLog').map(function (f) {
+    thanhVien: docBang_('ThanhVien').map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
+    linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || ''),
+    ganDay: docBang_('FileLog').map(function (f) {
       return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan), soNguoi: Number(f.SoNguoi) || 0, soBuoi: Number(f.SoBuoi) || 0, nguoiTao: String(f.NguoiTao) };
     }).sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 20)
   };
@@ -130,13 +130,13 @@ function layDuLieuLog(phien) {
 
 /** Tạo file đăng ký log: chép sheet mẫu (nếu có) vào thư mục đã chọn, điền thành viên và các buổi. */
 function taoFileLog(phien, yc) {
-  var tk = canDangNhap(phien, 'log');
-  var tv = docBang('ThanhVien');
-  var maMau = maTuLink(layCaiDat('LinkMauLog'));
-  var k = kiemTraFileLog({ coMau: !!maMau, tenFile: yc && yc.tenFile, nguoi: yc && yc.nguoi, buoi: yc && yc.buoi }, tv);
+  var tk = canDangNhap_(phien, 'log');
+  var tv = docBang_('ThanhVien');
+  var maMau = maTuLink_(layCaiDat_('LinkMauLog'));
+  var k = kiemTraFileLog_({ coMau: !!maMau, tenFile: yc && yc.tenFile, nguoi: yc && yc.nguoi, buoi: yc && yc.buoi }, tv);
   if (k.loi) throw new Error(k.loi);
 
-  var maThuMuc = maTuLink(layCaiDat('LinkThuMucLog'));
+  var maThuMuc = maTuLink_(layCaiDat_('LinkThuMucLog'));
   var thuMuc = null;
   if (maThuMuc) { try { thuMuc = DriveApp.getFolderById(maThuMuc); } catch (e) { throw new Error('Không mở được thư mục lưu file log. Kiểm tra lại link trong Cài đặt.'); } }
   var file;
@@ -145,7 +145,7 @@ function taoFileLog(phien, yc) {
   var ss = SpreadsheetApp.openById(file.getId());
   var sh = ss.getSheets()[0];
   var v = sh.getDataRange().getValues();
-  var td = timTieuDeMauLog(v);
+  var td = timTieuDeMauLog_(v);
   if (!td) {
     // Mẫu không có dòng tiêu đề nhận ra được: tự tạo tiêu đề ở dòng đầu tiên còn trống.
     var dongTrong = sh.getLastRow() ? sh.getLastRow() + 1 : 0;
@@ -176,22 +176,22 @@ function taoFileLog(phien, yc) {
   SpreadsheetApp.flush();
 
   var url = ss.getUrl();
-  themDong('FileLog', [{ ThoiGian: new Date(), TenFile: k.tenFile, DuongDan: url, SoNguoi: k.nguoi.length, SoBuoi: k.buoi.length, NguoiTao: String(tk.HoVaTen) }]);
+  themDong_('FileLog', [{ ThoiGian: new Date(), TenFile: k.tenFile, DuongDan: url, SoNguoi: k.nguoi.length, SoBuoi: k.buoi.length, NguoiTao: String(tk.HoVaTen) }]);
   return { url: url, ten: k.tenFile };
 }
 
 function luuCaiDatLog(phien, cd) {
-  canDangNhap(phien, 'log');
+  canDangNhap_(phien, 'log');
   cd = cd || {};
   var mau = String(cd.linkMau || '').trim(), thuMuc = String(cd.linkThuMuc || '').trim();
   if (mau) {
-    var m = maTuLink(mau);
+    var m = maTuLink_(mau);
     try { SpreadsheetApp.openById(m); } catch (e) { throw new Error('Không mở được sheet mẫu. Kiểm tra link và quyền truy cập của tài khoản CLB.'); }
   }
   if (thuMuc) {
-    try { DriveApp.getFolderById(maTuLink(thuMuc)).getName(); } catch (e) { throw new Error('Không mở được thư mục. Kiểm tra link và quyền truy cập của tài khoản CLB.'); }
+    try { DriveApp.getFolderById(maTuLink_(thuMuc)).getName(); } catch (e) { throw new Error('Không mở được thư mục. Kiểm tra link và quyền truy cập của tài khoản CLB.'); }
   }
-  datCaiDat('LinkMauLog', mau);
-  datCaiDat('LinkThuMucLog', thuMuc);
+  datCaiDat_('LinkMauLog', mau);
+  datCaiDat_('LinkThuMucLog', thuMuc);
   return true;
 }
