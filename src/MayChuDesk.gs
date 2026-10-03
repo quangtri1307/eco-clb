@@ -249,6 +249,7 @@ function layCaiDatDesk(phien) {
     sapDenHanNgay: soNgaySapDenHan_(),
     mail: { cheDoUcv: cheDoXemUcv_(), soDanhBa: docBang_('DanhBa').length, soThanhVien: tv.filter(function (t) { return emailHopLe_(t.Email); }).length },
     googleClientId: String(layCaiDat_('GoogleClientId') || ''),
+    chuDe: chuDeHopLe_(layCaiDat_('ChuDe')),
     log: { linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || '') },
     zalo: (function () {
       var n = dongBoNguoiNhanZalo_();
@@ -266,6 +267,16 @@ function luuLoaiHoatDong(phien, ds) {
   ghiDeBang_('LoaiHoatDong', kq.ds);
   xoaBoNhoTam_();
   return true;
+}
+
+/** Giao diện theo mùa hoặc ngày lễ cho cả ECOBoard và ECODesk. Trống là giao diện mặc định. */
+function luuChuDe(phien, ma) {
+  canDangNhap_(phien, 'caidat');
+  var m = chuDeHopLe_(ma);
+  if (String(ma || '').trim() && !m) throw new Error('Không có giao diện này.');
+  datCaiDat_('ChuDe', m);
+  xoaBoNhoTam_();
+  return m;
 }
 
 /** Quy chế cộng điểm là một link (thường là file Google Docs). Bỏ trống để ẩn. */

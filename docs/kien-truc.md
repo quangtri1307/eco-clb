@@ -184,3 +184,11 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - Chỗ chèn viết `{Tên cột}` hoặc `{{Tên cột}}`, so khớp không phân biệt dấu, hoa thường, khoảng trắng. Thành viên CLB dùng đúng tiêu đề cột của danh sách thành viên (`{Họ và tên}`, `{Ban}`…); mọi người nhận trong Danh bạ có `{Tên}` và `{Email}`.
 - Nguồn người nhận: Danh bạ (thành viên CLB lọc theo ban và danh bạ khác), Nhập tay, Google Sheet. Bảng sheet chỉ hiện các cột ai cũng điền, ô dài bị cắt, rê chuột để xem đủ.
 - Mỗi đợt gửi ngay cũng được ghi vào tab LichGui (trạng thái Đã gửi) để xem ở Mail, Lịch sử gửi.
+
+## Giao diện theo mùa và ngày lễ
+
+- BOD chọn trong Cài đặt, mục "Giao diện theo mùa và ngày lễ". Lưu ở CaiDat, khoá `ChuDe` (trống là giao diện xanh mặc định). Không tự đổi theo ngày.
+- Danh sách mã ở `CHU_DE` (Logic.gs) và `DS_CHU_DE` (ChuDe.html); test `tests/chude.test.js` bắt hai bên phải khớp.
+- `doGet` gắn `data-chude` vào thẻ html ngay khi tạo trang (Halloween gắn thêm `data-theme="dark"`), nên không bị nháy màu.
+- ChuDe.html dùng chung cho ECOBoard và ECODesk: tính màu ra mã hex (sáng và tối), hoa lá rơi khắp màn hình, đồ trang trí trong khung chào và đầu trang ECOBoard, lời chúc, màu lá ở màn chờ.
+- Mỗi người tắt được hiệu ứng rơi trên máy mình (Cài đặt, Giao diện sáng hoặc tối). Máy bật "giảm chuyển động" thì không có hiệu ứng.

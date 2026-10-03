@@ -288,6 +288,7 @@ var SET = [
   ['Cá nhân', [['tbtoi', 'bell', 'Thông báo của tôi', function () { return 'Cách tôi nhận nhắc deadline và các thiết bị đã bật thông báo'; }, 'thông báo của tôi nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử'],
     ['theme', 'sun', 'Giao diện sáng hoặc tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark'],
     ['matkhau', 'key', 'Đổi mật khẩu', function () { return 'Mật khẩu đăng nhập ECODesk của bạn'; }, 'mật khẩu đổi password đăng nhập']]],
+  ['Giao diện hai app', [['chude', 'star', 'Giao diện theo mùa và ngày lễ', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí']]],
   ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', '); }, 'điểm loại hoạt động staff log'],
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
@@ -416,8 +417,37 @@ var SUB = {
     } else ve();
   },
   theme: function () {
-    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng trên máy này. “Theo máy” sẽ tự đổi theo chế độ sáng hoặc tối của điện thoại, máy tính.</p>' + chonGiaoDien() + '</div>';
+    var p = timChuDe(CHU_DE);
+    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng trên máy này. “Theo máy” sẽ tự đổi theo chế độ sáng hoặc tối của điện thoại, máy tính.</p>' + chonGiaoDien() +
+      (p && p.toi ? '<p class="hint" style="margin:0">BOD đang chọn giao diện ' + esc(p.ten) + ' nên app luôn tối cho đến khi đổi giao diện khác.</p>' : '') + '</div>' +
+      (p ? '<label class="card row" style="cursor:pointer;flex-wrap:nowrap"><input type="checkbox" id="hu"' + (hieuUngBat() ? ' checked' : '') + '><span><b>Hiện hiệu ứng ' + esc(p.ten.toLowerCase()) + '</b><br><span class="hint">Hoa, lá, tuyết… bay trên màn hình. Tắt nếu máy chạy chậm. Chỉ áp dụng trên máy này.</span></span></label>' : '');
     ganGiaoDien($('#subbody'));
+    if ($('#hu')) $('#hu').onchange = function () { try { localStorage.setItem('eco_hieu_ung', this.checked ? 'bat' : 'tat'); } catch (e) {} veHatRoi(); };
+  },
+  chude: function () {
+    var the = function (p) {
+      var ma = p ? p.ma : '', dang = ma === CD.chuDe;
+      return '<button class="chude-the" data-cd="' + ma + '" aria-pressed="' + dang + '"><span class="dai" style="background:' + (p ? p.dai : 'linear-gradient(135deg,#2f5d18,#8cc152)') + '"><span>' + hinhThe(ma) + '</span></span>' + (dang ? '<span class="dang">Đang dùng</span>' : '') +
+        '<span class="chu"><b>' + (p ? p.ten : 'Mặc định') + '</b><small>' + (p ? p.khi : 'Xanh lá của CLB') + '</small></span></button>';
+    };
+    var ve = function () {
+      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Áp dụng cho mọi người trên cả ECODesk và ECOBoard: đổi màu, thêm hoa lá rơi và đồ trang trí hợp dịp. Giao diện không tự đổi theo ngày, hết dịp thì BOD vào đây chọn lại.</p><span id="m"></span></div>' +
+        '<div class="card"><div class="ctitle"><h3>' + ic('sun', 18) + ' Bốn mùa</h3></div><div class="chude-luoi deu">' + [null].concat(DS_CHU_DE.filter(function (p) { return p.nhom === 'mua'; })).map(the).join('') + '</div></div>' +
+        '<div class="card"><div class="ctitle"><h3>' + ic('star', 18) + ' Ngày lễ lớn</h3></div><div class="chude-luoi deu">' + DS_CHU_DE.filter(function (p) { return p.nhom === 'le'; }).map(the).join('') + '</div></div>';
+      $$('#subbody [data-cd]').forEach(function (b) {
+        b.onclick = function () {
+          var ma = b.getAttribute('data-cd');
+          if (ma === CD.chuDe) return;
+          $$('#subbody [data-cd]').forEach(function (x) { x.disabled = true; });
+          thongBao($('#m'), 'cho', 'Đang đổi giao diện…');
+          goiPhien('luuChuDe', ma).then(function (m) {
+            CD.chuDe = m; apChuDe(m); ve();
+            thongBao($('#m'), 'ok', 'Đã đổi. Ai đang mở app sẽ thấy giao diện mới khi mở lại.');
+          }).catch(function (err) { $$('#subbody [data-cd]').forEach(function (x) { x.disabled = false; }); thongBao($('#m'), 'loi', err.message); });
+        };
+      });
+    };
+    ve();
   },
   due: function () {
     var opts = [0, 1, 2, 3, 5, 7];

@@ -158,11 +158,15 @@ function escChao(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, func
 function khungChao(ten) {
   var b = buoiTrongNgay();
   var ds = CAU_HOI.concat(CAU_THEO_GIO[b.lop] || []);
+  // Đang dùng giao diện ngày lễ hoặc theo mùa: một nửa số lần hiện lời chúc hợp dịp.
+  var chuc = typeof LOI_CHUC !== 'undefined' && LOI_CHUC[CHU_DE];
+  if (chuc && Math.random() < .5) ds = chuc;
   var cau = ds[Math.floor(Math.random() * ds.length)];
   var chim = '<svg viewBox="0 0 26 12"><path d="M1 3c4 0 8 2 12 7 4-5 8-7 12-7"/></svg>';
   var sao = ''; for (var i = 0; i < 8; i++) sao += '<span class="sao"></span>';
-  return '<div class="chao ' + b.lop + '"><div class="troi" aria-hidden="true"><span class="mt"></span><span class="may m1"></span><span class="may m2"></span><span class="saos">' + sao + '</span>' +
-    '<span class="sbang"></span><span class="chim c1">' + chim + '</span><span class="chim c2">' + chim + '</span></div>' +
+  var tt = typeof trangTriChao === 'function' && CHU_DE ? trangTriChao() : '';
+  return '<div class="chao ' + b.lop + (tt ? ' tt-' + CHU_DE : '') + '"><div class="troi" aria-hidden="true"><span class="mt"></span><span class="may m1"></span><span class="may m2"></span><span class="saos">' + sao + '</span>' +
+    '<span class="sbang"></span><span class="chim c1">' + chim + '</span><span class="chim c2">' + chim + '</span></div>' + tt +
     '<div class="chao-chu"><span>Chào ' + b.ten + ',</span><h2>' + escChao(ten) + ' ơi!</h2><p>' + escChao(cau) + '</p></div></div>';
 }
 </script>
