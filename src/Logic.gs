@@ -493,16 +493,74 @@ function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio) {
 var NHAC_TRE = { MOI_NGAY: 'Mỗi ngày', MOT_LAN: 'Chỉ một lần', KHONG: 'Không nhắc' };
 
 /**
- * Chọn task cần nhắc hôm nay. ds: [{ ten, nguoi, hanChot, trangThai }] (trangThai đã tính).
- * caiDat: { nhacSapDenHan: true/false, nhacTre: một giá trị của NHAC_TRE }.
+ * Lịch nhắc deadline (BOD chỉnh): danh sách mốc { ngay, gio, phut }.
+ * ngay: số ngày so với hạn chót (-2 = trước hạn 2 ngày, 0 = ngày hạn chót, 1 = trễ hạn 1 ngày),
+ * hoặc MOC_TRE_MOI_NGAY = mỗi ngày khi task đang trễ hạn. gio 0..23, phut 0/15/30/45.
  */
-function chonTaskCanNhac_(ds, homNay, caiDat) {
+var MOC_TRE_MOI_NGAY = 'T';
+var TOI_DA_MOC_NHAC = 10, TOI_DA_GIO_NHAC = 6;
+
+function lucNhac_(m) { return m.gio * 60 + (m.phut || 0); }
+
+/** Chuẩn hoá lịch nhắc (mảng hoặc chuỗi JSON). Trả về null nếu không đọc được. Bỏ mốc sai, mốc trùng. */
+function chuanHoaLichNhac_(v) {
+  var ds = v;
+  if (typeof v === 'string') { try { ds = JSON.parse(v); } catch (e) { ds = null; } }
+  if (!Array.isArray(ds)) return null;
+  var kq = [], co = {};
+  ds.forEach(function (m) {
+    if (!m || typeof m !== 'object') return;
+    var ngay = m.ngay === MOC_TRE_MOI_NGAY ? MOC_TRE_MOI_NGAY : (m.ngay === '' || m.ngay == null ? NaN : Math.round(Number(m.ngay)));
+    var gio = Math.round(Number(m.gio)), phut = Math.round(Number(m.phut || 0));
+    if (ngay !== MOC_TRE_MOI_NGAY && !(ngay >= -30 && ngay <= 30)) return;
+    if (!(gio >= 0 && gio <= 23) || [0, 15, 30, 45].indexOf(phut) < 0) return;
+    var k = ngay + '@' + gio + ':' + phut;
+    if (co[k]) return;
+    co[k] = true;
+    kq.push({ ngay: ngay, gio: gio, phut: phut });
+  });
+  kq = kq.slice(0, TOI_DA_MOC_NHAC);
+  var thuTu = function (m) { return m.ngay === MOC_TRE_MOI_NGAY ? 1000 : m.ngay; };
+  kq.sort(function (a, b) { return thuTu(a) - thuTu(b) || lucNhac_(a) - lucNhac_(b); });
+  return kq;
+}
+
+/** Lịch nhắc từ cài đặt kiểu cũ (một danh sách giờ chung), để app đã chạy giữ nguyên cách nhắc. */
+function lichNhacTuCaiDatCu_(soNgaySap, dsGio, nhacSap, nhacTre) {
+  var ds = [];
+  var them = function (ngay) { dsGio.forEach(function (g) { ds.push({ ngay: ngay, gio: g, phut: 0 }); }); };
+  if (nhacSap) for (var d = 0; d <= soNgaySap; d++) them(-d);
+  if (nhacTre === NHAC_TRE.MOI_NGAY) them(MOC_TRE_MOI_NGAY);
+  else if (nhacTre === NHAC_TRE.MOT_LAN) them(1);
+  var kq = chuanHoaLichNhac_(ds);
+  return kq.length ? kq : [{ ngay: 0, gio: dsGio[0], phut: 0 }];
+}
+
+/** Các thời điểm (phút trong ngày) cần chạy nhắc, không trùng, tăng dần. */
+function lucCuaLich_(lich) {
+  var kq = [];
+  lich.forEach(function (m) { var l = lucNhac_(m); if (kq.indexOf(l) < 0) kq.push(l); });
+  return kq.sort(function (a, b) { return a - b; });
+}
+
+/** Tên một mốc nhắc, ví dụ "Trước hạn 2 ngày lúc 19:00". */
+function moTaMocNhac_(m) {
+  var hai = function (n) { return (n < 10 ? '0' : '') + n; };
+  var ngay = m.ngay === MOC_TRE_MOI_NGAY ? 'Trễ hạn, mỗi ngày' : m.ngay < 0 ? 'Trước hạn ' + (-m.ngay) + ' ngày' : m.ngay === 0 ? 'Ngày hạn chót' : 'Trễ hạn ' + m.ngay + ' ngày';
+  return ngay + ' lúc ' + hai(m.gio) + ':' + hai(m.phut || 0);
+}
+
+/**
+ * Chọn task cần nhắc hôm nay. ds: [{ ten, nguoi, hanChot, trangThai }] (trangThai đã tính).
+ * luc: phút trong ngày của lần chạy này (chỉ dùng các mốc đúng giờ đó); null = mọi mốc của hôm nay (nút "Gửi nhắc ngay").
+ */
+function chonTaskTheoLich_(ds, homNay, lich, luc) {
+  var moc = lich.filter(function (m) { return luc == null || lucNhac_(m) === luc; });
+  if (!moc.length) return [];
   return ds.filter(function (t) {
-    if (t.trangThai === TRANG_THAI_TASK.SAP) return !!caiDat.nhacSapDenHan;
-    if (t.trangThai !== TRANG_THAI_TASK.TRE) return false;
-    if (caiDat.nhacTre === NHAC_TRE.MOI_NGAY) return true;
-    if (caiDat.nhacTre === NHAC_TRE.MOT_LAN) return soNgayGiua_(t.hanChot, homNay) === 1;
-    return false;
+    if (t.trangThai === TRANG_THAI_TASK.XONG || t.trangThai === TRANG_THAI_TASK.HUY || !ngayHopLe_(t.hanChot)) return false;
+    var tre = soNgayGiua_(t.hanChot, homNay);
+    return moc.some(function (m) { return m.ngay === MOC_TRE_MOI_NGAY ? tre >= 1 : tre === m.ngay; });
   });
 }
 
@@ -1269,7 +1327,8 @@ if (typeof module !== 'undefined') {
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, boLocTaskHr: boLocTaskHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
-    trangThaiTask: trangThaiTask_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskCanNhac: chonTaskCanNhac_,
+    trangThaiTask: trangThaiTask_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,
     kiemTraViecMail: kiemTraViecMail_, timChoTrong: timChoTrong_, thayTheMau: thayTheMau_, chuSangHtml: chuSangHtml_,

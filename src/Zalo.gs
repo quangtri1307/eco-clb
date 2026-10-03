@@ -179,29 +179,47 @@ function ghiKetNoiZalo_(ten, chatId, tenZalo) {
 
 /* ---------- Nhắc việc hằng ngày ---------- */
 
+/** Lịch nhắc deadline. Chưa lưu lịch mới thì đổi từ cài đặt cũ (một danh sách giờ chung) để cách nhắc không đổi. */
 function caiDatNhacZalo_() {
-  var sap = layCaiDat_('ZaloNhacSapDenHan');
-  return {
-    dsGio: chuanHoaDsGio_(layCaiDat_('ZaloGioNhac')),
-    nhacSapDenHan: sap === null ? true : (sap === true || sap === 'TRUE' || sap === 'true'),
-    nhacTre: String(layCaiDat_('ZaloNhacTre') || NHAC_TRE.MOI_NGAY)
-  };
+  var lich = chuanHoaLichNhac_(layCaiDat_('LichNhac'));
+  if (!lich || !lich.length) {
+    var sap = layCaiDat_('ZaloNhacSapDenHan');
+    lich = lichNhacTuCaiDatCu_(soNgaySapDenHan_(), chuanHoaDsGio_(layCaiDat_('ZaloGioNhac')),
+      sap === null ? true : (sap === true || sap === 'TRUE' || sap === 'true'), String(layCaiDat_('ZaloNhacTre') || NHAC_TRE.MOI_NGAY));
+  }
+  return { lich: lich, dsLuc: lucCuaLich_(lich) };
 }
 
 /** Chạy tự động mỗi ngày theo lịch. Gửi theo cách mỗi người chọn (Zalo, app, mail). Cũng chạy được bằng nút "Gửi nhắc ngay". */
 /** Chỉ lịch chạy tự động mới gọi được (người ngoài không gọi thẳng từ trang web được). */
 function nhacViecHangNgay(e) {
   if (!laLichChay_(e)) return null;
-  return nhacViec_();
+  return nhacViec_(lucCuaLanChay_(e));
 }
-function nhacViec_() {
+
+/** Lần chạy này ứng với giờ nhắc nào (phút trong ngày). Google có thể chạy sớm hay muộn vài phút nên tra theo mã lịch. */
+function lucCuaLanChay_(e) {
+  var dsLuc = caiDatNhacZalo_().dsLuc;
+  try {
+    var theoMa = JSON.parse(layCaiDat_('LichNhacTheoMa') || '{}');
+    var l = theoMa[String(e.triggerUid)];
+    if (typeof l === 'number' && dsLuc.indexOf(l) >= 0) return l;
+  } catch (x) { /* tra theo giờ hiện tại */ }
+  var bayGio = Number(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'H')) * 60 + Number(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'm'));
+  var gan = dsLuc[0], lech = 1e9;
+  dsLuc.forEach(function (l) { var d = Math.abs(bayGio - l); d = Math.min(d, 1440 - d); if (d < lech) { lech = d; gan = l; } });
+  return gan;
+}
+
+/** luc: phút trong ngày của lần nhắc theo lịch; bỏ trống (nút "Gửi nhắc ngay") thì gửi mọi mốc của hôm nay. */
+function nhacViec_(luc) {
   if (layTokenZalo_()) { try { nhanTinMoiZalo_(); } catch (e) { /* vẫn nhắc những người đã kết nối */ } }
   try { donThongBaoCu_(); } catch (e) { /* bỏ qua */ }
   // Cộng bù câu trả lời form seeding nếu lần nộp nào đó Google không gọi được app.
   try { var fs = docCauHinhSeeding_(); if (fs.tab && !fs.tat) xuLyFormSeeding_(); } catch (e) { /* bỏ qua */ }
   var cd = caiDatNhacZalo_();
   var hom = homNay_();
-  var canNhac = chonTaskCanNhac_(docTask_(), hom, cd);
+  var canNhac = chonTaskTheoLich_(docTask_(), hom, cd.lich, luc == null ? null : luc);
   var nguoiNhan = nguoiNhanThongBao_();
   var laBod = {};
   nguoiNhan.forEach(function (n) { if (n.vaiTro === 'BOD') laBod[n.ten] = true; });
@@ -238,14 +256,17 @@ function baoTaskMoiChoBod_(dong, nguoiTao) {
   } catch (e) { /* bỏ qua */ }
 }
 
-/** Cài lịch chạy nhacViecHangNgay mỗi ngày vào các giờ đã chọn (thay lịch cũ nếu có). */
-function caiLichNhac_(dsGio) {
+/** Cài lịch chạy nhacViecHangNgay mỗi ngày vào các thời điểm đã chọn (thay lịch cũ nếu có). dsLuc: phút trong ngày. */
+function caiLichNhac_(dsLuc) {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'nhacViecHangNgay') ScriptApp.deleteTrigger(t);
   });
-  chuanHoaDsGio_(dsGio).forEach(function (gio) {
-    ScriptApp.newTrigger('nhacViecHangNgay').timeBased().atHour(gio).everyDays(1).inTimezone(Session.getScriptTimeZone()).create();
+  var theoMa = {};
+  dsLuc.forEach(function (l) {
+    var t = ScriptApp.newTrigger('nhacViecHangNgay').timeBased().atHour(Math.floor(l / 60)).nearMinute(l % 60).everyDays(1).inTimezone(Session.getScriptTimeZone()).create();
+    theoMa[t.getUniqueId()] = l;
   });
+  datCaiDat_('LichNhacTheoMa', JSON.stringify(theoMa));
 }
 
 function coLichNhac_() {
@@ -261,7 +282,7 @@ function layCaiDatZalo(phien) {
   try { lanCuoi = JSON.parse(layCaiDat_('ZaloLanNhacCuoi') || 'null'); } catch (e) { lanCuoi = null; }
   return {
     coBot: !!layTokenZalo_(), tenBot: tenBotZalo_(), coLich: coLichNhac_(),
-    dsGio: cd.dsGio, nhacSapDenHan: cd.nhacSapDenHan, nhacTre: cd.nhacTre, lanCuoi: lanCuoi,
+    lich: cd.lich, lanCuoi: lanCuoi,
     nguoiNhan: dongBoNguoiNhanZalo_().map(function (n) { return { ten: n.ten, vaiTro: n.vaiTro, ma: n.ma, daKetNoi: !!n.chatId, tenZalo: n.tenZalo }; })
   };
 }
@@ -270,7 +291,7 @@ function layCaiDatZalo(phien) {
 function luuCaiDatZalo(phien, cd) {
   canDangNhap_(phien, 'caidat');
   cd = cd || {};
-  if (cd.dsGio !== undefined) luuNhacViec(phien, cd);
+  if (cd.lich !== undefined) luuNhacViec(phien, cd);
   var token = String(cd.token || '').trim();
   if (token && token !== layTokenZalo_()) {
     var bot;
@@ -289,24 +310,23 @@ function luuCaiDatZalo(phien, cd) {
 }
 
 /**
- * Thời điểm nhắc deadline (BOD chỉnh): bao nhiêu ngày trước hạn thì coi là sắp đến hạn,
- * những giờ nào gửi nhắc mỗi ngày (có thể nhiều giờ), có nhắc task sắp đến hạn không, nhắc task trễ thế nào.
+ * Thời điểm nhắc deadline (BOD chỉnh): bao nhiêu ngày trước hạn thì task hiện "sắp đến hạn",
+ * và lịch nhắc gồm nhiều mốc, mỗi mốc là một ngày (so với hạn chót) và một giờ riêng.
  */
 function luuNhacViec(phien, cd) {
   canDangNhap_(phien, 'caidat');
   cd = cd || {};
-  if (!Array.isArray(cd.dsGio) || !cd.dsGio.length) throw new Error('Cần ít nhất một giờ nhắc.');
-  var dsGio = chuanHoaDsGio_(cd.dsGio);
+  var lich = chuanHoaLichNhac_(cd.lich);
+  if (!lich || !lich.length) throw new Error('Cần ít nhất một mốc nhắc.');
+  var dsLuc = lucCuaLich_(lich);
+  if (dsLuc.length > TOI_DA_GIO_NHAC) throw new Error('Các mốc chỉ được dùng tối đa ' + TOI_DA_GIO_NHAC + ' giờ khác nhau. Bạn gộp bớt giờ giống nhau nhé.');
   if (cd.sapDenHanNgay !== undefined) {
     var n = Math.round(Number(cd.sapDenHanNgay));
     if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
     datCaiDat_('SapDenHanNgay', n);
   }
-  var nhacTre = [NHAC_TRE.MOI_NGAY, NHAC_TRE.MOT_LAN, NHAC_TRE.KHONG].indexOf(cd.nhacTre) >= 0 ? cd.nhacTre : NHAC_TRE.MOI_NGAY;
-  datCaiDat_('ZaloGioNhac', dsGio.join(', '));
-  datCaiDat_('ZaloNhacSapDenHan', !!cd.nhacSapDenHan);
-  datCaiDat_('ZaloNhacTre', nhacTre);
-  caiLichNhac_(dsGio);
+  datCaiDat_('LichNhac', JSON.stringify(lich));
+  caiLichNhac_(dsLuc);
   return true;
 }
 
