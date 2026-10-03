@@ -6,7 +6,7 @@
  * Câu đã xử lý được đánh dấu ở cột "ECO đã cộng" trong tab đó, nên không bao giờ cộng hai lần.
  */
 
-/** Cấu hình lưu ở CaiDat: { tab: mã tab (sheetId), anhXa: { tên cột: tên loại hoạt động }, tat: true khi BOD tắt }. */
+/** Cấu hình lưu ở CaiDat: { tab: mã tab (sheetId), anhXa: { tên cột: tên loại hoạt động }, tat: true khi BOD tắt, baoMail: gửi mail báo về mail CLB }. */
 function docCauHinhSeeding_() {
   try { return JSON.parse(layCaiDat_('FormSeeding') || '{}') || {}; } catch (e) { return {}; }
 }
@@ -42,7 +42,7 @@ function layFormSeeding(phien) {
   var ch = docCauHinhSeeding_();
   return {
     tabs: cacTabForm_(),
-    cauHinh: { tab: ch.tab ? String(ch.tab) : '', anhXa: ch.anhXa || {}, bat: !!(ch.tab && !ch.tat && coLichForm_()) },
+    cauHinh: { tab: ch.tab ? String(ch.tab) : '', anhXa: ch.anhXa || {}, bat: !!(ch.tab && !ch.tat && coLichForm_()), baoMail: !!ch.baoMail },
     loai: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     nhatKy: docNhatKySeeding_(),
     // Ai chưa có Tên Facebook thì form không cộng được cho người đó: hiện ra để BOD bổ sung.
@@ -70,7 +70,7 @@ function luuFormSeeding(phien, yc) {
     var cu = docCauHinhSeeding_();
     // Lần đầu bật cho tab này: các câu đã có từ trước được đánh dấu bỏ qua, trừ khi BOD chọn cộng luôn.
     if (String(cu.tab) !== String(yc.tab) && !yc.congCu) danhDauBoQua_(sh);
-    datCaiDat_('FormSeeding', JSON.stringify({ tab: String(yc.tab), anhXa: anhXa }));
+    datCaiDat_('FormSeeding', JSON.stringify({ tab: String(yc.tab), anhXa: anhXa, baoMail: !!cu.baoMail }));
     if (!coLichForm_()) ScriptApp.newTrigger('khiNopForm').forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet()).onFormSubmit().create();
     return xuLyFormSeeding_();
   });
@@ -84,6 +84,17 @@ function tatFormSeeding(phien) {
   datCaiDat_('FormSeeding', JSON.stringify(ch));
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'khiNopForm') ScriptApp.deleteTrigger(t); });
   return true;
+}
+
+/** Bật/tắt gửi mail báo về mail CLB mỗi lần form cộng điểm. */
+function luuBaoMailSeeding(phien, bat) {
+  canDangNhap_(phien, 'caidat');
+  return voiKhoa_(function () {
+    var ch = docCauHinhSeeding_();
+    ch.baoMail = !!bat;
+    datCaiDat_('FormSeeding', JSON.stringify(ch));
+    return ch.baoMail;
+  });
 }
 
 /** Cộng ngay các câu trả lời chưa cộng (khi lịch tự chạy bị lỡ, hoặc vừa sửa Tên Facebook của ai đó). */
@@ -135,16 +146,40 @@ function xuLyFormSeeding_() {
       if (kq.loi) return { soCau: 0, soLuot: 0, loi: kq.loi };
       them = them.concat(kq.dong);
       danhDau.push([r + 1, 'Đã cộng ' + kq.dong.length + ' lượt']);
-      var ten = [];
-      kq.dong.forEach(function (d) { if (ten.indexOf(d.HoVaTen) < 0) ten.push(d.HoVaTen); });
-      nhat.push({ luc: nay.getTime(), nguoiNop: kq.nguoiNop, soLuot: kq.dong.length, ten: ten.slice(0, 30), khongKhop: kq.khongKhop.slice(0, 30), soKhongKhop: kq.khongKhop.length });
+      // Nhật ký: mỗi người được cộng kèm các cột (Reaction, Comment) đã cộng cho họ. Giữ tối đa 50 tên để vừa một ô CaiDat.
+      var ten = [], cotCua = {};
+      kq.dong.forEach(function (d) {
+        if (!cotCua[d.HoVaTen]) { cotCua[d.HoVaTen] = []; ten.push(d.HoVaTen); }
+        cotCua[d.HoVaTen].push(d.TenHoatDong);
+      });
+      nhat.push({
+        luc: nay.getTime(), nguoiNop: kq.nguoiNop, soLuot: kq.dong.length, soNguoi: ten.length,
+        duoc: ten.slice(0, 50).map(function (x) { return [x, cotCua[x].join(', ')]; }),
+        khongKhop: kq.khongKhop.slice(0, 50), soKhongKhop: kq.khongKhop.length
+      });
     }
     themDong_('LichSuDiem', them);
     danhDau.forEach(function (d) { sh.getRange(d[0], c + 1).setValue(d[1]); });
     if (nhat.length) {
-      datCaiDat_('FormSeedingNhatKy', JSON.stringify(nhat.reverse().concat(docNhatKySeeding_()).slice(0, 15)));
+      datCaiDat_('FormSeedingNhatKy', JSON.stringify(nhat.slice().reverse().concat(docNhatKySeeding_()).slice(0, 15)));
       xoaBoNhoTam_();
+      if (ch.baoMail) { try { guiMailSeeding_(nhat); } catch (e) { /* lỗi gửi mail không ảnh hưởng việc cộng điểm */ } }
     }
     return { soCau: danhDau.length, soLuot: them.length, loi: '' };
   });
+}
+
+/** Một mail tóm tắt các lần nộp vừa cộng, gửi về chính mail CLB. */
+function guiMailSeeding_(nhat) {
+  var den = emailClb_();
+  if (!den) return;
+  var tz = Session.getScriptTimeZone();
+  var luot = 0;
+  var noiDung = nhat.map(function (n) {
+    luot += n.soLuot;
+    return 'Người nộp: ' + (n.nguoiNop || 'Không rõ') + '\nLúc: ' + Utilities.formatDate(new Date(n.luc), tz, 'dd/MM/yyyy HH:mm') +
+      '\nĐược cộng (' + n.soNguoi + ' người, ' + n.soLuot + ' lượt): ' + (n.duoc.length ? n.duoc.map(function (d) { return d[0] + ' (' + d[1] + ')'; }).join(', ') + (n.soNguoi > n.duoc.length ? ', …' : '') : 'không ai') +
+      (n.soKhongKhop ? '\nKhông được cộng (' + n.soKhongKhop + ' tên không khớp Tên Facebook của thành viên nào): ' + n.khongKhop.join(', ') + (n.soKhongKhop > n.khongKhop.length ? ', …' : '') : '');
+  }).join('\n\n');
+  guiMailThongBao_(den, 'Form seeding vừa cộng ' + luot + ' lượt', noiDung + '\n\nTắt mail này trong ECODesk: Cài đặt, Loại hoạt động và mức điểm.');
 }

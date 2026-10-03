@@ -8,7 +8,7 @@ const vm = require('vm');
 const MA = ['Logic.gs', 'Code.gs', 'FormSeeding.gs'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
 
 function mayChu() {
-  const tabs = {}, cache = new Map(), props = new Map(), triggers = [];
+  const tabs = {}, cache = new Map(), props = new Map(), triggers = [], mail = [];
   let soTab = 100;
   function tab(ten) {
     const sh = {
@@ -39,7 +39,10 @@ function mayChu() {
       CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), getAll: (ks) => { const o = {}; ks.forEach((k) => { if (cache.has(k)) o[k] = cache.get(k); }); return o; }, put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
       LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
       PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, v) }) },
-      Utilities: { getUuid: () => Math.random().toString(36).slice(2) },
+      Utilities: { getUuid: () => Math.random().toString(36).slice(2), formatDate: () => '03/10/2026 21:00' },
+      Session: { getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },
+      emailClb_: () => 'clb@example.com',
+      guiMailThongBao_: (den, tieuDe, noiDung) => { mail.push({ den, tieuDe, noiDung }); return true; },
       ScriptApp: {
         getProjectTriggers: () => triggers.map(trig),
         deleteTrigger: (t) => { const i = triggers.indexOf(t.getHandlerFunction()); if (i >= 0) triggers.splice(i, 1); },
@@ -51,7 +54,7 @@ function mayChu() {
     vm.runInContext(MA, ctx);
     return ctx;
   }
-  return { tabs, triggers, lanChay };
+  return { tabs, triggers, mail, lanChay };
 }
 
 function chuanBi() {
@@ -94,6 +97,8 @@ test('bật form: bỏ qua câu cũ, cài lịch; nộp form thì cộng ngay, c
   assert.strictEqual(form.o[2][4], 'Đã cộng 3 lượt');
   const nk = m.lanChay().layFormSeeding('p').nhatKy;
   assert.strictEqual(nk[0].nguoiNop, 'Hà');
+  assert.strictEqual(nk[0].soNguoi, 3);
+  assert.deepStrictEqual(j(nk[0].duoc), [['Nguyễn Văn An', 'Reaction'], ['Phan Văn', 'Reaction'], ['Trần Thị Bình', 'Comment']]);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(nk[0].khongKhop)), ['Người lạ']);
 
   // Chạy lại (quét tay hoặc lịch chạy lần nữa) thì không cộng hai lần.
@@ -123,4 +128,24 @@ test('lịch lạ (không phải lịch của app) gọi vào thì không làm g
   form.o.push([new Date(), 'X', 'Bình Trần', '']);
   m.lanChay().khiNopForm({ triggerUid: 'gia-mao', range: { getSheet: () => form } });
   assert.strictEqual(diem(m).length, 0);
+});
+
+test('bật mail báo thì mỗi lần cộng gửi một mail tóm tắt về mail CLB; lưu lại cấu hình không làm mất', () => {
+  const { m, form } = chuanBi();
+  const ma = m.lanChay().layFormSeeding('p').tabs[0].ma;
+  m.lanChay().luuFormSeeding('p', { tab: ma, anhXa: { Reaction: 'Seeding Reaction', Comment: 'Seeding Comment' } });
+  nopForm(m, form, [new Date(), 'Hà', 'An Nguyễn', '']);
+  assert.strictEqual(m.mail.length, 0, 'mặc định không gửi');
+  assert.strictEqual(m.lanChay().luuBaoMailSeeding('p', true), true);
+  m.lanChay().luuFormSeeding('p', { tab: ma, anhXa: { Reaction: 'Seeding Reaction', Comment: 'Seeding Comment' } });
+  assert.strictEqual(m.lanChay().layFormSeeding('p').cauHinh.baoMail, true, 'lưu lại vẫn giữ mail báo');
+  nopForm(m, form, [new Date(), 'Hà', 'An Nguyễn\nNgười lạ', 'An Nguyễn']);
+  assert.strictEqual(m.mail.length, 1);
+  assert.strictEqual(m.mail[0].den, 'clb@example.com');
+  assert.match(m.mail[0].tieuDe, /2 lượt/);
+  assert.match(m.mail[0].noiDung, /Được cộng \(1 người, 2 lượt\): Nguyễn Văn An \(Reaction, Comment\)/);
+  assert.match(m.mail[0].noiDung, /Không được cộng \(1 tên.*\): Người lạ/);
+  m.lanChay().luuBaoMailSeeding('p', false);
+  nopForm(m, form, [new Date(), 'Hà', 'Bình Trần', '']);
+  assert.strictEqual(m.mail.length, 1);
 });

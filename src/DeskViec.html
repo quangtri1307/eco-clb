@@ -396,14 +396,22 @@ function formSeeding(box) {
       '<p class="hint" style="margin:0">Muốn Reaction và Comment có điểm khác nhau thì thêm hai dòng, ví dụ “Seeding Reaction” và “Seeding Comment”, vào bảng ở trên (bỏ chọn “BOD cộng”), bấm Lưu rồi chọn ở đây.</p>' +
       (moiLan && t.soCau ? '<label class="row" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="sd-cu" style="margin-top:3px"><span>Cộng luôn cho ' + t.soCau + ' câu trả lời đã có trong tab<br><span class="hint">Để trống nếu các câu này đã được cộng điểm trước đây (ví dụ bằng tool cũ).</span></span></label>' : '') +
       (D.thieuFb.length ? '<div class="note">' + ic('info') + '<span>' + D.thieuFb.length + ' thành viên chưa có Tên Facebook nên form không cộng được cho họ: ' + esc(D.thieuFb.slice(0, 12).join(', ')) + (D.thieuFb.length > 12 ? '…' : '') + '. Bổ sung Tên Facebook cho họ trong danh sách thành viên để những lần nộp sau được cộng.</span></div>' : '') +
+      '<label class="switch"><input type="checkbox" id="sd-mail"' + (ch.baoMail ? ' checked' : '') + '>Gửi mail báo về mail CLB mỗi lần form cộng điểm</label>' +
       '<div class="row"><button class="btn sm" id="sd-luu">' + (ch.bat && !moiLan ? 'Lưu' : 'Lưu và bật') + '</button>' +
       (ch.bat && !moiLan && t.chuaCong ? '<button class="btn ghost sm" id="sd-quet">Cộng ' + t.chuaCong + ' câu chưa cộng</button>' : '') +
       (ch.bat ? '<button class="btn ghost sm" id="sd-tat">Tắt</button>' : '') + nutLai + '<span id="sd-m"></span></div></div>' +
       '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Các lần form cộng điểm gần đây</h3></div>' +
-      (D.nhatKy.length ? '<div>' + D.nhatKy.map(function (n, i) {
-        return '<div style="display:grid;gap:2px;padding:10px 0;' + (i ? 'border-top:1px solid var(--line)' : 'padding-top:0') + '"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + ' <span class="hint" style="font-weight:400">· ' + ngayGio(n.luc) + '</span></b>' +
-          '<span>' + (n.soLuot ? 'Cộng ' + n.soLuot + ' lượt: ' + esc(n.ten.join(', ')) : 'Không cộng cho ai') + '</span>' +
-          (n.soKhongKhop ? '<details><summary class="hint" style="cursor:pointer">' + n.soKhongKhop + ' tên không khớp thành viên nào (sai chính tả hoặc không phải thành viên)</summary><span class="hint">' + esc(n.khongKhop.join(', ')) + (n.soKhongKhop > n.khongKhop.length ? '…' : '') + '</span></details>' : '') + '</div>';
+      (D.nhatKy.length ? '<div class="sd-nk">' + D.nhatKy.map(function (n) {
+        // Bản ghi cũ chỉ có danh sách tên (ten), chưa có cột đã cộng cho từng người.
+        var duoc = n.duoc || (n.ten || []).map(function (x) { return [x, '']; });
+        var soNguoi = n.soNguoi != null ? n.soNguoi : duoc.length;
+        var them = function (so, ds) { return so > ds.length ? '<li class="hint">và ' + (so - ds.length) + ' tên khác</li>' : ''; };
+        return '<details><summary><span class="sd-nk-dau"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + '</b><span class="hint">' + ngayGio(n.luc) + '</span></span>' +
+          '<span class="sd-nk-so"><span class="pill" style="background:var(--ok-bg);color:var(--ok)">' + soNguoi + ' người được cộng</span>' +
+          (n.soKhongKhop ? '<span class="pill" style="background:var(--warn-bg);color:var(--warn)">' + n.soKhongKhop + ' tên không khớp</span>' : '') + '</span></summary>' +
+          '<div class="sd-nk-ct"><div><b>Được cộng</b> <span class="hint">(' + n.soLuot + ' lượt)</span>' + (duoc.length ? '<ul>' + duoc.map(function (d) { return '<li>' + esc(d[0]) + (d[1] ? ' <span class="hint">· ' + esc(d[1]) + '</span>' : '') + '</li>'; }).join('') + them(soNguoi, duoc) + '</ul>' : '<p class="hint">Không ai.</p>') + '</div>' +
+          (n.soKhongKhop ? '<div><b>Không được cộng</b> <span class="hint">(tên không khớp Tên Facebook của thành viên nào: sai chính tả hoặc không phải thành viên)</span><ul>' + n.khongKhop.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + them(n.soKhongKhop, n.khongKhop) + '</ul></div>' : '') +
+          '</div></details>';
       }).join('') + '</div>' : '<p class="hint" style="margin:0">Chưa có lần nào.</p>') + '</div>';
     $('#sd-lai').onclick = nap;
     if ($('#sd-tab')) $('#sd-tab').onchange = function () { tabChon = this.value; ve(); };
@@ -417,6 +425,11 @@ function formSeeding(box) {
         tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã lưu và bật' + (kq.soLuot ? '. Vừa cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.' : '.')];
         nap();
       }).catch(function (err) { nut.disabled = false; thongBao($('#sd-m'), 'loi', err.message); });
+    };
+    $('#sd-mail').onchange = function () {
+      var o = this; o.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang lưu…');
+      goiPhien('luuBaoMailSeeding', o.checked).then(function (bat) { o.disabled = false; ch.baoMail = bat; thongBao($('#sd-m'), 'ok', bat ? 'Đã bật mail báo' : 'Đã tắt mail báo'); })
+        .catch(function (err) { o.disabled = false; o.checked = !o.checked; thongBao($('#sd-m'), 'loi', err.message); });
     };
     if ($('#sd-quet')) $('#sd-quet').onclick = function () {
       var nut = this; nut.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang cộng…');

@@ -199,5 +199,6 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - BOD bật trong Cài đặt, trang "Loại hoạt động và mức điểm" (phần dưới bảng loại): chọn tab và loại hoạt động có sẵn cho từng cột. Điểm mỗi lượt lấy từ bảng LoaiHoatDong. Muốn Reaction và Comment khác điểm thì thêm hai loại riêng (ví dụ Seeding Reaction, Seeding Comment). Lưu ở CaiDat `FormSeeding`.
 - Bật thì app cài lịch `khiNopForm` (onFormSubmit của file dữ liệu). Mỗi dòng trong ô là một tên Facebook, khớp nguyên dòng với cột Tên Facebook của tab ThanhVien (bỏ dấu, chữ thường, bỏ ký tự lạ), gồm cả BOD. Trang cài đặt liệt kê thành viên chưa có Tên Facebook.
 - Câu đã xử lý được ghi ở cột "ECO đã cộng" trong tab câu trả lời, nên không cộng hai lần. Lần đầu bật, các câu có sẵn được đánh dấu bỏ qua, trừ khi BOD chọn cộng luôn.
-- 15 lần cộng gần nhất (kèm tên không khớp) lưu ở CaiDat `FormSeedingNhatKy`.
+- 15 lần cộng gần nhất lưu ở CaiDat `FormSeedingNhatKy` (mỗi lần: người nộp, số người được cộng kèm cột đã cộng, tên không khớp; tối đa 50 tên mỗi loại). Trang cài đặt chỉ hiện con số, bấm vào mới xem tên.
+- `baoMail` trong cấu hình `FormSeeding`: bật thì mỗi lần cộng gửi một mail tóm tắt về chính mail CLB (`guiMailSeeding_`).
 - Lịch nhắc việc hằng ngày (`nhacViec_`) cũng chạy `xuLyFormSeeding_` để cộng bù nếu Google lỡ gọi `khiNopForm`.
