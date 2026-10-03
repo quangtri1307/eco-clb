@@ -250,6 +250,7 @@ function layCaiDatDesk(phien) {
     mail: { cheDoUcv: cheDoXemUcv_(), soDanhBa: docBang_('DanhBa').length, soThanhVien: tv.filter(function (t) { return emailHopLe_(t.Email); }).length },
     googleClientId: String(layCaiDat_('GoogleClientId') || ''),
     chuDe: chuDeHopLe_(layCaiDat_('ChuDe')),
+    formSeeding: (function () { var ch = docCauHinhSeeding_(); return { bat: !!(ch.tab && !ch.tat && coLichForm_()) }; })(),
     log: { linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || '') },
     zalo: (function () {
       var n = dongBoNguoiNhanZalo_();

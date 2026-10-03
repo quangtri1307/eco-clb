@@ -1161,6 +1161,81 @@ function chuanHoaDsGio_(v) {
   return kq.length ? kq.slice(0, 6) : [20];
 }
 
+/* ===================== Form cộng điểm seeding ===================== */
+
+/** Cột app tự thêm vào tab câu trả lời form để đánh dấu câu nào đã cộng (không cộng lại lần hai). */
+var COT_DA_CONG_FORM = 'ECO đã cộng';
+
+/** Tên Facebook để so: bỏ dấu, chữ thường, bỏ ký tự lạ (biểu tượng, dấu chấm…), gộp khoảng trắng. */
+function chuanTenFb_(s) {
+  return boDau_(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * Nhận diện cột của tab câu trả lời: dấu thời gian, người nộp, cột đánh dấu, email (bỏ qua),
+ * còn lại là các cột danh sách tên (Reaction, Comment…).
+ */
+function cotFormSeeding_(tieuDe) {
+  var kq = { thoiGian: -1, nguoiNop: -1, daCong: -1, seeding: [] };
+  (tieuDe || []).forEach(function (t, i) {
+    var c = chuanHoaTenCot_(t);
+    if (!c) return;
+    if (String(t).trim() === COT_DA_CONG_FORM) kq.daCong = i;
+    else if (c === 'dauthoigian' || c === 'timestamp') kq.thoiGian = i;
+    else if (kq.nguoiNop < 0 && (c.indexOf('hovaten') >= 0 || c.indexOf('nguoinop') >= 0 || c.indexOf('hoten') >= 0)) kq.nguoiNop = i;
+    else if (c.indexOf('email') >= 0) return;
+    else kq.seeding.push({ cot: i, ten: String(t).trim() });
+  });
+  return kq;
+}
+
+/** Loại hoạt động gợi ý cho một cột: loại có tên chứa tên cột (ví dụ "Seeding Reaction" cho cột Reaction). */
+function goiYLoaiSeeding_(tenCot, loaiHoatDong) {
+  var c = chuanHoaTenCot_(tenCot);
+  for (var i = 0; i < loaiHoatDong.length; i++) if (c && chuanHoaTenCot_(loaiHoatDong[i].TenLoai).indexOf(c) >= 0) return String(loaiHoatDong[i].TenLoai);
+  return '';
+}
+
+/**
+ * Một câu trả lời form thành các dòng cộng điểm. Mỗi dòng trong ô Reaction/Comment là một tên Facebook,
+ * khớp nguyên dòng với cột Tên Facebook của thành viên (không phân biệt dấu, hoa thường, ký tự lạ).
+ * anhXa: { tên cột: tên loại hoạt động }. thanhVien: chỉ những người được cộng (đang trong danh sách, không phải BOD).
+ * Trả về { dong, khongKhop (tên không khớp ai), nguoiNop, loi }.
+ */
+function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGio) {
+  var nguoiNop = cot.nguoiNop >= 0 ? String(dong[cot.nguoiNop] == null ? '' : dong[cot.nguoiNop]).trim() : '';
+  var kq = { dong: [], khongKhop: [], nguoiNop: nguoiNop, loi: '' };
+  if (!ky) { kq.loi = 'Chưa có học kỳ nào nên chưa cộng được. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.'; return kq; }
+  var loaiTheoTen = {};
+  loaiHoatDong.forEach(function (l) { loaiTheoTen[String(l.TenLoai)] = l; });
+  var theoFb = {};
+  thanhVien.forEach(function (tv) {
+    var k = chuanTenFb_(tv.TenFacebook);
+    if (k) (theoFb[k] = theoFb[k] || []).push(String(tv.HoVaTen));
+  });
+  var tg = cot.thoiGian >= 0 ? dong[cot.thoiGian] : null;
+  var thoiGian = tg !== null && String(tg).trim() !== '' && !isNaN(new Date(tg).getTime()) ? new Date(tg) : bayGio;
+  cot.seeding.forEach(function (c) {
+    var loai = loaiTheoTen[(anhXa || {})[c.ten]];
+    if (!loai) return;
+    var daCo = {};
+    String(dong[c.cot] == null ? '' : dong[c.cot]).split(/\r?\n/).forEach(function (dongTen) {
+      var k = chuanTenFb_(dongTen);
+      if (!k) return;
+      if (!theoFb[k]) { var goc = String(dongTen).trim(); if (kq.khongKhop.indexOf(goc) < 0) kq.khongKhop.push(goc); return; }
+      theoFb[k].forEach(function (ten) {
+        if (daCo[ten]) return;
+        daCo[ten] = true;
+        kq.dong.push({
+          ThoiGian: thoiGian, HoVaTen: ten, LoaiHoatDong: String(loai.TenLoai), TenHoatDong: c.ten, Diem: Number(loai.Diem) || 0,
+          NguoiCong: 'Form' + (nguoiNop ? ': ' + nguoiNop : ''), NhiemKy: String(ky.NhiemKy), HocKy: Number(ky.HocKy)
+        });
+      });
+    });
+  });
+  return kq;
+}
+
 /** Giao diện theo mùa và ngày lễ do BOD chọn (trống là giao diện xanh mặc định). Tên, màu, hình nằm ở ChuDe.html. */
 var CHU_DE = ['xuan', 'ha', 'thu', 'dong', 'tet', 'phunu', 'traidat', 'quockhanh', 'trungthu', 'halloween', 'nhagiao', 'giangsinh'];
 /** Giao diện luôn tối (bất kể người dùng chọn sáng hay tối). */
@@ -1202,6 +1277,7 @@ if (typeof module !== 'undefined') {
     timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, chuCot: chuCot_, xepTheoBan: xepTheoBan_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
     base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_,
-    CHU_DE: CHU_DE, chuDeHopLe: chuDeHopLe_, thuocTinhChuDe: thuocTinhChuDe_
+    CHU_DE: CHU_DE, chuDeHopLe: chuDeHopLe_, thuocTinhChuDe: thuocTinhChuDe_,
+    COT_DA_CONG_FORM: COT_DA_CONG_FORM, chuanTenFb: chuanTenFb_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_
   };
 }

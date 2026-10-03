@@ -192,3 +192,11 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - `doGet` gắn `data-chude` vào thẻ html ngay khi tạo trang (Halloween gắn thêm `data-theme="dark"`), nên không bị nháy màu.
 - ChuDe.html dùng chung cho ECOBoard và ECODesk: tính màu ra mã hex (sáng và tối), hoa lá rơi khắp màn hình, đồ trang trí trong khung chào và đầu trang ECOBoard, lời chúc, màu lá ở màn chờ.
 - Mỗi người tắt được hiệu ứng rơi trên máy mình (Cài đặt, Giao diện sáng hoặc tối). Máy bật "giảm chuyển động" thì không có hiệu ứng.
+
+## Form cộng điểm seeding
+
+- Google Form seeding được liên kết câu trả lời về chính file dữ liệu (Van bấm một lần trong Form). Tab câu trả lời có cột Dấu thời gian, Họ và tên người nộp, Reaction, Comment.
+- BOD bật trong Cài đặt, "Form cộng điểm seeding": chọn tab và loại hoạt động cho từng cột (có thể tạo loại mới, ví dụ Seeding Reaction 1 điểm, Seeding Comment 2 điểm). Lưu ở CaiDat `FormSeeding`.
+- Bật thì app cài lịch `khiNopForm` (onFormSubmit của file dữ liệu). Mỗi dòng trong ô là một tên Facebook, khớp nguyên dòng với cột Tên Facebook của tab ThanhVien (bỏ dấu, chữ thường, bỏ ký tự lạ), không cộng BOD.
+- Câu đã xử lý được ghi ở cột "ECO đã cộng" trong tab câu trả lời, nên không cộng hai lần. Lần đầu bật, các câu có sẵn được đánh dấu bỏ qua, trừ khi BOD chọn cộng luôn.
+- 15 lần cộng gần nhất (kèm tên không khớp) lưu ở CaiDat `FormSeedingNhatKy`.
