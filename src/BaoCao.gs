@@ -122,7 +122,6 @@ function layDuLieuLog(phien) {
   return {
     thanhVien: docBang_('ThanhVien').map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
     linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || ''),
-    duoi: duoiNhiemKy_((layKyHienTai_() || {}).NhiemKy || tenNhiemKy_(new Date())),
     ganDay: docBang_('FileLog').map(function (f) {
       return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan), soNguoi: Number(f.SoNguoi) || 0, soBuoi: Number(f.SoBuoi) || 0, nguoiTao: String(f.NguoiTao) };
     }).sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 20)

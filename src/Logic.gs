@@ -862,17 +862,6 @@ function chuCot_(so) {
   return chu;
 }
 
-/** "2026-2027" → "2627" (đuôi tên file log như tool cũ). Không đọc được thì trả về ''. */
-function duoiNhiemKy_(nhiemKy) {
-  var m = String(nhiemKy || '').match(/(\d{4})\D+(\d{4})/);
-  return m ? m[1].slice(2) + m[2].slice(2) : '';
-}
-
-/** Tên file mặc định như tool cũ: "[ECO] ĐĂNG KÝ LÀM LOG <TÊN ĐỢT> 2627". */
-function tenFileLogMacDinh_(tenDot, duoi) {
-  return ['[ECO] ĐĂNG KÝ LÀM LOG', String(tenDot || '').trim().toUpperCase(), duoi || ''].filter(String).join(' ');
-}
-
 /**
  * Xếp người theo ban như tool cũ; cùng ban thì giữ thứ tự trong danh sách thành viên.
  * Trả về { nguoi[], nhomBan[{dau, so}] } — dau là vị trí (từ 0) của người đầu tiên mỗi nhóm ban liền nhau.
@@ -1141,7 +1130,7 @@ if (typeof module !== 'undefined') {
     kiemTraViecMail: kiemTraViecMail_, timChoTrong: timChoTrong_, thayTheMau: thayTheMau_, chuSangHtml: chuSangHtml_,
     docBangNgoai: docBangNgoai_, chuanBiGuiHangLoat: chuanBiGuiHangLoat_,
     chiSoBaoCao: chiSoBaoCao_, taskBiTre: taskBiTre_, tongHopBaoCao: tongHopBaoCao_, chiaMoc: chiaMoc_, bieuDoBaoCao: bieuDoBaoCao_,
-    timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, chuCot: chuCot_, duoiNhiemKy: duoiNhiemKy_, tenFileLogMacDinh: tenFileLogMacDinh_, xepTheoBan: xepTheoBan_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
+    timTieuDeMauLog: timTieuDeMauLog_, kiemTraFileLog: kiemTraFileLog_, chuCot: chuCot_, xepTheoBan: xepTheoBan_, kiemTraTokenGoogle: kiemTraTokenGoogle_,
     base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_
   };

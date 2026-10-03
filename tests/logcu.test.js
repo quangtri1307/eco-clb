@@ -118,7 +118,6 @@ for (const buoi of [['Sáng T7'], ['Sáng T7', 'Chiều T7', 'Sáng CN']]) {
     // Chọn theo thứ tự lộn xộn: app vẫn xếp theo ban, cùng ban giữ thứ tự danh sách thành viên.
     const moi = chayApp(buoi, ['Võ Em', 'Phạm Dũng', 'Lê Chi', 'Trần Bình', 'Nguyễn An']);
     assert.deepStrictEqual(trangThai(moi.mau), trangThai(cu.mau));
-    assert.strictEqual(moi.ctx.tenFileLogMacDinh_('oday', moi.ctx.duoiNhiemKy_('2026-2027')), cu.tenFile);
   });
 }
 
@@ -136,11 +135,7 @@ test('tab Đăng ký log điền đúng chỗ', () => {
   assert.strictEqual(mau.tabs[1].o['3,3'].ct, "='Đăng ký log'!F3");
 });
 
-test('chữ cột, đuôi nhiệm kỳ, tên file mặc định', () => {
+test('chữ cột', () => {
   const L = require('./load-logic');
   assert.deepStrictEqual([1, 5, 26, 27, 52, 703].map(L.chuCot), ['A', 'E', 'Z', 'AA', 'AZ', 'AAA']);
-  assert.strictEqual(L.duoiNhiemKy('2026-2027'), '2627');
-  assert.strictEqual(L.duoiNhiemKy('khác'), '');
-  assert.strictEqual(L.tenFileLogMacDinh(' Oday ', '2627'), '[ECO] ĐĂNG KÝ LÀM LOG ODAY 2627');
-  assert.strictEqual(L.tenFileLogMacDinh('', ''), '[ECO] ĐĂNG KÝ LÀM LOG');
 });
