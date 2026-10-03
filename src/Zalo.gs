@@ -197,6 +197,8 @@ function nhacViecHangNgay(e) {
 function nhacViec_() {
   if (layTokenZalo_()) { try { nhanTinMoiZalo_(); } catch (e) { /* vẫn nhắc những người đã kết nối */ } }
   try { donThongBaoCu_(); } catch (e) { /* bỏ qua */ }
+  // Cộng bù câu trả lời form seeding nếu lần nộp nào đó Google không gọi được app.
+  try { var fs = docCauHinhSeeding_(); if (fs.tab && !fs.tat) xuLyFormSeeding_(); } catch (e) { /* bỏ qua */ }
   var cd = caiDatNhacZalo_();
   var hom = homNay_();
   var canNhac = chonTaskCanNhac_(docTask_(), hom, cd);
