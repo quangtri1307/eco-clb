@@ -360,13 +360,12 @@ function docThanhVien_() {
   return xepThanhVienTheoBan_(docBang_('ThanhVien'));
 }
 
-/** Lúc bắt đầu nhiệm kỳ hiện tại (lần tải "Sau tuyển đợt 1" gần nhất), tính bằng ms. 0 = chưa có nhiệm kỳ nào. */
+/**
+ * Lúc bắt đầu nhiệm kỳ hiện tại, tính bằng ms: lần tải "Sau tuyển đợt 1" ĐẦU TIÊN của nhiệm kỳ này
+ * (lỡ tải đợt 1 lại lần nữa trong cùng nhiệm kỳ thì không ẩn mất dữ liệu đã có). 0 = chưa có nhiệm kỳ nào.
+ */
 function batDauNhiemKy_() {
-  var ds = docBang_('KyHoatDong');
-  for (var i = ds.length - 1; i >= 0; i--) {
-    if (Number(ds[i].HocKy) === 1) { var t = new Date(ds[i].BatDau).getTime(); return isNaN(t) ? 0 : t; }
-  }
-  return 0;
+  return batDauNhiemKyTu_(docBang_('KyHoatDong'));
 }
 
 /** Đọc một tab, bỏ các dòng của nhiệm kỳ cũ (vẫn còn trong sheet, chỉ không hiện). */

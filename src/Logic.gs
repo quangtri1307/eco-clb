@@ -241,6 +241,17 @@ function locNhiemKy_(ds, layThoiGian, moc) {
   return ds.filter(function (x) { var v = layThoiGian(x); var t = v === '' || v == null ? NaN : new Date(v).getTime(); return isNaN(t) || t >= moc; });
 }
 
+/** Từ các dòng KyHoatDong: lúc (ms) tải đợt 1 đầu tiên của nhiệm kỳ đang chạy (nhiệm kỳ của dòng cuối). 0 = chưa có. */
+function batDauNhiemKyTu_(ds) {
+  if (!ds.length) return 0;
+  var nk = String(ds[ds.length - 1].NhiemKy), kq = 0;
+  ds.forEach(function (k) {
+    var t = new Date(k.BatDau).getTime();
+    if (String(k.NhiemKy) === nk && Number(k.HocKy) === 1 && !isNaN(t) && (!kq || t < kq)) kq = t;
+  });
+  return kq;
+}
+
 function cungKy_(dong, nhiemKy, hocKy) {
   return String(dong.NhiemKy) === String(nhiemKy) && Number(dong.HocKy) === Number(hocKy);
 }
@@ -1330,7 +1341,7 @@ if (typeof module !== 'undefined') {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
-    dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
+    dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, boLocTaskHr: boLocTaskHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
