@@ -289,7 +289,7 @@ var NAV = {
 var BOTTOM = { BOD: ['home', 'diem', 'task', 'mail'], HR: ['home', 'task'], UCV: ['home', 'mail'] };
 var VAI_TRO = { BOD: 'BOD', HR: 'HR', UCV: 'UCV' };
 /** Nhãn dưới tên người dùng: BOD hiện chức vụ (nếu danh sách thành viên có ghi), còn lại hiện vai trò. */
-function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : VAI_TRO[NGUOI.vaiTro]; }
+function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : NGUOI.vaiTro === 'HR' && NGUOI.maHr ? VAI_TRO.HR + ' · ' + esc(NGUOI.maHr) : VAI_TRO[NGUOI.vaiTro]; }
 var page = null, sub = null, soGopYMoi = 0, soViecCho = 0;
 var MENU_GON = (function () { try { return localStorage.getItem('eco_menu_gon') === '1'; } catch (e) { return false; } })();
 function flat() { return NAV[NGUOI.vaiTro].reduce(function (a, g) { return a.concat(g[1]); }, []); }
