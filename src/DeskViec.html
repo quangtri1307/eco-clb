@@ -299,7 +299,7 @@ var SET = [
     ['sign', 'edit', 'Chữ ký thư', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature'],
     ['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['Làm log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
-  ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR và phân ban', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad'],
+  ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR, mã HR và phân ban', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad mã hr'],
     ['ucv', 'users', 'Tài khoản UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' tài khoản'; }, 'UCV ucv tài khoản mail'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho BOD, HR và UCV'; }, 'mật khẩu tài khoản đặt lại'],
     ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'],
@@ -710,22 +710,23 @@ var SUB = {
     var cacBan = [];
     CD.thanhVien.forEach(function (t) { var n = String(t.ban).trim().split(/\s+/)[0].toUpperCase(); if (n && n !== 'BOD' && cacBan.indexOf(n) < 0) cacBan.push(n); });
     var phanBan = function (t, i) {
-      if (vaiTro !== 'HR' || !cacBan.length) return '';
-      return '<div class="row" style="gap:10px;margin-top:6px;flex-wrap:wrap"><span class="hint">Quản lý ban:</span>' + cacBan.map(function (n) { return '<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" data-pb="' + i + '" value="' + esc(n) + '"' + (t.banQuanLy.indexOf(n) >= 0 ? ' checked' : '') + '>' + esc(n) + '</label>'; }).join('') +
+      if (vaiTro !== 'HR') return '';
+      return '<div class="row" style="gap:10px;margin-top:6px;flex-wrap:wrap"><label class="row" style="gap:6px;font-size:13px"><span class="hint">Mã HR</span><input type="text" id="mhr' + i + '" value="' + esc(t.maHr || '') + '" maxlength="20" placeholder="VD: HR01" style="width:110px" aria-label="Mã HR của ' + esc(t.ten) + '"></label>' +
+        (cacBan.length ? '<span class="hint">Quản lý ban:</span>' + cacBan.map(function (n) { return '<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" data-pb="' + i + '" value="' + esc(n) + '"' + (t.banQuanLy.indexOf(n) >= 0 ? ' checked' : '') + '>' + esc(n) + '</label>'; }).join('') : '') +
         '<button class="btn ghost sm" data-luupb="' + i + '">Lưu</button><span id="pbm' + i + '"></span></div>';
     };
     $('#subbody').innerHTML = (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>Phân ban cho từng HR: HR chỉ thấy, thao tác và được nhắc deadline task của các ban mình quản lý. Mọi HR cùng quản lý một ban đều được nhắc. Chưa phân ban thì HR thấy mọi task. Ban chưa có HR nào quản lý thì mọi HR đều thấy, để không task nào bị bỏ sót. BOD luôn thấy mọi task.</span></div>' : '') +
       '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + phanBan(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
-      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau. Nếu CLB đã bật đăng nhập bằng Google, họ có thể đăng nhập bằng Google luôn.</small><input type="text" id="hp" autocomplete="off"></label><div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
+      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau. Nếu CLB đã bật đăng nhập bằng Google, họ có thể đăng nhập bằng Google luôn.</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
     $$('[data-luupb]').forEach(function (b) {
       b.onclick = function () {
         var i = b.getAttribute('data-luupb');
         var ds = $$('[data-pb="' + i + '"]:checked').map(function (c) { return c.value; });
-        luuVa(b, $('#pbm' + i), 'luuBanQuanLy', [hr[Number(i)].email, ds]);
+        luuVa(b, $('#pbm' + i), 'luuBanQuanLy', [hr[Number(i)].email, ds, $('#mhr' + i).value]);
       };
     });
-    $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
+    $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro, $('#hm') ? $('#hm').value : ''], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
   },
   ucv: function () { SUB.hr('UCV'); },
   google: function () {

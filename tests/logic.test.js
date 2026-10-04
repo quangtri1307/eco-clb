@@ -116,3 +116,17 @@ test('batDauNhiemKyTu: lấy lần tải đợt 1 đầu tiên của nhiệm k�
   ];
   assert.strictEqual(L.batDauNhiemKyTu(ds), d(8, 10).getTime());
 });
+
+test('kiemTraMaHr: gọn khoảng trắng, không trùng giữa các HR', () => {
+  const tk = [
+    { Email: 'a@x.vn', HoVaTen: 'An', VaiTro: 'HR', MaHr: 'HR01' },
+    { Email: 'b@x.vn', HoVaTen: 'Bình', VaiTro: 'HR', MaHr: '' },
+    { Email: 'c@x.vn', HoVaTen: 'Chi', VaiTro: 'BOD', MaHr: 'HR02' }
+  ];
+  assert.deepStrictEqual(L.kiemTraMaHr('  HR  03 ', tk, 'b@x.vn'), { ma: 'HR 03', loi: '' });
+  assert.match(L.kiemTraMaHr('hr01', tk, 'b@x.vn').loi, /An/);
+  assert.strictEqual(L.kiemTraMaHr('HR01', tk, 'A@x.vn').loi, '');
+  assert.strictEqual(L.kiemTraMaHr('HR02', tk, 'b@x.vn').loi, '');
+  assert.strictEqual(L.kiemTraMaHr('', tk, 'b@x.vn').loi, '');
+  assert.match(L.kiemTraMaHr('x'.repeat(21), tk, 'b@x.vn').loi, /20/);
+});

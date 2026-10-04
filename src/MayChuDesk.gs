@@ -89,7 +89,7 @@ function doiMatKhau(phien, matKhauCu, matKhauMoi) {
 function thongTinNguoiDung_(tk) {
   var vaiTro = String(tk.VaiTro);
   var gd = String(tk.GiaoDien || '');
-  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua_(tk) : '', gmail: vaiTro === 'BOD' ? linkGmail_('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
+  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua_(tk) : '', maHr: vaiTro === 'HR' ? String(tk.MaHr || '').trim() : '', gmail: vaiTro === 'BOD' ? linkGmail_('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
 }
 
 /** Chức vụ ghi trong danh sách thành viên (tìm theo email, rồi theo họ tên). */
@@ -256,7 +256,7 @@ function layCaiDatDesk(phien) {
       var n = dongBoNguoiNhanZalo_();
       return { coBot: !!layTokenZalo_(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
     })(),
-    taiKhoan: docBang_('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy) }; }),
+    taiKhoan: docBang_('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy), maHr: String(t.MaHr || '') }; }),
     thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), email: String(t.Email || '') }; })
   };
 }
@@ -329,7 +329,7 @@ function luuSapDenHan_(phien, soNgay) {
 }
 
 /** Cho một thành viên vào ECODesk với vai trò ban nhân sự (HR) hoặc UCV (UCV). */
-function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
+function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro, maHr) {
   vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
   canDangNhap_(phien, 'caidat');
   var tv = docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen) === String(hoVaTen); })[0];
@@ -342,17 +342,25 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   var muoi = Utilities.getUuid();
   return voiKhoa_(function () {
     if (timTaiKhoan_(email)) throw new Error(hoVaTen + ' đã có tài khoản ECODesk.'); // kiểm lại trong khoá: có thể ai đó vừa thêm
-    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: bamMatKhau_(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date() }]);
+    var ma = vaiTro === 'HR' ? kiemTraMaHr_(maHr, docBang_('TaiKhoan'), email) : { ma: '', loi: '' };
+    if (ma.loi) throw new Error(ma.loi);
+    bangDuLieu_('TaiKhoan'); // thêm cột MaHr nếu sheet còn bản cũ
+    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: bamMatKhau_(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date(), MaHr: ma.ma }]);
     return true;
   });
 }
 
-/** Phân ban cho một tài khoản HR (danh sách nhóm ban, trống là chưa phân ban: thấy mọi task). */
-function luuBanQuanLy(phien, email, dsBan) {
+/** Lưu mã HR và phân ban cho một tài khoản HR (danh sách nhóm ban, trống là chưa phân ban: thấy mọi task). maHr bỏ trống = không có mã. */
+function luuBanQuanLy(phien, email, dsBan, maHr) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk || String(tk.VaiTro) !== 'HR') throw new Error('Chỉ phân ban cho tài khoản HR.');
-  bangDuLieu_('TaiKhoan'); // thêm cột BanQuanLy nếu sheet còn bản cũ
+  bangDuLieu_('TaiKhoan'); // thêm cột BanQuanLy, MaHr nếu sheet còn bản cũ
+  if (maHr !== undefined) {
+    var ma = kiemTraMaHr_(maHr, docBang_('TaiKhoan'), tk.Email);
+    if (ma.loi) throw new Error(ma.loi);
+    ghiCotTaiKhoan_(tk.Email, 'MaHr', ma.ma);
+  }
   ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).join(', '));
   return true;
 }

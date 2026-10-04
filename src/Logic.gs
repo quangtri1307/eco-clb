@@ -31,7 +31,7 @@ var BANG = {
   LoaiHoatDong: ['TenLoai', 'Diem', 'CongTay'],
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc'],
-  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy'],
+  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr'],
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
@@ -250,6 +250,17 @@ function batDauNhiemKyTu_(ds) {
     if (String(k.NhiemKy) === nk && Number(k.HocKy) === 1 && !isNaN(t) && (!kq || t < kq)) kq = t;
   });
   return kq;
+}
+
+/** Mã HR do Head HR tự phân (ví dụ HR01). Bỏ khoảng trắng thừa, tối đa 20 ký tự. Trả về { ma, loi }. */
+function kiemTraMaHr_(ma, taiKhoan, email) {
+  ma = String(ma == null ? '' : ma).replace(/\s+/g, ' ').trim();
+  if (ma.length > 20) return { ma: ma, loi: 'Mã HR dài quá 20 ký tự.' };
+  var trung = ma && (taiKhoan || []).filter(function (t) {
+    return String(t.VaiTro) === 'HR' && String(t.Email).toLowerCase() !== String(email || '').toLowerCase() && String(t.MaHr || '').trim().toLowerCase() === ma.toLowerCase();
+  })[0];
+  if (trung) return { ma: ma, loi: 'Mã ' + ma + ' đã dùng cho ' + trung.HoVaTen + '.' };
+  return { ma: ma, loi: '' };
 }
 
 function cungKy_(dong, nhiemKy, hocKy) {
@@ -1341,7 +1352,7 @@ if (typeof module !== 'undefined') {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
-    dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
+    dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, boLocTaskHr: boLocTaskHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
