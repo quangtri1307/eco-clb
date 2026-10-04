@@ -123,7 +123,7 @@ function chiTietLuong_(maThu) {
 /** Mã các luồng thư UCV này được xem khi BOD chọn chế độ "chỉ thư của mình". */
 function luongCuaUcv_(ten) {
   var ds = [];
-  docBang_('ViecMail').forEach(function (v) {
+  docBangNhiemKy_('ViecMail', 'ThoiGian').forEach(function (v) {
     if (String(v.NguoiTao) === ten && String(v.TrangThai) === TRANG_THAI_VIEC.DUYET && v.MaThu && ds.indexOf(String(v.MaThu)) < 0) ds.push(String(v.MaThu));
   });
   return ds;
@@ -193,7 +193,7 @@ function viecRaDoiTuong_(v) {
 
 function layViecCuaToi(phien) {
   var tk = canDangNhap_(phien, 'hopthu');
-  return docBang_('ViecMail').filter(function (v) { return String(v.NguoiTao) === String(tk.HoVaTen); })
+  return docBangNhiemKy_('ViecMail', 'ThoiGian').filter(function (v) { return String(v.NguoiTao) === String(tk.HoVaTen); })
     .map(viecRaDoiTuong_).sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 300);
 }
 
@@ -289,7 +289,7 @@ function xoaViecMail(phien, thoiGian) {
 
 function layViecDuyet(phien) {
   canDangNhap_(phien, 'duyetmail');
-  return docBang_('ViecMail').filter(function (v) { return String(v.TrangThai) !== TRANG_THAI_VIEC.NHAP; })
+  return docBangNhiemKy_('ViecMail', 'ThoiGian').filter(function (v) { return String(v.TrangThai) !== TRANG_THAI_VIEC.NHAP; })
     .map(function (v) { var o = viecRaDoiTuong_(v); o.linkThu = o.maThu ? linkLuongGmail_(o.maThu) : ''; return o; }).sort(function (a, b) {
       var ca = a.trangThai === TRANG_THAI_VIEC.CHO ? 0 : 1, cb = b.trangThai === TRANG_THAI_VIEC.CHO ? 0 : 1;
       return ca - cb || b.thoiGian - a.thoiGian;
@@ -299,7 +299,7 @@ function layViecDuyet(phien) {
 /** Đếm việc chờ duyệt (hiện số trên menu). */
 function demViecChoDuyet_(phien) {
   canDangNhap_(phien, 'duyetmail');
-  return docBang_('ViecMail').filter(function (v) { return String(v.TrangThai) === TRANG_THAI_VIEC.CHO; }).length;
+  return docBangNhiemKy_('ViecMail', 'ThoiGian').filter(function (v) { return String(v.TrangThai) === TRANG_THAI_VIEC.CHO; }).length;
 }
 
 function xemLuongKhiDuyet(phien, maThu) {
@@ -610,7 +610,9 @@ function guiThuHenGio_() {
 
 function layLichGui(phien) {
   canDangNhap_(phien, 'duyetmail');
-  return docBang_('LichGui').map(function (l) {
+  var moc = batDauNhiemKy_();
+  // Thư còn chờ gửi vẫn hiện dù tạo từ nhiệm kỳ trước, để BOD còn huỷ được.
+  return locNhiemKy_(docBang_('LichGui'), function (l) { return String(l.TrangThai) === 'Đã lên lịch' ? '' : l.ThoiGianTao; }, moc).map(function (l) {
     var soNguoi = 0;
     try { soNguoi = JSON.parse(String(l.NguoiNhan)).length; } catch (e) { soNguoi = 0; }
     var maNhap = String(l.MaNhap || '');

@@ -20,7 +20,7 @@ function truMotNgay_(ngay) {
 function layThongTinBaoCao(phien) {
   canDangNhap_(phien, 'baocao');
   var hom = homNay_();
-  var ky = docBang_('KyHoatDong').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian_(k.BatDau) }; })
+  var ky = docBangNhiemKy_('KyHoatDong', 'BatDau').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian_(k.BatDau) }; })
     .filter(function (k) { return k.tu; }).sort(function (a, b) { return a.tu < b.tu ? -1 : 1; });
   var hocKy = ky.map(function (k, i) {
     return { ten: 'Học kỳ ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
@@ -36,10 +36,10 @@ function layThongTinBaoCao(phien) {
 
 function duLieuBaoCao_() {
   return {
-    lichSu: docBang_('LichSuDiem').map(function (d) {
+    lichSu: docBangNhiemKy_('LichSuDiem', 'ThoiGian').map(function (d) {
       return { ngay: ngayCuaThoiGian_(d.ThoiGian), ten: String(d.HoVaTen), loai: String(d.LoaiHoatDong), tenHoatDong: String(d.TenHoatDong || ''), diem: Number(d.Diem) || 0 };
     }),
-    task: docBang_('Task').map(function (t) {
+    task: docBangNhiemKy_('Task', 'ThoiGianTao').map(function (t) {
       return { nguoi: String(t.NguoiPhuTrach), hanChot: ngayChuoi_(t.HanChot), trangThaiLuu: String(t.TrangThai || TRANG_THAI_TASK.GIAO), ngayXong: ngayCuaThoiGian_(t.ThoiGianXong) };
     }),
     thanhVien: docThanhVien_().filter(khongPhaiBod_).map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban) }; }),
@@ -122,7 +122,7 @@ function layDuLieuLog(phien) {
   return {
     thanhVien: docThanhVien_().map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
     linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || ''),
-    ganDay: docBang_('FileLog').map(function (f) {
+    ganDay: docBangNhiemKy_('FileLog', 'ThoiGian').map(function (f) {
       return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan), soNguoi: Number(f.SoNguoi) || 0, soBuoi: Number(f.SoBuoi) || 0, nguoiTao: String(f.NguoiTao) };
     }).sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 20)
   };

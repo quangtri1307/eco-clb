@@ -44,7 +44,7 @@ function layFormSeeding(phien) {
     tabs: cacTabForm_(),
     cauHinh: { tab: ch.tab ? String(ch.tab) : '', anhXa: ch.anhXa || {}, bat: !!(ch.tab && !ch.tat && coLichForm_()), baoMail: !!ch.baoMail },
     loai: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
-    nhatKy: docNhatKySeeding_(),
+    nhatKy: locNhiemKy_(docNhatKySeeding_(), function (n) { return n.luc; }, batDauNhiemKy_()),
     // Ai chưa có Tên Facebook thì form không cộng được cho người đó: hiện ra để BOD bổ sung.
     thieuFb: docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen).trim() && !chuanTenFb_(t.TenFacebook); }).map(function (t) { return String(t.HoVaTen); })
   };
