@@ -45,20 +45,11 @@ function chuKyGmail_(lamMoi) {
   if (!lamMoi) { var co = bo.get(khoa); if (co !== null) return { html: co, loi: '' }; }
   var html = '', loi = '';
   try {
-    // Gọi thẳng Gmail API bằng quyền Gmail sẵn có của GmailApp, không cần bật thêm dịch vụ hay xin thêm quyền.
-    var r = UrlFetchApp.fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs', {
-      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true
-    });
-    if (r.getResponseCode() !== 200) {
-      var tl = {};
-      try { tl = JSON.parse(r.getContentText()).error || {}; } catch (x) { tl = {}; }
-      loi = 'Gmail trả về lỗi ' + r.getResponseCode() + (tl.message ? ': ' + String(tl.message).slice(0, 300) : '');
-    } else {
-      var ds = JSON.parse(r.getContentText()).sendAs || [];
-      var chinh = ds.filter(function (s) { return s.isDefault; })[0] || ds.filter(function (s) { return s.isPrimary; })[0];
-      html = chinh && chinh.signature ? String(chinh.signature) : '';
-    }
-  } catch (e) { loi = 'Không gọi được Gmail: ' + e.message; }
+    // Dịch vụ Gmail nâng cao (bật trong appsscript.json): Apps Script tự bật Gmail API cho project ẩn của nó.
+    var ds = Gmail.Users.Settings.SendAs.list('me').sendAs || [];
+    var chinh = ds.filter(function (s) { return s.isDefault; })[0] || ds.filter(function (s) { return s.isPrimary; })[0];
+    html = chinh && chinh.signature ? String(chinh.signature) : '';
+  } catch (e) { loi = 'Không đọc được từ Gmail: ' + String(e.message || e).slice(0, 300); }
   if (!loi) { try { bo.put(khoa, html, 21600); } catch (e) { /* chữ ký quá dài để nhớ tạm thì thôi */ } }
   return { html: html, loi: loi };
 }
