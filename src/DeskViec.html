@@ -662,7 +662,8 @@ var SUB = {
     goiPhien('layCaiDatMail').then(function (m) {
       var veChuKy = function (ck) {
         if (ck.html) $('#sk-xem').innerHTML = khungThu(ck.html);
-        else $('#sk-xem').innerHTML = '<p class="hint" style="margin:0">Gmail của CLB chưa có chữ ký mặc định, hoặc chưa đọc được. Đặt chữ ký trong Gmail rồi bấm Tải lại.</p>';
+        else if (ck.loi) $('#sk-xem').innerHTML = '<div class="note" style="display:block"><b>Chưa đọc được chữ ký từ Gmail.</b><div style="font-size:13px;margin-top:4px;overflow-wrap:anywhere">' + esc(ck.loi) + '</div></div>';
+        else $('#sk-xem').innerHTML = '<p class="hint" style="margin:0">Gmail của CLB chưa có chữ ký mặc định cho thư mới. Trong Gmail, vào Cài đặt, mục Chữ ký: tạo chữ ký, chọn nó ở ô “Cho email mới”, kéo xuống cuối bấm Lưu thay đổi, rồi quay lại đây bấm Tải lại.</p>';
       };
       $('#subbody').innerHTML = '<div class="card form"><label class="switch"><input type="checkbox" id="sk"' + (m.chuKy.bat ? ' checked' : '') + '>Thêm chữ ký vào cuối thư UCV gửi</label>' +
         '<p class="hint" style="margin:0">Chữ ký lấy từ chữ ký mặc định trong Gmail của CLB. Muốn đổi nội dung, sửa trong Gmail rồi bấm Tải lại.</p>' +

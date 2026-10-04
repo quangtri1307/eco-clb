@@ -39,26 +39,34 @@ function linkGmail_(phanSau) {
 }
 
 /* Chữ ký: lấy đúng chữ ký mặc định trong cài đặt Gmail của tài khoản CLB; BOD chỉ chọn có thêm vào thư UCV hay không. */
+/** Đọc chữ ký: { html, loi }. Chỉ nhớ tạm khi đọc được (đọc lỗi thì lần sau thử lại ngay, không giữ kết quả rỗng 6 tiếng). */
 function chuKyGmail_(lamMoi) {
-  var bo = CacheService.getScriptCache(), khoa = 'chuKyGmail';
-  if (!lamMoi) { var co = bo.get(khoa); if (co !== null) return co; }
-  var html = '';
+  var bo = CacheService.getScriptCache(), khoa = 'chuKyGmail2';
+  if (!lamMoi) { var co = bo.get(khoa); if (co !== null) return { html: co, loi: '' }; }
+  var html = '', loi = '';
   try {
     // Gọi thẳng Gmail API bằng quyền Gmail sẵn có của GmailApp, không cần bật thêm dịch vụ hay xin thêm quyền.
     var r = UrlFetchApp.fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs', {
       headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true
     });
-    var ds = r.getResponseCode() === 200 ? (JSON.parse(r.getContentText()).sendAs || []) : [];
-    var chinh = ds.filter(function (s) { return s.isDefault; })[0] || ds.filter(function (s) { return s.isPrimary; })[0];
-    html = chinh && chinh.signature ? String(chinh.signature) : '';
-  } catch (e) { html = ''; }
-  try { bo.put(khoa, html, 21600); } catch (e) { /* chữ ký quá dài để nhớ tạm thì thôi */ }
-  return html;
+    if (r.getResponseCode() !== 200) {
+      var tl = {};
+      try { tl = JSON.parse(r.getContentText()).error || {}; } catch (x) { tl = {}; }
+      loi = 'Gmail trả về lỗi ' + r.getResponseCode() + (tl.message ? ': ' + String(tl.message).slice(0, 300) : '');
+    } else {
+      var ds = JSON.parse(r.getContentText()).sendAs || [];
+      var chinh = ds.filter(function (s) { return s.isDefault; })[0] || ds.filter(function (s) { return s.isPrimary; })[0];
+      html = chinh && chinh.signature ? String(chinh.signature) : '';
+    }
+  } catch (e) { loi = 'Không gọi được Gmail: ' + e.message; }
+  if (!loi) { try { bo.put(khoa, html, 21600); } catch (e) { /* chữ ký quá dài để nhớ tạm thì thôi */ } }
+  return { html: html, loi: loi };
 }
 
-/** Chữ ký đang dùng: { bat, html }. */
+/** Chữ ký đang dùng: { bat, html, loi }. */
 function layChuKy_(lamMoi) {
-  return { bat: String(layCaiDat_('DungChuKy') || '') !== 'tat', html: chuKyGmail_(lamMoi) };
+  var ck = chuKyGmail_(lamMoi);
+  return { bat: String(layCaiDat_('DungChuKy') || '') !== 'tat', html: ck.html, loi: ck.loi };
 }
 
 function luuChuKy(phien, ck) {
