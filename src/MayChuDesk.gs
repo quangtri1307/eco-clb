@@ -215,7 +215,7 @@ function xoaDongDiem(phien, thoiGianMs, hoVaTen) {
 
 function layGopY(phien) {
   canDangNhap_(phien, 'gopy');
-  return docBang_('GopY').map(function (g) {
+  return docBangNhiemKy_('GopY', 'ThoiGian').map(function (g) {
     return { thoiGian: new Date(g.ThoiGian).getTime(), noiDung: String(g.NoiDung), daDoc: g.DaDoc === true || g.DaDoc === 'TRUE' };
   }).sort(function (a, b) { return b.thoiGian - a.thoiGian; });
 }
@@ -411,7 +411,7 @@ function kiemTraDuocGiao_(duoc, ten) {
 /** Đọc toàn bộ task kèm trạng thái đã tính. */
 function docTask_() {
   var hom = homNay_(), sap = soNgaySapDenHan_();
-  return docBang_('Task').map(function (t) {
+  return docBangNhiemKy_('Task', 'ThoiGianTao').map(function (t) {
     var han = ngayChuoi_(t.HanChot);
     var luu = String(t.TrangThai || TRANG_THAI_TASK.GIAO);
     return {
@@ -576,11 +576,11 @@ function layTrangChu(phien) {
     }
   }
   if (vaiTro === 'BOD') {
-    kq.choDuyet = docBang_('ViecMail').filter(function (v) { return String(v.TrangThai) === TRANG_THAI_VIEC.CHO; }).length;
-    kq.gopYMoi = docBang_('GopY').filter(function (g) { return !(g.DaDoc === true || g.DaDoc === 'TRUE'); }).length;
+    kq.choDuyet = docBangNhiemKy_('ViecMail', 'ThoiGian').filter(function (v) { return String(v.TrangThai) === TRANG_THAI_VIEC.CHO; }).length;
+    kq.gopYMoi = docBangNhiemKy_('GopY', 'ThoiGian').filter(function (g) { return !(g.DaDoc === true || g.DaDoc === 'TRUE'); }).length;
   }
   if (vaiTro === 'UCV') {
-    var thu = docBang_('ViecMail').filter(function (v) { return String(v.NguoiTao) === ten; });
+    var thu = docBangNhiemKy_('ViecMail', 'ThoiGian').filter(function (v) { return String(v.NguoiTao) === ten; });
     var demThu = function (st) { return thu.filter(function (v) { return String(v.TrangThai) === st; }).length; };
     kq.thu = { nhap: demThu(TRANG_THAI_VIEC.NHAP), cho: demThu(TRANG_THAI_VIEC.CHO), sua: demThu(TRANG_THAI_VIEC.SUA), duyet: demThu(TRANG_THAI_VIEC.DUYET) };
   }

@@ -96,3 +96,11 @@ test('linkHopLe, kiemTraGopY, taiKhoanBodCanCo', () => {
   const bod = L.taiKhoanBodCanCo([{ HoVaTen: 'A', Ban: 'BOD', Email: 'a@x' }, { HoVaTen: 'B', Ban: 'PG', Email: 'b@x' }, { HoVaTen: 'C', Ban: 'BOD', Email: '' }]);
   assert.deepStrictEqual(bod, [{ Email: 'a@x', HoVaTen: 'A' }]);
 });
+
+test('locNhiemKy: ẩn dữ liệu nhiệm kỳ cũ, không rõ thời điểm thì giữ', () => {
+  const moc = new Date(2026, 8, 15).getTime();
+  const ds = [{ t: new Date(2026, 8, 1) }, { t: new Date(2026, 8, 15) }, { t: new Date(2026, 9, 1).getTime() }, { t: '' }, { t: 'không phải ngày' }];
+  assert.strictEqual(L.locNhiemKy(ds, (d) => d.t, moc).length, 4);
+  assert.ok(!L.locNhiemKy(ds, (d) => d.t, moc).includes(ds[0]));
+  assert.strictEqual(L.locNhiemKy(ds, (d) => d.t, 0).length, 5);
+});
