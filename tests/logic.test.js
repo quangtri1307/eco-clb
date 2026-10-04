@@ -104,3 +104,15 @@ test('locNhiemKy: ẩn dữ liệu nhiệm kỳ cũ, không rõ thời điểm t
   assert.ok(!L.locNhiemKy(ds, (d) => d.t, moc).includes(ds[0]));
   assert.strictEqual(L.locNhiemKy(ds, (d) => d.t, 0).length, 5);
 });
+
+test('batDauNhiemKyTu: lấy lần tải đợt 1 đầu tiên của nhiệm kỳ đang chạy', () => {
+  const d = (m, n) => new Date(2026, m, n);
+  assert.strictEqual(L.batDauNhiemKyTu([]), 0);
+  const ds = [
+    { NhiemKy: '2025-2026', HocKy: 1, BatDau: d(0, 1) },
+    { NhiemKy: '2026-2027', HocKy: 1, BatDau: d(8, 10) },
+    { NhiemKy: '2026-2027', HocKy: 1, BatDau: d(8, 12) },
+    { NhiemKy: '2026-2027', HocKy: 2, BatDau: d(11, 1) }
+  ];
+  assert.strictEqual(L.batDauNhiemKyTu(ds), d(8, 10).getTime());
+});

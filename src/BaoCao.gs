@@ -21,7 +21,9 @@ function layThongTinBaoCao(phien) {
   canDangNhap_(phien, 'baocao');
   var hom = homNay_();
   var ky = docBangNhiemKy_('KyHoatDong', 'BatDau').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian_(k.BatDau) }; })
-    .filter(function (k) { return k.tu; }).sort(function (a, b) { return a.tu < b.tu ? -1 : 1; });
+    .filter(function (k) { return k.tu; }).sort(function (a, b) { return a.tu < b.tu ? -1 : 1; })
+    // Lỡ tải cùng một đợt hai lần thì vẫn chỉ là một học kỳ.
+    .filter(function (k, i, ds) { return !i || ds[i - 1].nhiemKy !== k.nhiemKy || ds[i - 1].hocKy !== k.hocKy; });
   var hocKy = ky.map(function (k, i) {
     return { ten: 'Học kỳ ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
   }).reverse();
