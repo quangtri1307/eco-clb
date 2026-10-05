@@ -224,19 +224,30 @@ function nhacViec_(luc) {
   var laBod = {};
   nguoiNhan.forEach(function (n) { if (n.vaiTro === 'BOD') laBod[n.ten] = true; });
   var choNhanSu = canNhac.filter(function (t) { return !laBod[t.nguoi]; });
-  // HR đã phân ban chỉ được nhắc task của ban mình quản lý (mọi HR cùng ban đều nhận, để không ai bỏ sót).
-  var taiKhoan = docBang_('TaiKhoan'), nhomCua = {};
-  docBang_('ThanhVien').forEach(function (t) { nhomCua[String(t.HoVaTen)] = nhomBan_(t.Ban); });
+  // HR được nhắc task của các ban mình quản lý (PG, PR, AD; mọi HR cùng ban đều nhận, để không ai bỏ sót).
+  // Ban HR không do HR quản lý nên Head HR được nhắc task của thành viên ban HR.
+  var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {};
+  docBang_('ThanhVien').forEach(function (t) {
+    banCua[String(t.HoVaTen)] = String(t.Ban);
+    if (t.Email) chucVuTheoEmail[String(t.Email).toLowerCase()] = String(t.ChucVu || '');
+  });
   var tkTheoEmail = {};
   taiKhoan.forEach(function (t) { tkTheoEmail[String(t.Email).toLowerCase()] = t; });
-  var duocCua = function (n) { return boLocTaskHr_(tkTheoEmail[n.email.toLowerCase()] || { VaiTro: n.vaiTro, HoVaTen: n.ten }, taiKhoan, nhomCua); };
 
   var daGui = 0, loi = [];
   nguoiNhan.forEach(function (n) {
     if (n.vaiTro !== 'BOD' && n.vaiTro !== 'HR') return; // UCV không nhận nhắc việc
-    var tin = n.vaiTro === 'BOD'
-      ? soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false)
-      : soanTinNhac_(n.ten, choNhanSu.filter((function (duoc) { return function (t) { return duoc(t.nguoi); }; })(duocCua(n))), hom, true);
+    var tin;
+    if (n.vaiTro === 'BOD') {
+      tin = soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false);
+      if (chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]) === 'HEAD HR') {
+        var tinBanHr = soanTinNhac_(n.ten, choNhanSu.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten; }), hom, true);
+        tin = [tin, tinBanHr].filter(String).join('\n\n');
+      }
+    } else {
+      var q = quyenTask_(tkTheoEmail[n.email.toLowerCase()] || { VaiTro: 'HR', HoVaTen: n.ten }, '', banCua);
+      tin = soanTinNhac_(n.ten, choNhanSu.filter(function (t) { return q.sua(t.nguoi); }), hom, true);
+    }
     if (!tin) return;
     try { if (guiThongBao_(n, 'Nhắc việc', tin)) daGui++; else loi.push(n.ten + ': chưa có cách nhận nào dùng được'); } catch (e) { loi.push(n.ten + ': ' + e.message); }
   });
