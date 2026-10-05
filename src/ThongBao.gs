@@ -252,7 +252,7 @@ function layThongBaoCuaToi(phien) {
   return {
     email: String(tk.Email), vaiTro: String(tk.VaiTro), cach: toi.cach, soMay: toi.may.length, may: toi.may,
     zalo: trangThaiZaloCuaToi_(String(tk.HoVaTen)), khoaCong: khoaVapid_().cong,
-    suKien: { lich: caiDatNhacZalo_().lich.map(moTaMocNhac_), gopY: baoGopYQuaMail_(), thuChoDuyet: batSuKien_('BaoThuChoDuyet') }
+    suKien: { lich: caiDatNhacZalo_().lich.map(moTaMocNhac_), gopY: baoGopYQuaMail_(), thuChoDuyet: batSuKien_('BaoThuChoDuyet'), taskMoi: batSuKien_('BaoTaskMoi'), taskXong: batSuKien_('BaoTaskXong') }
   };
 }
 
@@ -353,12 +353,14 @@ function luuCachNhan(phien, email, cach) {
   return true;
 }
 
-/** Bật/tắt mail báo góp ý mới và thư chờ duyệt. */
+/** Bật/tắt mail báo góp ý mới, thư chờ duyệt, và tin báo task giao (task mới, task đã xong). */
 function luuSuKienThongBao(phien, cd) {
   canDangNhap_(phien, 'caidat');
   cd = cd || {};
   if (cd.gopY !== undefined) datCaiDat_('BaoGopYQuaMail', cd.gopY ? 'bat' : 'tat');
   if (cd.thuChoDuyet !== undefined) datCaiDat_('BaoThuChoDuyet', cd.thuChoDuyet ? 'bat' : 'tat');
+  if (cd.taskMoi !== undefined) datCaiDat_('BaoTaskMoi', cd.taskMoi ? 'bat' : 'tat');
+  if (cd.taskXong !== undefined) datCaiDat_('BaoTaskXong', cd.taskXong ? 'bat' : 'tat');
   return true;
 }
 

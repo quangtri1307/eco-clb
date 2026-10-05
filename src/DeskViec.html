@@ -51,26 +51,28 @@ VIEWS.task = function () {
   dangTai();
   goiPhien('layDuLieuTask').then(function (d) {
     if (page !== 'task') return;
-    var loc = 'mo', tim = '';
+    var loc = 'mo', tim = '', nhom = '';
     var laMo = function (t) { return t.trangThai !== 'Đã xong' && t.trangThai !== 'Đã huỷ'; };
     var hop = function (t, k) { return k === 'mo' ? laMo(t) : t.trangThai === k; };
-    var dem = function (k) { return d.task.filter(function (t) { return hop(t, k); }).length; };
+    var dem = function (k) { return d.task.filter(function (t) { return hop(t, k) && (!nhom || t.nhom === nhom); }).length; };
     var LOC = [['mo', 'Đang mở'], ['Sắp đến hạn', 'Sắp đến hạn'], ['Trễ hạn', 'Trễ hạn'], ['Đã xong', 'Đã xong'], ['Đã huỷ', 'Đã huỷ']];
     $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">' + (NGUOI.vaiTro === 'HR' ? 'Task bạn tạo sẽ ghi là “nhập task”.' : 'Task BOD tạo ghi là “giao task”, task HR tạo ghi là “nhập task”.') + (d.phamVi ? ' ' + esc(d.phamVi) : '') + '</p></div>' + (d.thanhVien.length ? '<button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button>' : '') + '</div>' +
       (d.thongBao ? '<div id="zbox">' + dongThongBao(d.thongBao) + '</div>' : '') +
       '<div class="toolbar"><div class="seg" id="tfil">' + LOC.map(function (x) { return '<button data-f="' + x[0] + '" aria-pressed="' + (x[0] === loc) + '">' + x[1] + ' <span class="n">' + dem(x[0]) + '</span></button>'; }).join('') + '</div>' +
       '<input type="search" id="tq" placeholder="Tìm theo tên task hoặc người phụ trách…" aria-label="Tìm task"></div>' +
+      (d.dsNhom.length > 1 ? '<div class="toolbar"><div class="seg" id="tban">' + [''].concat(d.dsNhom).map(function (n) { return '<button data-b="' + esc(n) + '" aria-pressed="' + (n === nhom) + '">' + (n ? esc(n) : 'Mọi ban') + '</button>'; }).join('') + '</div></div>' : '') +
       '<div id="tam"></div><div class="tasks" id="tl"></div>' +
       '<p class="hint">“Đang mở” gồm mọi task chưa xong và chưa huỷ. “Sắp đến hạn” là còn ' + (d.sapDenHanNgay === 0 ? 'đúng ngày hạn' : d.sapDenHanNgay + ' ngày trở xuống') + '. Task đã xong hoặc đã huỷ được giữ ở đây 120 ngày.</p>';
 
     var ve = function () {
       var q = boDau(tim);
-      var rows = d.task.filter(function (t) { return hop(t, loc) && (!q || boDau(t.ten + ' ' + t.nguoi).indexOf(q) >= 0); });
+      $$('#tfil [data-f]').forEach(function (x) { x.querySelector('.n').textContent = dem(x.getAttribute('data-f')); });
+      var rows = d.task.filter(function (t) { return hop(t, loc) && (!nhom || t.nhom === nhom) && (!q || boDau(t.ten + ' ' + t.nguoi).indexOf(q) >= 0); });
       $('#tl').innerHTML = rows.map(function (t) {
         var i = d.task.indexOf(t), mo = laMo(t), st = ST_TASK[t.trangThai] || ['p-mute', ''];
         return '<div class="task ' + st[1] + '"><div><div class="tt">' + esc(t.ten) + '</div>' + (t.moTa ? '<div class="md">' + esc(t.moTa) + '</div>' : '') +
           '<div class="meta"><span class="pill ' + st[0] + '">' + esc(t.trangThai) + '</span><span>' + ic('users', 14) + ' <b>' + esc(t.nguoi) + '</b></span><span>' + ic('clock', 14) + ' Hạn <b>' + hienNgay(t.hanChot) + '</b></span><span>' + esc(t.kieuTao) + ' bởi ' + esc(t.nguoiTao) + ' · ' + ngayGio(t.thoiGianTao) + '</span></div></div>' +
-          '<div class="act">' + (!t.sua ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
+          '<div class="act">' + (!t.sua ? (t.nguoi !== NGUOI.ten ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button>' : t.trangThai === 'Đã xong' ? '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>' : '') : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
       }).join('') || rong(ic('check') + 'Không có task nào.');
       $$('#tl [data-st]').forEach(function (b) {
         b.onclick = function () {
@@ -113,6 +115,7 @@ VIEWS.task = function () {
     if ($('#newt')) $('#newt').onclick = function () { moForm(null); };
     $('#tfil').onclick = function (e) { var b = e.target.closest('[data-f]'); if (!b) return; loc = b.getAttribute('data-f'); $$('#tfil button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     $('#tq').oninput = function (e) { tim = e.target.value; ve(); };
+    if ($('#tban')) $('#tban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; nhom = b.getAttribute('data-b'); $$('#tban button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     ve();
   }).catch(loiTai);
 };
@@ -293,6 +296,7 @@ var SET = [
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
     ['due', 'clock', 'Lịch nhắc deadline', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
+    ['taskgiao', 'bell', 'Thông báo task giao', function () { var ds = [CD.baoTaskMoi ? 'task mới' : '', CD.baoTaskXong ? 'task đã xong' : ''].filter(String); return ds.length ? 'Báo ' + ds.join(' và ') : 'Đang tắt'; }, 'thông báo task giao mới xong người giao người làm'],
     ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối']]],
   ['Mail', [['notify', 'mail', 'Thông báo qua mail cho BOD', function () { var ds = [CD.baoGopY ? 'góp ý mới' : '', CD.baoThuChoDuyet ? 'thư chờ duyệt' : ''].filter(String); return ds.length ? 'Gửi khi có ' + ds.join(' và ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv'],
     ['mailcfg', 'mail', 'Quyền gửi thư của UCV', function () { return CD.mail.cheDoUcv === 'rieng' ? 'UCV chỉ xem thư của mình' : 'UCV xem toàn bộ hộp thư'; }, 'mail tên người gửi UCV ucv xem hộp thư'],
@@ -491,6 +495,13 @@ var SUB = {
       '<p class="hint" style="margin:0">UCV luôn được báo qua mail khi thư của mình được duyệt hoặc bị trả lại.</p><span id="m"></span></div>';
     $('#bg').onchange = function () { luuVa($('#bg'), $('#m'), 'luuSuKienThongBao', [{ gopY: $('#bg').checked }]); };
     $('#bt').onchange = function () { luuVa($('#bt'), $('#m'), 'luuSuKienThongBao', [{ thuChoDuyet: $('#bt').checked }]); };
+  },
+  taskgiao: function () {
+    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng cho task giao (BOD tạo). Task nhập (HR tạo) chỉ dùng để nhắc deadline và xem lại cuối năm. Tin gửi theo cách nhận mỗi người đã chọn, và chỉ tới người có tài khoản ECODesk.</p>' +
+      '<label class="switch"><input type="checkbox" id="tm"' + (CD.baoTaskMoi ? ' checked' : '') + '>Báo cho người được giao khi có task mới</label>' +
+      '<label class="switch"><input type="checkbox" id="tx"' + (CD.baoTaskXong ? ' checked' : '') + '>Báo cho người giao khi task đã xong</label><span id="m"></span></div>';
+    $('#tm').onchange = function () { luuVa($('#tm'), $('#m'), 'luuSuKienThongBao', [{ taskMoi: $('#tm').checked }]); };
+    $('#tx').onchange = function () { luuVa($('#tx'), $('#m'), 'luuSuKienThongBao', [{ taskXong: $('#tx').checked }]); };
   },
   loginbg: function () {
     var ve = function () {

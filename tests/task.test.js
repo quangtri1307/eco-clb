@@ -112,6 +112,7 @@ test('quyền task theo vai trò và chức vụ', () => {
   assert.deepStrictEqual(ds.filter(headCap.xem), ['Binh', 'Dung']);
   const headHr = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Dung' }, ' head  hr ', ban);
   assert.deepStrictEqual(ds.filter(headHr.sua), ['Em', 'Ha']);
+  assert.ok(ds.every(headHr.xem), 'Head HR xem mọi task');
   const vp = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Duy' }, 'Vice pres', ban);
   assert.deepStrictEqual(ds.filter(vp.sua), ['Dung', 'Duy']);
   assert.ok(ds.every(vp.xem), 'Pres, Vice pres xem mọi task');

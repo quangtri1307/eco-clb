@@ -255,15 +255,26 @@ function nhacViec_(luc) {
   return { daGui: daGui, loi: loi };
 }
 
-/** Báo ngay cho BOD khi được giao task mới. Lỗi thì bỏ qua, không ảnh hưởng việc tạo task. */
-function baoTaskMoiChoBod_(dong, nguoiTao) {
+/** Task giao (không phải task HR nhập để nhắc): báo ngay cho người được giao nếu họ có tài khoản, theo cách họ chọn. Lỗi thì bỏ qua. */
+function baoTaskMoi_(dong, nguoiTao) {
   try {
     var nguoiNhan = nguoiNhanThongBao_();
     dong.forEach(function (d) {
-      var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach && x.vaiTro === 'BOD'; })[0];
+      if (d.KieuTao !== 'Giao task' || !batSuKien_('BaoTaskMoi')) return;
+      var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach; })[0];
       if (!n || n.ten === nguoiTao) return;
       guiThongBao_(n, 'Task mới', 'ECODesk: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay_(d.HanChot) + '.');
     });
+  } catch (e) { /* bỏ qua */ }
+}
+
+/** Task giao vừa được đánh dấu xong: báo cho người giao theo cách họ chọn (trừ khi chính họ đánh dấu). Lỗi thì bỏ qua. */
+function baoTaskXong_(task, nguoiLam, nguoiDanhDau) {
+  try {
+    if (task.kieuTao !== 'Giao task' || task.nguoiTao === nguoiDanhDau || !batSuKien_('BaoTaskXong')) return;
+    var n = nguoiNhanThongBao_().filter(function (x) { return x.ten === task.nguoiTao; })[0];
+    if (!n) return;
+    guiThongBao_(n, 'Task đã xong', 'ECODesk: ' + nguoiLam + ' đã xong task "' + task.ten + '"' + (nguoiDanhDau !== nguoiLam ? ' (' + nguoiDanhDau + ' xác nhận)' : '') + '.');
   } catch (e) { /* bỏ qua */ }
 }
 
