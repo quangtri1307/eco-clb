@@ -359,22 +359,43 @@ function banQuanLy_(giaTri) {
   return ds.sort(soSanhBan_);
 }
 
+/** Các ban HR được phân quản lý task. */
+var BAN_HR_QUAN_LY = ['PG', 'PR', 'AD'];
+
+/** Ban HR quản lý: chỉ PG, PR, AD; chưa phân ban thì cả ba. */
+function banCuaHr_(giaTri) {
+  var ds = banQuanLy_(giaTri).filter(function (b) { return BAN_HR_QUAN_LY.indexOf(b) >= 0; });
+  return ds.length ? ds : BAN_HR_QUAN_LY.slice();
+}
+
+function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toUpperCase(); }
+
 /**
- * Bộ lọc task cho một tài khoản: trả về hàm (tên người phụ trách) → được xem và thao tác hay không.
- * BOD và HR chưa phân ban: mọi task. HR đã phân ban: task của chính mình, của các ban mình quản lý,
- * và của ban (không phải BOD) chưa có HR nào quản lý, để không task nào bị bỏ sót.
- * nhomCua: { họ tên: nhóm ban }.
+ * Quyền với task của một tài khoản. banCua: { họ tên: ban }. Trả về:
+ * - xem(tên), sua(tên): xem được và thao tác được (giao, sửa, đổi trạng thái) task của người đó hay không;
+ * - moTa: câu giải thích phạm vi, hiện ở trang Task.
+ * HR: thành viên các ban được phân (PG, PR, AD). Head ban: thành viên ban mình.
+ * Pres, Vice pres: thao tác task của BOD, xem task mọi ban. BOD chưa có chức vụ rõ: mọi task.
+ * Ai cũng xem được task của chính mình.
  */
-function boLocTaskHr_(tk, taiKhoan, nhomCua) {
-  var cuaToi = banQuanLy_(tk.BanQuanLy);
-  if (String(tk.VaiTro) !== 'HR' || !cuaToi.length) return function () { return true; };
-  var coHr = {};
-  (taiKhoan || []).forEach(function (t) { if (String(t.VaiTro) === 'HR') banQuanLy_(t.BanQuanLy).forEach(function (b) { coHr[b] = true; }); });
-  return function (ten) {
-    if (String(ten) === String(tk.HoVaTen)) return true;
-    var n = nhomCua[String(ten)] || '';
-    return cuaToi.indexOf(n) >= 0 || (n !== 'BOD' && !coHr[n]);
-  };
+function quyenTask_(tk, chucVu, banCua) {
+  var toi = String(tk.HoVaTen);
+  var ban = function (n) { return chuanChu_(banCua[String(n)]); };
+  var tatCa = function () { return true; };
+  var theo = function (sua, moTa) { return { xem: function (n) { return String(n) === toi || sua(n); }, sua: sua, moTa: moTa }; };
+  if (String(tk.VaiTro) === 'HR') {
+    var dsBan = banCuaHr_(tk.BanQuanLy);
+    return theo(function (n) { return dsBan.indexOf(nhomBan_(ban(n))) >= 0; }, 'Bạn quản lý task của ban ' + dsBan.join(', ') + '.');
+  }
+  var cv = chuanChu_(chucVu);
+  if (String(tk.VaiTro) === 'BOD' && /^HEAD /.test(cv)) {
+    var b = cv.slice(5);
+    return theo(function (n) { var x = ban(n); return x === b || (b.indexOf(' ') < 0 && nhomBan_(x) === b); }, 'Bạn giao và quản lý task của ban ' + b + '.');
+  }
+  if (String(tk.VaiTro) === 'BOD' && /^(PRES(IDENT)?|VICE[ -]?PRES(IDENT)?|VP)$/.test(cv)) {
+    return { xem: tatCa, sua: function (n) { return ban(n) === 'BOD'; }, moTa: 'Bạn giao và quản lý task của BOD, xem được task của mọi ban.' };
+  }
+  return { xem: tatCa, sua: tatCa, moTa: '' };
 }
 
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
@@ -1355,7 +1376,7 @@ if (typeof module !== 'undefined') {
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
-    coQuyen: coQuyen_, banQuanLy: banQuanLy_, boLocTaskHr: boLocTaskHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
+    coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
     trangThaiTask: trangThaiTask_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,

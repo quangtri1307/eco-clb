@@ -96,20 +96,26 @@ test('timMaTrongTin', () => {
   assert.strictEqual(L.timMaTrongTin('XK7M2QP', ['K7M2QP']), '');
 });
 
-test('phân ban cho HR: chỉ thấy task của ban mình, ban chưa ai quản lý thì ai cũng thấy', () => {
+test('quyền task theo vai trò và chức vụ', () => {
   assert.deepStrictEqual(L.banQuanLy('ad, PR cap; pg,'), ['PG', 'PR', 'AD']);
   assert.deepStrictEqual(L.banQuanLy(''), []);
-  const nhom = { An: 'PG', Binh: 'PR', Chi: 'AD', Dung: 'BOD', Em: 'HR', Ha: 'HR' };
-  const tk = [
-    { VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR' },
-    { VaiTro: 'HR', HoVaTen: 'Khoa', BanQuanLy: 'PR, AD' },
-    { VaiTro: 'HR', HoVaTen: 'Linh', BanQuanLy: '' },
-    { VaiTro: 'BOD', HoVaTen: 'Dung', BanQuanLy: '' }
-  ];
-  const ha = L.boLocTaskHr(tk[0], tk, nhom);
-  assert.deepStrictEqual(['An', 'Binh', 'Chi', 'Dung', 'Em', 'Ha', 'Người cũ'].filter(ha), ['An', 'Binh', 'Em', 'Ha', 'Người cũ']);
-  const khoa = L.boLocTaskHr(tk[1], tk, nhom);
-  assert.ok(khoa('Binh') && khoa('Chi') && !khoa('Dung'));
-  assert.ok(['An', 'Binh', 'Chi', 'Dung'].every(L.boLocTaskHr(tk[2], tk, nhom)), 'HR chưa phân ban thấy hết');
-  assert.ok(['An', 'Binh', 'Chi', 'Dung'].every(L.boLocTaskHr(tk[3], tk, nhom)), 'BOD thấy hết');
+  assert.deepStrictEqual(L.banCuaHr('HR, BOD'), ['PG', 'PR', 'AD'], 'HR chỉ quản lý PG, PR, AD; chưa phân thì cả ba');
+  const ban = { An: 'PG', Binh: 'PR CAP', Bao: 'PR DES', Chi: 'AD', Dung: 'BOD', Duy: 'BOD', Em: 'HR', Ha: 'HR' };
+  const ds = Object.keys(ban).concat(['Người cũ']);
+  const ha = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR' }, '', ban);
+  assert.deepStrictEqual(ds.filter(ha.sua), ['Binh', 'Bao']);
+  assert.deepStrictEqual(ds.filter(ha.xem), ['Binh', 'Bao', 'Ha'], 'HR xem thêm task của chính mình');
+  const linh = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Linh', BanQuanLy: '' }, '', ban);
+  assert.deepStrictEqual(ds.filter(linh.sua), ['An', 'Binh', 'Bao', 'Chi']);
+  const headCap = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Dung' }, 'Head PR CAP', ban);
+  assert.deepStrictEqual(ds.filter(headCap.sua), ['Binh']);
+  assert.deepStrictEqual(ds.filter(headCap.xem), ['Binh', 'Dung']);
+  const headHr = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Dung' }, ' head  hr ', ban);
+  assert.deepStrictEqual(ds.filter(headHr.sua), ['Em', 'Ha']);
+  const vp = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Duy' }, 'Vice pres', ban);
+  assert.deepStrictEqual(ds.filter(vp.sua), ['Dung', 'Duy']);
+  assert.ok(ds.every(vp.xem), 'Pres, Vice pres xem mọi task');
+  assert.ok(L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Duy' }, 'Pres', ban).sua('Dung'));
+  const khac = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Duy' }, '', ban);
+  assert.ok(ds.every(khac.sua), 'BOD chưa có chức vụ rõ thì như cũ');
 });

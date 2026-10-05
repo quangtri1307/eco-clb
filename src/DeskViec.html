@@ -56,7 +56,7 @@ VIEWS.task = function () {
     var hop = function (t, k) { return k === 'mo' ? laMo(t) : t.trangThai === k; };
     var dem = function (k) { return d.task.filter(function (t) { return hop(t, k); }).length; };
     var LOC = [['mo', 'Đang mở'], ['Sắp đến hạn', 'Sắp đến hạn'], ['Trễ hạn', 'Trễ hạn'], ['Đã xong', 'Đã xong'], ['Đã huỷ', 'Đã huỷ']];
-    $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">' + (NGUOI.vaiTro === 'HR' ? 'Task bạn tạo sẽ ghi là “nhập task”.' + (d.banQuanLy && d.banQuanLy.length ? ' Bạn đang quản lý ban ' + esc(d.banQuanLy.join(', ')) + '.' : '') : 'Task BOD tạo ghi là “giao task”, task HR tạo ghi là “nhập task”.') + '</p></div><button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">' + (NGUOI.vaiTro === 'HR' ? 'Task bạn tạo sẽ ghi là “nhập task”.' : 'Task BOD tạo ghi là “giao task”, task HR tạo ghi là “nhập task”.') + (d.phamVi ? ' ' + esc(d.phamVi) : '') + '</p></div>' + (d.thanhVien.length ? '<button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button>' : '') + '</div>' +
       (d.thongBao ? '<div id="zbox">' + dongThongBao(d.thongBao) + '</div>' : '') +
       '<div class="toolbar"><div class="seg" id="tfil">' + LOC.map(function (x) { return '<button data-f="' + x[0] + '" aria-pressed="' + (x[0] === loc) + '">' + x[1] + ' <span class="n">' + dem(x[0]) + '</span></button>'; }).join('') + '</div>' +
       '<input type="search" id="tq" placeholder="Tìm theo tên task hoặc người phụ trách…" aria-label="Tìm task"></div>' +
@@ -70,7 +70,7 @@ VIEWS.task = function () {
         var i = d.task.indexOf(t), mo = laMo(t), st = ST_TASK[t.trangThai] || ['p-mute', ''];
         return '<div class="task ' + st[1] + '"><div><div class="tt">' + esc(t.ten) + '</div>' + (t.moTa ? '<div class="md">' + esc(t.moTa) + '</div>' : '') +
           '<div class="meta"><span class="pill ' + st[0] + '">' + esc(t.trangThai) + '</span><span>' + ic('users', 14) + ' <b>' + esc(t.nguoi) + '</b></span><span>' + ic('clock', 14) + ' Hạn <b>' + hienNgay(t.hanChot) + '</b></span><span>' + esc(t.kieuTao) + ' bởi ' + esc(t.nguoiTao) + ' · ' + ngayGio(t.thoiGianTao) + '</span></div></div>' +
-          '<div class="act">' + (mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
+          '<div class="act">' + (!t.sua ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
       }).join('') || rong(ic('check') + 'Không có task nào.');
       $$('#tl [data-st]').forEach(function (b) {
         b.onclick = function () {
@@ -110,7 +110,7 @@ VIEWS.task = function () {
       if (window.innerWidth > 860) $('#tn').focus();
     };
 
-    $('#newt').onclick = function () { moForm(null); };
+    if ($('#newt')) $('#newt').onclick = function () { moForm(null); };
     $('#tfil').onclick = function (e) { var b = e.target.closest('[data-f]'); if (!b) return; loc = b.getAttribute('data-f'); $$('#tfil button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     $('#tq').oninput = function (e) { tim = e.target.value; ve(); };
     ve();
@@ -299,7 +299,7 @@ var SET = [
     ['sign', 'edit', 'Chữ ký thư', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature'],
     ['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['Làm log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
-  ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR, mã HR và phân ban', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad mã hr'],
+  ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad mã hr'],
     ['ucv', 'users', 'Tài khoản UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' tài khoản'; }, 'UCV ucv tài khoản mail'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho BOD, HR và UCV'; }, 'mật khẩu tài khoản đặt lại'],
     ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'],
@@ -557,7 +557,7 @@ var SUB = {
     var dsNgay = [-7, -5, -3, -2, -1, 0, 1, 2, 3, 5, 7, 'T'];
     $('#subbody').innerHTML = '<form class="card form" id="duef"><p class="hint" style="margin:0">BOD được nhắc task của mình, HR được nhắc task của thành viên để nhắc lại các ban. Mỗi người nhận theo cách đã chọn ở mục Nhắc deadline.</p>' +
       '<label class="f">Task hiện “sắp đến hạn” trong danh sách task khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
-      '<div style="display:grid;gap:6px"><b style="font-size:13.5px">Lịch nhắc</b><span class="hint">Mỗi mốc là một lần nhắc vào ngày và giờ đã chọn, cả trước hạn lẫn trễ hạn. Ví dụ: trước hạn 2 ngày lúc 19:00, ngày hạn chót lúc 06:00, trễ hạn 1 ngày lúc 19:00. Google gửi lệch vài phút quanh giờ đã chọn.</span><div id="dsmoc" style="display:grid;gap:8px"></div></div>' +
+      '<div style="display:grid;gap:6px"><b style="font-size:13.5px">Lịch nhắc</b><span class="hint">Mỗi mốc là một lần nhắc vào ngày và giờ đã chọn, cả trước hạn lẫn trễ hạn. Ví dụ: trước hạn 2 ngày lúc 19:00, ngày hạn chót lúc 06:00, trễ hạn 1 ngày lúc 19:00. Google gửi lệch vài phút quanh giờ đã chọn.</span><span class="hint">Mỗi task được xét riêng theo hạn chót của từng người: những người cùng hạn chót được nhắc chung một lần, hạn chót khác nhau thì chỉ nhắc người có task đúng mốc.</span><div id="dsmoc" style="display:grid;gap:8px"></div></div>' +
       '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
     var chonMoc = function (m, i) {
       var ng = dsNgay.indexOf(m.ngay) < 0 ? dsNgay.concat([m.ngay]) : dsNgay;
@@ -708,15 +708,17 @@ var SUB = {
     var daCo = {}; CD.taiKhoan.forEach(function (t) { daCo[t.email.toLowerCase()] = true; });
     var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()]; });
     // HR được phân quản lý một số ban: chỉ thấy, thao tác và được nhắc deadline task của các ban đó.
-    var cacBan = [];
-    CD.thanhVien.forEach(function (t) { var n = String(t.ban).trim().split(/\s+/)[0].toUpperCase(); if (n && n !== 'BOD' && cacBan.indexOf(n) < 0) cacBan.push(n); });
+    var cacBan = ['PG', 'PR', 'AD'];
+    var chuaAi = vaiTro !== 'HR' || hr.some(function (t) { return !t.banQuanLy.some(function (b) { return cacBan.indexOf(b) >= 0; }); }) ? []
+      : cacBan.filter(function (b) { return !hr.some(function (t) { return t.banQuanLy.indexOf(b) >= 0; }); });
     var phanBan = function (t, i) {
       if (vaiTro !== 'HR') return '';
       return '<div class="row" style="gap:10px;margin-top:6px;flex-wrap:wrap"><label class="row" style="gap:6px;font-size:13px"><span class="hint">Mã HR</span><input type="text" id="mhr' + i + '" value="' + esc(t.maHr || '') + '" maxlength="20" placeholder="VD: HR01" style="width:110px" aria-label="Mã HR của ' + esc(t.ten) + '"></label>' +
         (cacBan.length ? '<span class="hint">Quản lý ban:</span>' + cacBan.map(function (n) { return '<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" data-pb="' + i + '" value="' + esc(n) + '"' + (t.banQuanLy.indexOf(n) >= 0 ? ' checked' : '') + '>' + esc(n) + '</label>'; }).join('') : '') +
         '<button class="btn ghost sm" data-luupb="' + i + '">Lưu</button><span id="pbm' + i + '"></span></div>';
     };
-    $('#subbody').innerHTML = (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>Phân ban cho từng HR: HR chỉ thấy, thao tác và được nhắc deadline task của các ban mình quản lý. Mọi HR cùng quản lý một ban đều được nhắc. Chưa phân ban thì HR thấy mọi task. Ban chưa có HR nào quản lý thì mọi HR đều thấy, để không task nào bị bỏ sót. BOD luôn thấy mọi task.</span></div>' : '') +
+    $('#subbody').innerHTML = (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>HR quản lý task của PG, PR và AD. HR chỉ thấy, giao và được nhắc deadline task của thành viên các ban mình được phân. Mọi HR cùng quản lý một ban đều được nhắc. Chưa phân ban thì HR quản lý cả ba ban. Task của ban HR do Head HR quản lý và nhắc.</span></div>' : '') +
+      (chuaAi.length ? '<p class="err">Ban ' + chuaAi.join(', ') + ' chưa có HR nào quản lý nên task của ban này chưa được ai nhắc.</p>' : '') +
       '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + phanBan(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
       '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau. Nếu CLB đã bật đăng nhập bằng Google, họ có thể đăng nhập bằng Google luôn.</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });

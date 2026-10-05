@@ -361,7 +361,7 @@ function luuBanQuanLy(phien, email, dsBan, maHr) {
     if (ma.loi) throw new Error(ma.loi);
     ghiCotTaiKhoan_(tk.Email, 'MaHr', ma.ma);
   }
-  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).join(', '));
+  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).filter(function (b) { return BAN_HR_QUAN_LY.indexOf(b) >= 0; }).join(', '));
   return true;
 }
 
@@ -405,15 +405,15 @@ function soNgaySapDenHan_() {
   return n === null || n === '' ? 2 : Number(n);
 }
 
-/** Bộ lọc task theo ban HR quản lý (BOD và HR chưa phân ban thấy hết). */
-function boLocTaskCua_(tk) {
-  var nhomCua = {};
-  docBang_('ThanhVien').forEach(function (t) { nhomCua[String(t.HoVaTen)] = nhomBan_(t.Ban); });
-  return boLocTaskHr_(tk, docBang_('TaiKhoan'), nhomCua);
+/** Quyền với task của tài khoản đang đăng nhập (theo vai trò, ban HR được phân, chức vụ BOD). */
+function quyenTaskCua_(tk) {
+  var banCua = {};
+  docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); });
+  return quyenTask_(tk, String(tk.VaiTro) === 'BOD' ? chucVuCua_(tk) : '', banCua);
 }
 
-function kiemTraDuocGiao_(duoc, ten) {
-  if (!duoc(ten)) throw new Error('Bạn chỉ quản lý task của các ban được phân. ' + ten + ' không thuộc ban bạn quản lý.');
+function kiemTraDuocGiao_(q, ten) {
+  if (!q.sua(ten)) throw new Error('Bạn không có quyền với task của ' + ten + '. ' + (q.moTa || ''));
 }
 
 /** Đọc toàn bộ task kèm trạng thái đã tính. */
@@ -434,18 +434,19 @@ function docTask_() {
 function layDuLieuTask(phien) {
   var tk = canDangNhap_(phien, 'task');
   var moc = Date.now() - GIU_TASK_DA_KET_THUC_NGAY * 864e5;
-  var duoc = boLocTaskCua_(tk);
+  var q = quyenTaskCua_(tk);
   var ds = docTask_().filter(function (t) {
-    if (!duoc(t.nguoi)) return false;
+    if (!q.xem(t.nguoi)) return false;
     if (t.trangThaiLuu !== TRANG_THAI_TASK.XONG && t.trangThaiLuu !== TRANG_THAI_TASK.HUY) return true;
     return (t.thoiGianXong || t.thoiGianTao) >= moc;
-  }).sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : b.thoiGianTao - a.thoiGianTao; });
+  }).map(function (t) { t.sua = q.sua(t.nguoi); return t; })
+    .sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : b.thoiGianTao - a.thoiGianTao; });
   return {
     homNay: homNay_(),
     sapDenHanNgay: soNgaySapDenHan_(),
     task: ds,
-    thanhVien: docThanhVien_().filter(function (tv) { return duoc(tv.HoVaTen); }).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
-    banQuanLy: banQuanLy_(tk.BanQuanLy),
+    thanhVien: docThanhVien_().filter(function (tv) { return q.sua(tv.HoVaTen); }).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
+    phamVi: q.moTa,
     thongBao: (function () {
       var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
       return toi ? { cach: toi.cach } : null;
@@ -455,8 +456,8 @@ function layDuLieuTask(phien) {
 
 function taoTask(phien, yeuCau) {
   var tk = canDangNhap_(phien, 'task');
-  var duoc = boLocTaskCua_(tk);
-  ((yeuCau && yeuCau.nguoi) || []).forEach(function (n) { kiemTraDuocGiao_(duoc, n); });
+  var q = quyenTaskCua_(tk);
+  ((yeuCau && yeuCau.nguoi) || []).forEach(function (n) { kiemTraDuocGiao_(q, n); });
   var khoa = layKhoa_();
   var kq;
   try {
@@ -481,9 +482,9 @@ function timDongTask_(v, thoiGianTao, nguoi) {
 
 /** Sửa tên, mô tả, hạn chót hoặc người phụ trách của một task. */
 function suaTask(phien, thoiGianTao, nguoiCu, moi) {
-  var duoc = boLocTaskCua_(canDangNhap_(phien, 'task'));
-  kiemTraDuocGiao_(duoc, nguoiCu);
-  kiemTraDuocGiao_(duoc, moi && moi.nguoi);
+  var q = quyenTaskCua_(canDangNhap_(phien, 'task'));
+  kiemTraDuocGiao_(q, nguoiCu);
+  kiemTraDuocGiao_(q, moi && moi.nguoi);
   var k = kiemTraTask_({ ten: moi && moi.ten, moTa: moi && moi.moTa, hanChot: moi && moi.hanChot, nguoi: [moi && moi.nguoi] }, docBang_('ThanhVien'));
   if (k.loi) throw new Error(k.loi);
   var khoa = layKhoa_();
@@ -506,7 +507,7 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
 
 /** Đánh dấu Đã xong, Đã huỷ, hoặc mở lại (Đã giao). */
 function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
-  kiemTraDuocGiao_(boLocTaskCua_(canDangNhap_(phien, 'task')), nguoi);
+  kiemTraDuocGiao_(quyenTaskCua_(canDangNhap_(phien, 'task')), nguoi);
   if ([TRANG_THAI_TASK.XONG, TRANG_THAI_TASK.HUY, TRANG_THAI_TASK.GIAO].indexOf(trangThai) < 0) throw new Error('Trạng thái không hợp lệ.');
   return voiKhoa_(function () {
     var sh = bangDuLieu_('Task');
@@ -579,8 +580,8 @@ function layTrangChu(phien) {
     if (vaiTro === 'HR') {
       var bod = {};
       docBang_('TaiKhoan').forEach(function (t) { if (t.VaiTro === 'BOD') bod[String(t.HoVaTen)] = true; });
-      var duoc = boLocTaskCua_(tk);
-      kq.taskThanhVien = dem(dsTask.filter(function (t) { return !bod[t.nguoi] && duoc(t.nguoi); }));
+      var q = quyenTaskCua_(tk);
+      kq.taskThanhVien = dem(dsTask.filter(function (t) { return !bod[t.nguoi] && q.sua(t.nguoi); }));
     }
   }
   if (vaiTro === 'BOD') {
