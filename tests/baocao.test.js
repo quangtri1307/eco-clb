@@ -19,7 +19,7 @@ const TASK = [
 
 test('chiSoBaoCao tách Seeding theo tên hoạt động', () => {
   const ds = L.chiSoBaoCao(['Staff', 'Seeding'], LS).map((c) => c.khoa);
-  assert.deepStrictEqual(ds, ['diem', 'loai:Staff', 'loai:Seeding:comment', 'loai:Seeding:react', 'taskXong', 'taskTre']);
+  assert.deepStrictEqual(ds, ['diem', 'loai:Staff', 'loai:Seeding:comment', 'loai:Seeding:react', 'taskXong', 'taskTre', 'taskKht']);
 });
 
 test('tongHopBaoCao theo thành viên, bỏ người đã rời CLB', () => {
@@ -74,4 +74,16 @@ test('timTieuDeMauLog và kiemTraFileLog', () => {
   assert.match(L.kiemTraFileLog({ coMau: true, tenFile: 'x', nguoi: ['an'], buoi: [' '] }, TVs).loi, /chưa đặt tên/);
   assert.match(L.kiemTraFileLog({ coMau: true, tenFile: 'x', nguoi: [], buoi: ['a'] }, TVs).loi, /thành viên/);
   assert.match(L.kiemTraFileLog({ tenFile: 'Log T10', nguoi: ['an'], buoi: ['Buổi 1'] }, TVs).loi, /file mẫu/);
+});
+
+test('báo cáo đếm task không hoàn thành', () => {
+  const tv = [{ ten: 'An', ban: 'PG', nhom: 'PG' }];
+  const task = [
+    { nguoi: 'An', hanChot: '2026-10-05', trangThaiLuu: 'Đã giao', ngayXong: '' },
+    { nguoi: 'An', hanChot: '2026-10-09', trangThaiLuu: 'Đã giao', ngayXong: '' },
+    { nguoi: 'An', hanChot: '2026-10-01', trangThaiLuu: 'Đã xong', ngayXong: '2026-10-08' }
+  ];
+  const kq = L.tongHopBaoCao([], task, tv, '2026-10-01', '2026-10-31', 'thanhvien', '2026-10-10', 1);
+  assert.strictEqual(kq.dong[0].so.taskKht, 1);
+  assert.strictEqual(kq.dong[0].so.taskTre, 3);
 });
