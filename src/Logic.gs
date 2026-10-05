@@ -375,8 +375,8 @@ function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g,
  * - xem(tên), sua(tên): xem được và thao tác được (giao, sửa, đổi trạng thái) task của người đó hay không;
  * - moTa: câu giải thích phạm vi, hiện ở trang Task.
  * HR: thành viên các ban được phân (PG, PR, AD). Head ban: thành viên ban mình.
- * Pres, Vice pres: thao tác task của BOD, xem task mọi ban. BOD chưa có chức vụ rõ: mọi task.
- * Ai cũng xem được task của chính mình.
+ * Pres, Vice pres: thao tác task của BOD. Pres, Vice pres và Head HR xem được task mọi ban.
+ * BOD chưa có chức vụ rõ: mọi task. Ai cũng xem được và tự xác nhận xong task của chính mình.
  */
 function quyenTask_(tk, chucVu, banCua) {
   var toi = String(tk.HoVaTen);
@@ -390,7 +390,9 @@ function quyenTask_(tk, chucVu, banCua) {
   var cv = chuanChu_(chucVu);
   if (String(tk.VaiTro) === 'BOD' && /^HEAD /.test(cv)) {
     var b = cv.slice(5);
-    return theo(function (n) { var x = ban(n); return x === b || (b.indexOf(' ') < 0 && nhomBan_(x) === b); }, 'Bạn giao và quản lý task của ban ' + b + '.');
+    var cuaBan = function (n) { var x = ban(n); return x === b || (b.indexOf(' ') < 0 && nhomBan_(x) === b); };
+    if (b === 'HR') return { xem: tatCa, sua: cuaBan, moTa: 'Bạn giao và quản lý task của ban HR, xem được task của mọi ban.' };
+    return theo(cuaBan, 'Bạn giao và quản lý task của ban ' + b + '.');
   }
   if (String(tk.VaiTro) === 'BOD' && /^(PRES(IDENT)?|VICE[ -]?PRES(IDENT)?|VP)$/.test(cv)) {
     return { xem: tatCa, sua: function (n) { return ban(n) === 'BOD'; }, moTa: 'Bạn giao và quản lý task của BOD, xem được task của mọi ban.' };
