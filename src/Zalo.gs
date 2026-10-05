@@ -260,7 +260,7 @@ function baoTaskMoi_(dong, nguoiTao) {
   try {
     var nguoiNhan = nguoiNhanThongBao_();
     dong.forEach(function (d) {
-      if (d.KieuTao !== 'Giao task') return;
+      if (d.KieuTao !== 'Giao task' || !batSuKien_('BaoTaskMoi')) return;
       var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach; })[0];
       if (!n || n.ten === nguoiTao) return;
       guiThongBao_(n, 'Task mới', 'ECODesk: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay_(d.HanChot) + '.');
@@ -271,7 +271,7 @@ function baoTaskMoi_(dong, nguoiTao) {
 /** Task giao vừa được đánh dấu xong: báo cho người giao theo cách họ chọn (trừ khi chính họ đánh dấu). Lỗi thì bỏ qua. */
 function baoTaskXong_(task, nguoiLam, nguoiDanhDau) {
   try {
-    if (task.kieuTao !== 'Giao task' || task.nguoiTao === nguoiDanhDau) return;
+    if (task.kieuTao !== 'Giao task' || task.nguoiTao === nguoiDanhDau || !batSuKien_('BaoTaskXong')) return;
     var n = nguoiNhanThongBao_().filter(function (x) { return x.ten === task.nguoiTao; })[0];
     if (!n) return;
     guiThongBao_(n, 'Task đã xong', 'ECODesk: ' + nguoiLam + ' đã xong task "' + task.ten + '"' + (nguoiDanhDau !== nguoiLam ? ' (' + nguoiDanhDau + ' xác nhận)' : '') + '.');

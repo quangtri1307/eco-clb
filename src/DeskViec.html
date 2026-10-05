@@ -296,6 +296,7 @@ var SET = [
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
     ['due', 'clock', 'Lịch nhắc deadline', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
+    ['taskgiao', 'bell', 'Thông báo task giao', function () { var ds = [CD.baoTaskMoi ? 'task mới' : '', CD.baoTaskXong ? 'task đã xong' : ''].filter(String); return ds.length ? 'Báo ' + ds.join(' và ') : 'Đang tắt'; }, 'thông báo task giao mới xong người giao người làm'],
     ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối']]],
   ['Mail', [['notify', 'mail', 'Thông báo qua mail cho BOD', function () { var ds = [CD.baoGopY ? 'góp ý mới' : '', CD.baoThuChoDuyet ? 'thư chờ duyệt' : ''].filter(String); return ds.length ? 'Gửi khi có ' + ds.join(' và ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv'],
     ['mailcfg', 'mail', 'Quyền gửi thư của UCV', function () { return CD.mail.cheDoUcv === 'rieng' ? 'UCV chỉ xem thư của mình' : 'UCV xem toàn bộ hộp thư'; }, 'mail tên người gửi UCV ucv xem hộp thư'],
@@ -494,6 +495,13 @@ var SUB = {
       '<p class="hint" style="margin:0">UCV luôn được báo qua mail khi thư của mình được duyệt hoặc bị trả lại.</p><span id="m"></span></div>';
     $('#bg').onchange = function () { luuVa($('#bg'), $('#m'), 'luuSuKienThongBao', [{ gopY: $('#bg').checked }]); };
     $('#bt').onchange = function () { luuVa($('#bt'), $('#m'), 'luuSuKienThongBao', [{ thuChoDuyet: $('#bt').checked }]); };
+  },
+  taskgiao: function () {
+    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng cho task giao (BOD tạo). Task nhập (HR tạo) chỉ dùng để nhắc deadline và xem lại cuối năm. Tin gửi theo cách nhận mỗi người đã chọn, và chỉ tới người có tài khoản ECODesk.</p>' +
+      '<label class="switch"><input type="checkbox" id="tm"' + (CD.baoTaskMoi ? ' checked' : '') + '>Báo cho người được giao khi có task mới</label>' +
+      '<label class="switch"><input type="checkbox" id="tx"' + (CD.baoTaskXong ? ' checked' : '') + '>Báo cho người giao khi task đã xong</label><span id="m"></span></div>';
+    $('#tm').onchange = function () { luuVa($('#tm'), $('#m'), 'luuSuKienThongBao', [{ taskMoi: $('#tm').checked }]); };
+    $('#tx').onchange = function () { luuVa($('#tx'), $('#m'), 'luuSuKienThongBao', [{ taskXong: $('#tx').checked }]); };
   },
   loginbg: function () {
     var ve = function () {

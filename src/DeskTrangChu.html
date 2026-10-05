@@ -90,9 +90,10 @@ function dongThongBao(tb) {
 }
 function suKienCuaToi(tb) {
   var g = tb.suKien.lich.join('; ');
-  if (tb.vaiTro === 'HR') return { cach: ['Task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại các ban (' + g + ').'], mail: [] };
+  var giao = [].concat(tb.suKien.taskMoi ? ['Khi có người giao task mới cho bạn.'] : []).concat(tb.suKien.taskXong ? ['Khi task bạn giao đã được làm xong.'] : []);
+  if (tb.vaiTro === 'HR') return { cach: ['Task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại các ban (' + g + ').'].concat(tb.suKien.taskMoi ? ['Khi có người giao task mới cho bạn.'] : []), mail: [] };
   return {
-    cach: ['Task của bạn sắp đến hạn hoặc trễ hạn (' + g + ').', 'Khi có người giao task mới cho bạn.'],
+    cach: ['Task của bạn sắp đến hạn hoặc trễ hạn (' + g + ').'].concat(giao),
     mail: [].concat(tb.suKien.thuChoDuyet ? ['UCV gửi thư chờ duyệt.'] : []).concat(tb.suKien.gopY ? ['Có góp ý mới từ ECOBoard.'] : [])
   };
 }

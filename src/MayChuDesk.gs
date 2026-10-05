@@ -243,6 +243,8 @@ function layCaiDatDesk(phien) {
     quyChe: String(layCaiDat_('QuyChe') || ''),
     baoGopY: baoGopYQuaMail_(),
     baoThuChoDuyet: batSuKien_('BaoThuChoDuyet'),
+    baoTaskMoi: batSuKien_('BaoTaskMoi'),
+    baoTaskXong: batSuKien_('BaoTaskXong'),
     nhac: caiDatNhacZalo_(),
     anhNen: String(layCaiDat_('AnhNenPhienBan') || ''),
     ghim: docBang_('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
