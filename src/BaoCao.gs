@@ -58,12 +58,12 @@ function kiemTraKhoang_(tu, den) {
 function tinhBaoCao_(tu, den, cheDo) {
   kiemTraKhoang_(tu, den);
   cheDo = ['thanhvien', 'ban', 'clb'].indexOf(cheDo) >= 0 ? cheDo : 'thanhvien';
-  var d = duLieuBaoCao_(), hom = homNay_();
+  var d = duLieuBaoCao_(), hom = homNay_(), kht = soNgayKhongHoanThanh_();
   var lichSuKhoang = d.lichSu.filter(function (x) { return x.ngay >= tu && x.ngay <= den; });
   return {
     chiSo: chiSoBaoCao_(d.loai, lichSuKhoang),
-    bang: tongHopBaoCao_(d.lichSu, d.task, d.thanhVien, tu, den, cheDo, hom).dong,
-    bieuDo: bieuDoBaoCao_(lichSuKhoang, d.task, d.thanhVien, tu, den, cheDo, hom)
+    bang: tongHopBaoCao_(d.lichSu, d.task, d.thanhVien, tu, den, cheDo, hom, kht).dong,
+    bieuDo: bieuDoBaoCao_(lichSuKhoang, d.task, d.thanhVien, tu, den, cheDo, hom, kht)
   };
 }
 

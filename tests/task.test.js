@@ -120,3 +120,14 @@ test('quyền task theo vai trò và chức vụ', () => {
   const khac = L.quyenTask({ VaiTro: 'BOD', HoVaTen: 'Duy' }, '', ban);
   assert.ok(ds.every(khac.sua), 'BOD chưa có chức vụ rõ thì như cũ');
 });
+
+test('task trễ quá số ngày cài đặt thì tính là không hoàn thành và thôi nhắc', () => {
+  assert.strictEqual(L.trangThaiTask('Đã giao', '2026-10-05', '2026-10-06', 2, 1), 'Trễ hạn');
+  assert.strictEqual(L.trangThaiTask('Đã giao', '2026-10-05', '2026-10-07', 2, 1), 'Không hoàn thành');
+  assert.strictEqual(L.trangThaiTask('Đã giao', '2026-10-05', '2026-10-06', 2, 0), 'Không hoàn thành');
+  assert.strictEqual(L.trangThaiTask('Đã xong', '2026-10-05', '2026-10-20', 2, 1), 'Đã xong');
+  assert.strictEqual(L.trangThaiTask('Đã giao', '2026-10-05', '2026-10-20', 2), 'Trễ hạn', 'không truyền số ngày thì không áp dụng');
+  const lich = [{ ngay: 'T', gio: 6, phut: 30 }];
+  const ds = [{ hanChot: '2026-10-05', trangThai: 'Trễ hạn' }, { hanChot: '2026-10-03', trangThai: 'Không hoàn thành' }];
+  assert.strictEqual(L.chonTaskTheoLich(ds, '2026-10-06', lich, null).length, 1);
+});

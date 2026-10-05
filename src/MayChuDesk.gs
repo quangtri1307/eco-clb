@@ -249,6 +249,7 @@ function layCaiDatDesk(phien) {
     anhNen: String(layCaiDat_('AnhNenPhienBan') || ''),
     ghim: docBang_('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
     sapDenHanNgay: soNgaySapDenHan_(),
+    khongHoanThanhSau: soNgayKhongHoanThanh_(),
     mail: { cheDoUcv: cheDoXemUcv_(), soDanhBa: docBang_('DanhBa').length, soThanhVien: tv.filter(function (t) { return emailHopLe_(t.Email); }).length },
     googleClientId: String(layCaiDat_('GoogleClientId') || ''),
     chuDe: chuDeHopLe_(layCaiDat_('ChuDe')),
@@ -402,6 +403,12 @@ function ngayChuoi_(v) {
   return String(v || '').slice(0, 10);
 }
 
+/** Trễ quá bao nhiêu ngày thì task tính là không hoàn thành (mặc định 1). */
+function soNgayKhongHoanThanh_() {
+  var n = layCaiDat_('KhongHoanThanhSauNgay');
+  return n === null || n === '' ? 1 : Number(n);
+}
+
 function soNgaySapDenHan_() {
   var n = layCaiDat_('SapDenHanNgay');
   return n === null || n === '' ? 2 : Number(n);
@@ -420,14 +427,14 @@ function kiemTraDuocGiao_(q, ten) {
 
 /** Đọc toàn bộ task kèm trạng thái đã tính. */
 function docTask_() {
-  var hom = homNay_(), sap = soNgaySapDenHan_();
+  var hom = homNay_(), sap = soNgaySapDenHan_(), kht = soNgayKhongHoanThanh_();
   return docBangNhiemKy_('Task', 'ThoiGianTao').map(function (t) {
     var han = ngayChuoi_(t.HanChot);
     var luu = String(t.TrangThai || TRANG_THAI_TASK.GIAO);
     return {
       thoiGianTao: new Date(t.ThoiGianTao).getTime(), ten: String(t.TenTask), moTa: String(t.MoTa || ''), hanChot: han,
       nguoi: String(t.NguoiPhuTrach), nguoiTao: String(t.NguoiTao), kieuTao: String(t.KieuTao),
-      trangThaiLuu: luu, trangThai: trangThaiTask_(luu, han, hom, sap),
+      trangThaiLuu: luu, trangThai: trangThaiTask_(luu, han, hom, sap, kht),
       thoiGianXong: t.ThoiGianXong ? new Date(t.ThoiGianXong).getTime() : null
     };
   });
@@ -440,6 +447,7 @@ function layDuLieuTask(phien) {
   docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); });
   var ds = docTask_().filter(function (t) {
     if (!q.xem(t.nguoi)) return false;
+    if (t.trangThai === TRANG_THAI_TASK.KHT) return new Date(t.hanChot).getTime() >= moc;
     if (t.trangThaiLuu !== TRANG_THAI_TASK.XONG && t.trangThaiLuu !== TRANG_THAI_TASK.HUY) return true;
     return (t.thoiGianXong || t.thoiGianTao) >= moc;
   }).map(function (t) { t.sua = q.sua(t.nguoi); t.nhom = nhomBan_(banCua[t.nguoi]) || 'Khác'; return t; })
@@ -447,6 +455,7 @@ function layDuLieuTask(phien) {
   return {
     homNay: homNay_(),
     sapDenHanNgay: soNgaySapDenHan_(),
+    khongHoanThanhSau: soNgayKhongHoanThanh_(),
     task: ds,
     thanhVien: docThanhVien_().filter(function (tv) { return q.sua(tv.HoVaTen); }).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
     phamVi: q.moTa,
@@ -520,6 +529,9 @@ function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
     var v = sh.getDataRange().getValues();
     var dong = timDongTask_(v, thoiGianTao, nguoi);
     var td = v[0];
+    if (trangThai === TRANG_THAI_TASK.XONG && laKhongHoanThanh_(String(v[dong - 1][td.indexOf('TrangThai')] || TRANG_THAI_TASK.GIAO), ngayChuoi_(v[dong - 1][td.indexOf('HanChot')]), homNay_(), soNgayKhongHoanThanh_())) {
+      throw new Error('Task đã trễ quá hạn nên được tính là không hoàn thành. Muốn ghi nhận xong thì người quản lý sửa hạn chót trước.');
+    }
     sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
     sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
     var r = v[dong - 1];
@@ -581,7 +593,7 @@ function layTrangChu(phien) {
   var vaiTro = String(tk.VaiTro), ten = String(tk.HoVaTen);
   var kq = { vaiTro: vaiTro };
   if (vaiTro === 'BOD' || vaiTro === 'HR') {
-    var dsTask = docTask_().filter(function (t) { return t.trangThai !== TRANG_THAI_TASK.XONG && t.trangThai !== TRANG_THAI_TASK.HUY; });
+    var dsTask = docTask_().filter(function (t) { return t.trangThai !== TRANG_THAI_TASK.XONG && t.trangThai !== TRANG_THAI_TASK.HUY && t.trangThai !== TRANG_THAI_TASK.KHT; });
     var dem = function (ds) {
       return { dangLam: ds.length, sap: ds.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.SAP; }).length, tre: ds.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.TRE; }).length };
     };

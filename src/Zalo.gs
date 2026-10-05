@@ -347,6 +347,11 @@ function luuNhacViec(phien, cd) {
     if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
     datCaiDat_('SapDenHanNgay', n);
   }
+  if (cd.khongHoanThanhSau !== undefined) {
+    var k = Math.round(Number(cd.khongHoanThanhSau));
+    if (!(k >= 0 && k <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
+    datCaiDat_('KhongHoanThanhSauNgay', k);
+  }
   datCaiDat_('LichNhac', JSON.stringify(lich));
   caiLichNhac_(dsLuc);
   return true;

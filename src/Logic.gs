@@ -473,7 +473,13 @@ function chuanHoaGhim_(ds) {
 /* ===================== Task ===================== */
 
 /** Trạng thái lưu trong sheet chỉ có Đã giao, Đã xong, Đã huỷ. Sắp đến hạn và Trễ hạn được tính từ hạn chót. */
-var TRANG_THAI_TASK = { GIAO: 'Đã giao', SAP: 'Sắp đến hạn', TRE: 'Trễ hạn', XONG: 'Đã xong', HUY: 'Đã huỷ' };
+var TRANG_THAI_TASK = { GIAO: 'Đã giao', SAP: 'Sắp đến hạn', TRE: 'Trễ hạn', KHT: 'Không hoàn thành', XONG: 'Đã xong', HUY: 'Đã huỷ' };
+
+/** Task chưa xong, chưa huỷ mà trễ quá khtSau ngày thì tính là không hoàn thành (khtSau không phải số: không áp dụng). */
+function laKhongHoanThanh_(trangThaiLuu, hanChot, homNay, khtSau) {
+  if (typeof khtSau !== 'number' || trangThaiLuu === TRANG_THAI_TASK.XONG || trangThaiLuu === TRANG_THAI_TASK.HUY || !ngayHopLe_(hanChot)) return false;
+  return soNgayGiua_(hanChot, homNay) > khtSau;
+}
 
 /** Ngày dạng yyyy-mm-dd có thật hay không. */
 function ngayHopLe_(s) {
@@ -495,9 +501,10 @@ function hienNgay_(s) {
   return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(s);
 }
 
-function trangThaiTask_(trangThaiLuu, hanChot, homNay, soNgaySapDenHan) {
+function trangThaiTask_(trangThaiLuu, hanChot, homNay, soNgaySapDenHan, khtSau) {
   if (trangThaiLuu === TRANG_THAI_TASK.XONG || trangThaiLuu === TRANG_THAI_TASK.HUY) return trangThaiLuu;
   if (!ngayHopLe_(hanChot)) return TRANG_THAI_TASK.GIAO;
+  if (laKhongHoanThanh_(trangThaiLuu, hanChot, homNay, khtSau)) return TRANG_THAI_TASK.KHT;
   var conLai = soNgayGiua_(homNay, hanChot);
   if (conLai < 0) return TRANG_THAI_TASK.TRE;
   if (conLai <= soNgaySapDenHan) return TRANG_THAI_TASK.SAP;
@@ -612,7 +619,7 @@ function chonTaskTheoLich_(ds, homNay, lich, luc) {
   var moc = lich.filter(function (m) { return luc == null || lucNhac_(m) === luc; });
   if (!moc.length) return [];
   return ds.filter(function (t) {
-    if (t.trangThai === TRANG_THAI_TASK.XONG || t.trangThai === TRANG_THAI_TASK.HUY || !ngayHopLe_(t.hanChot)) return false;
+    if (t.trangThai === TRANG_THAI_TASK.XONG || t.trangThai === TRANG_THAI_TASK.HUY || t.trangThai === TRANG_THAI_TASK.KHT || !ngayHopLe_(t.hanChot)) return false;
     var tre = soNgayGiua_(t.hanChot, homNay);
     return moc.some(function (m) { return m.ngay === MOC_TRE_MOI_NGAY ? tre >= 1 : tre === m.ngay; });
   });
@@ -884,6 +891,7 @@ function chiSoBaoCao_(loaiHoatDong, lichSu) {
   });
   ds.push({ khoa: 'taskXong', ten: 'Task đã xong' });
   ds.push({ khoa: 'taskTre', ten: 'Task trễ hạn' });
+  ds.push({ khoa: 'taskKht', ten: 'Task không hoàn thành' });
   return ds;
 }
 
@@ -905,7 +913,7 @@ function taskBiTre_(t, homNay) {
  * cheDo: 'thanhvien' | 'ban' | 'clb'.
  * Trả về { dong: [{ ten, ban, so: {khoa: số} }] }.
  */
-function tongHopBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
+function tongHopBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay, khtSau) {
   var cuaAi = {};
   thanhVien.forEach(function (t) { cuaAi[t.ten] = t; });
   var nhom = function (ten) {
@@ -937,6 +945,7 @@ function tongHopBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
     var d = dongCua(k);
     if (t.trangThaiLuu === TRANG_THAI_TASK.XONG && t.ngayXong && t.ngayXong >= tu && t.ngayXong <= den) cong(d, 'taskXong', 1);
     if (t.hanChot >= tu && t.hanChot <= den && taskBiTre_(t, homNay)) cong(d, 'taskTre', 1);
+    if (t.hanChot >= tu && t.hanChot <= den && laKhongHoanThanh_(t.trangThaiLuu, t.hanChot, homNay, khtSau)) cong(d, 'taskKht', 1);
   });
   return { dong: thuTu.map(function (k) { return bang[k]; }) };
 }
@@ -967,11 +976,11 @@ function chiaMoc_(tu, den) {
 }
 
 /** Số liệu theo từng mốc cho biểu đồ: { moc[], chuoi: { tenDong: [ {khoa: số} theo mốc ] } }. */
-function bieuDoBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay) {
+function bieuDoBaoCao_(lichSu, task, thanhVien, tu, den, cheDo, homNay, khtSau) {
   var c = chiaMoc_(tu, den);
   var chuoi = {};
   c.moc.forEach(function (m, i) {
-    tongHopBaoCao_(lichSu, task, thanhVien, m.tu, m.den, cheDo, homNay).dong.forEach(function (d) {
+    tongHopBaoCao_(lichSu, task, thanhVien, m.tu, m.den, cheDo, homNay, khtSau).dong.forEach(function (d) {
       if (!chuoi[d.ten]) chuoi[d.ten] = c.moc.map(function () { return {}; });
       chuoi[d.ten][i] = d.so;
     });
@@ -1381,7 +1390,7 @@ if (typeof module !== 'undefined') {
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
-    trangThaiTask: trangThaiTask_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
     lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,

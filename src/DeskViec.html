@@ -43,7 +43,7 @@ VIEWS.diem = function () {
 };
 
 /* ---------- Task ---------- */
-var ST_TASK = { 'Đã giao': ['p-info', ''], 'Sắp đến hạn': ['p-warn', 'st-sap'], 'Trễ hạn': ['p-bad', 'st-tre'], 'Đã xong': ['p-ok', 'st-xong'], 'Đã huỷ': ['p-mute', 'st-huy'] };
+var ST_TASK = { 'Đã giao': ['p-info', ''], 'Sắp đến hạn': ['p-warn', 'st-sap'], 'Trễ hạn': ['p-bad', 'st-tre'], 'Không hoàn thành': ['p-bad', 'st-tre'], 'Đã xong': ['p-ok', 'st-xong'], 'Đã huỷ': ['p-mute', 'st-huy'] };
 function hienNgay(s) { var p = String(s).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : esc(s); }
 function congNgay(s, n) { var p = s.split('-'); var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)); return d.toISOString().slice(0, 10); }
 /* ---------- Nhận thông báo (Zalo, app trên điện thoại, mail) ---------- */
@@ -52,17 +52,17 @@ VIEWS.task = function () {
   goiPhien('layDuLieuTask').then(function (d) {
     if (page !== 'task') return;
     var loc = 'mo', tim = '', nhom = '';
-    var laMo = function (t) { return t.trangThai !== 'Đã xong' && t.trangThai !== 'Đã huỷ'; };
+    var laMo = function (t) { return t.trangThai !== 'Đã xong' && t.trangThai !== 'Đã huỷ' && t.trangThai !== 'Không hoàn thành'; };
     var hop = function (t, k) { return k === 'mo' ? laMo(t) : t.trangThai === k; };
     var dem = function (k) { return d.task.filter(function (t) { return hop(t, k) && (!nhom || t.nhom === nhom); }).length; };
-    var LOC = [['mo', 'Đang mở'], ['Sắp đến hạn', 'Sắp đến hạn'], ['Trễ hạn', 'Trễ hạn'], ['Đã xong', 'Đã xong'], ['Đã huỷ', 'Đã huỷ']];
+    var LOC = [['mo', 'Đang mở'], ['Sắp đến hạn', 'Sắp đến hạn'], ['Trễ hạn', 'Trễ hạn'], ['Không hoàn thành', 'Không hoàn thành'], ['Đã xong', 'Đã xong'], ['Đã huỷ', 'Đã huỷ']];
     $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">' + (NGUOI.vaiTro === 'HR' ? 'Task bạn tạo sẽ ghi là “nhập task”.' : 'Task BOD tạo ghi là “giao task”, task HR tạo ghi là “nhập task”.') + (d.phamVi ? ' ' + esc(d.phamVi) : '') + '</p></div>' + (d.thanhVien.length ? '<button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button>' : '') + '</div>' +
       (d.thongBao ? '<div id="zbox">' + dongThongBao(d.thongBao) + '</div>' : '') +
       '<div class="toolbar"><div class="seg" id="tfil">' + LOC.map(function (x) { return '<button data-f="' + x[0] + '" aria-pressed="' + (x[0] === loc) + '">' + x[1] + ' <span class="n">' + dem(x[0]) + '</span></button>'; }).join('') + '</div>' +
       '<input type="search" id="tq" placeholder="Tìm theo tên task hoặc người phụ trách…" aria-label="Tìm task"></div>' +
       (d.dsNhom.length > 1 ? '<div class="toolbar"><div class="seg" id="tban">' + [''].concat(d.dsNhom).map(function (n) { return '<button data-b="' + esc(n) + '" aria-pressed="' + (n === nhom) + '">' + (n ? esc(n) : 'Mọi ban') + '</button>'; }).join('') + '</div></div>' : '') +
       '<div id="tam"></div><div class="tasks" id="tl"></div>' +
-      '<p class="hint">“Đang mở” gồm mọi task chưa xong và chưa huỷ. “Sắp đến hạn” là còn ' + (d.sapDenHanNgay === 0 ? 'đúng ngày hạn' : d.sapDenHanNgay + ' ngày trở xuống') + '. Task đã xong hoặc đã huỷ được giữ ở đây 120 ngày.</p>';
+      '<p class="hint">“Đang mở” gồm mọi task chưa xong, chưa huỷ và chưa bị tính không hoàn thành. “Sắp đến hạn” là còn ' + (d.sapDenHanNgay === 0 ? 'đúng ngày hạn' : d.sapDenHanNgay + ' ngày trở xuống') + '. Trễ quá ' + d.khongHoanThanhSau + ' ngày mà chưa xong thì tính là không hoàn thành, thôi nhắc; muốn cho thêm thời gian thì sửa hạn chót. Task đã xong, đã huỷ hoặc không hoàn thành được giữ ở đây 120 ngày.</p>';
 
     var ve = function () {
       var q = boDau(tim);
@@ -72,7 +72,7 @@ VIEWS.task = function () {
         var i = d.task.indexOf(t), mo = laMo(t), st = ST_TASK[t.trangThai] || ['p-mute', ''];
         return '<div class="task ' + st[1] + '"><div><div class="tt">' + esc(t.ten) + '</div>' + (t.moTa ? '<div class="md">' + esc(t.moTa) + '</div>' : '') +
           '<div class="meta"><span class="pill ' + st[0] + '">' + esc(t.trangThai) + '</span><span>' + ic('users', 14) + ' <b>' + esc(t.nguoi) + '</b></span><span>' + ic('clock', 14) + ' Hạn <b>' + hienNgay(t.hanChot) + '</b></span><span>' + esc(t.kieuTao) + ' bởi ' + esc(t.nguoiTao) + ' · ' + ngayGio(t.thoiGianTao) + '</span></div></div>' +
-          '<div class="act">' + (!t.sua ? (t.nguoi !== NGUOI.ten ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button>' : t.trangThai === 'Đã xong' ? '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>' : '') : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
+          '<div class="act">' + (!t.sua ? (t.nguoi !== NGUOI.ten ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button>' : t.trangThai === 'Đã xong' ? '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>' : '') : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : t.trangThai === 'Không hoàn thành' ? '<button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa hạn</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
       }).join('') || rong(ic('check') + 'Không có task nào.');
       $$('#tl [data-st]').forEach(function (b) {
         b.onclick = function () {
@@ -295,7 +295,7 @@ var SET = [
   ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
-    ['due', 'clock', 'Lịch nhắc deadline', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
+    ['due', 'clock', 'Lịch nhắc deadline', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'không hoàn thành sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
     ['taskgiao', 'bell', 'Thông báo task giao', function () { var ds = [CD.baoTaskMoi ? 'task mới' : '', CD.baoTaskXong ? 'task đã xong' : ''].filter(String); return ds.length ? 'Báo ' + ds.join(' và ') : 'Đang tắt'; }, 'thông báo task giao mới xong người giao người làm'],
     ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối']]],
   ['Mail', [['notify', 'mail', 'Thông báo qua mail cho BOD', function () { var ds = [CD.baoGopY ? 'góp ý mới' : '', CD.baoThuChoDuyet ? 'thư chờ duyệt' : ''].filter(String); return ds.length ? 'Gửi khi có ' + ds.join(' và ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv'],
@@ -564,10 +564,13 @@ var SUB = {
   due: function () {
     var opts = [0, 1, 2, 3, 5, 7];
     if (opts.indexOf(CD.sapDenHanNgay) < 0) opts.push(CD.sapDenHanNgay);
+    var khOpts = [0, 1, 2, 3, 5, 7];
+    if (khOpts.indexOf(CD.khongHoanThanhSau) < 0) khOpts.push(CD.khongHoanThanhSau);
     var lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; });
     var dsNgay = [-7, -5, -3, -2, -1, 0, 1, 2, 3, 5, 7, 'T'];
     $('#subbody').innerHTML = '<form class="card form" id="duef"><p class="hint" style="margin:0">BOD được nhắc task của mình, HR được nhắc task của thành viên để nhắc lại các ban. Mỗi người nhận theo cách đã chọn ở mục Nhắc deadline.</p>' +
       '<label class="f">Task hiện “sắp đến hạn” trong danh sách task khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f">Trễ quá bao nhiêu ngày thì task tính là không hoàn thành <small>Task không hoàn thành thôi được nhắc, không tự xác nhận xong được nữa. Muốn cho thêm thời gian thì sửa hạn chót.</small><select id="dk">' + khOpts.map(function (n) { return '<option value="' + n + '"' + (n === CD.khongHoanThanhSau ? ' selected' : '') + '>' + (n === 0 ? 'Ngay khi trễ hạn' : 'Trễ quá ' + n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
       '<div style="display:grid;gap:6px"><b style="font-size:13.5px">Lịch nhắc</b><span class="hint">Mỗi mốc là một lần nhắc vào ngày và giờ đã chọn, cả trước hạn lẫn trễ hạn. Ví dụ: trước hạn 2 ngày lúc 19:00, ngày hạn chót lúc 06:00, trễ hạn 1 ngày lúc 19:00. Google gửi lệch vài phút quanh giờ đã chọn.</span><span class="hint">Mỗi task được xét riêng theo hạn chót của từng người: những người cùng hạn chót được nhắc chung một lần, hạn chót khác nhau thì chỉ nhắc người có task đúng mốc.</span><div id="dsmoc" style="display:grid;gap:8px"></div></div>' +
       '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
     var chonMoc = function (m, i) {
@@ -589,7 +592,7 @@ var SUB = {
     veMoc();
     $('#duef').onsubmit = function (e) {
       e.preventDefault();
-      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ sapDenHanNgay: Number($('#dd').value), lich: lich }], function () { lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; }); veMoc(); });
+      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ sapDenHanNgay: Number($('#dd').value), khongHoanThanhSau: Number($('#dk').value), lich: lich }], function () { lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; }); veMoc(); });
     };
   },
   tbtoi: function () { veTrangThongBao($('#subbody'), 'toi'); },
